@@ -49,5 +49,6 @@ DB
 coins
 
 # Ignore all EasyDEX-GUI subfolder files, except README
-EasyDEX-GUI/*
-!EasyDEX-GUI/README
+EasyDEX-GUI
+#EasyDEX-GUI/*
+#!EasyDEX-GUI/README
