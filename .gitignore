@@ -36,7 +36,10 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 
+# Ignore node.js modules folder
 node_modules
+
+# Ignore any igauna made directories or files in repo folder
 tmp
 help
 debug.log
@@ -44,3 +47,7 @@ genesis
 confs
 DB
 coins
+
+# Ignore all EasyDEX-GUI subfolder files, except README
+EasyDEX-GUI/*
+!EasyDEX-GUI/README
