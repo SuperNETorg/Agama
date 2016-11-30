@@ -1,10 +1,10 @@
-# Unity-App
+# Iguana Desktop App
 Desktop App for SuperNET DAPPs
 
 
-Clone Unity Desktop App
+Clone Iguana Desktop App
 ```shell
-git clone https://github.com/SuperNETorg/Unity-App.git
+git clone https://github.com/SuperNETorg/iguana.git
 ```
 
 Please clone EasyDEX-GUI from github repo here.
