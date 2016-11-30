@@ -1,0 +1,24 @@
+{
+  "name": "iguana_electron",
+  "version": "1.0.0",
+  "description": "Electron iguana app launcher",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": "https://github.com/ca333/iguana_electron",
+  "keywords": [
+    "iguana",
+    "superNET",
+    "komodo"
+  ],
+  "author": "ca333, grewalsatinder",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^1.4.1"
+  },
+  "dependencies": {
+    "jquery": "^2.2.4",
+    "toastr": "^2.1.2"
+  }
+}
