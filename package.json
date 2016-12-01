@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron ."
   },
-  "repository": "https://github.com/ca333/iguana_electron",
+  "repository": "https://github.com/SuperNETorg/iguana/",
   "keywords": [
     "iguana",
     "superNET",
