@@ -19,7 +19,7 @@ guiapp.get('/', function (req, res) {
 })
 
 var rungui = guiapp.listen(17777, function () {
-  console.log('Example guiapp listening on port 17777!')
+  console.log('guiapp listening on port 17777!')
 })
 // END GUI App Settings
 
@@ -43,7 +43,7 @@ if (os.platform() === 'win32') {
   var iguanaDir = process.env.APPDATA + '/iguana'
 }
 
-console.log(iguanaDir);
+//console.log(iguanaDir);
 
 mkdirp(iguanaDir, function (err) {
   if (err)
@@ -51,7 +51,7 @@ mkdirp(iguanaDir, function (err) {
   else
     fs.readdir(iguanaDir, (err, files) => {
       files.forEach(file => {
-        console.log(file);
+        //console.log(file);
       });
     })
 });

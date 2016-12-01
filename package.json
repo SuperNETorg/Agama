@@ -1,7 +1,7 @@
 {
-  "name": "iguana_electron",
+  "name": "iguana_app",
   "version": "1.0.0",
-  "description": "Electron iguana app launcher",
+  "description": "iguana Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron ."
@@ -10,7 +10,10 @@
   "keywords": [
     "iguana",
     "superNET",
-    "komodo"
+    "komodo",
+    "easydex",
+    "instantdex",
+    "pax"
   ],
   "author": "ca333, grewalsatinder",
   "license": "MIT",
