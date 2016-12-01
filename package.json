@@ -1,6 +1,7 @@
 {
   "name": "iguana_app",
-  "version": "1.0.0",
+  "productName": "Iguana",
+  "version": "0.1.0",
   "description": "iguana Desktop App",
   "main": "main.js",
   "scripts": {

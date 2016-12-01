@@ -53,3 +53,6 @@ EasyDEX-GUI
 Iguana-GUI
 #EasyDEX-GUI/*
 #!EasyDEX-GUI/README
+
+# Electron-builder related folders
+build

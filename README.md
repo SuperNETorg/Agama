@@ -30,3 +30,15 @@ npm start
 
 #### For end users
 The instructions to make production build of Iguana App will be updated soon.
+
+To make production ready app, install `electron-packager` and `electron-prebuilt` packages from npm
+```shell
+npm install electron-packager -g
+npm install electron-prebuilt -g
+```
+
+Change directory to iguana and execute following command to build OSX App
+```shell
+cd iguana
+electron-packager . --platform=darwin --arch=x64 --icon=assets/icons/komodo.icns --out=build/
+```
