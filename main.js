@@ -8,7 +8,7 @@ const BrowserWindow = electron.BrowserWindow
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 
-// GUI APP settings and starting gui on address http://120.0.0.1:77777
+// GUI APP settings and starting gui on address http://120.0.0.1:17777
 var express = require('express')
 var guiapp = express()
 
@@ -18,8 +18,8 @@ guiapp.get('/', function (req, res) {
   res.send('Hello World!')
 })
 
-var rungui = guiapp.listen(77777, function () {
-  console.log('Example guiapp listening on port 77777!')
+var rungui = guiapp.listen(17777, function () {
+  console.log('Example guiapp listening on port 17777!')
 })
 // END GUI App Settings
 
@@ -66,7 +66,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({width: 800, height: 600})
 
   // load our index.html (i.e. easyDEX GUI)
-  mainWindow.loadURL('http://localhost:77777/gui/EasyDEX-GUI/');
+  mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
   /*mainWindow.loadURL(url.format({
     pathname: path.join(__dirname, 'EasyDEX-GUI/index.html'),
     protocol: 'file:',
