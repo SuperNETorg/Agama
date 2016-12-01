@@ -50,5 +50,6 @@ coins
 
 # Ignore all EasyDEX-GUI subfolder files, except README
 EasyDEX-GUI
+Iguana-GUI
 #EasyDEX-GUI/*
 #!EasyDEX-GUI/README
