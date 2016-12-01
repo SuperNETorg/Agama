@@ -64,7 +64,7 @@ let mainWindow
 function createWindow () {
 
   // initialise window
-  mainWindow = new BrowserWindow({width: 800, height: 600})
+  mainWindow = new BrowserWindow({width: 1280, height: 800})
 
   // load our index.html (i.e. easyDEX GUI)
   mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
@@ -75,7 +75,7 @@ function createWindow () {
   }))*/
 
   // DEVTOOLS - only for dev purposes - ca333
-  mainWindow.webContents.openDevTools()
+  //mainWindow.webContents.openDevTools()
 
   // if window closed we kill iguana proc
   mainWindow.on('closed', function () {
