@@ -5,15 +5,43 @@ const electron = require('electron')
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
 
+var fs = require('fs');
+var mkdirp = require('mkdirp');
+
 
 const path = require('path')
 const url = require('url')
 const os = require('os')
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
 const spawn = require('child_process').spawn;
+const exec = require('child_process').exec;
 var iguanaOSX = path.join(__dirname, '/assets/iguana/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/iguana/iguanaLinux');
 var iguanaWin = path.join(__dirname, '/assets/iguana/iguana');
+
+if (os.platform() === 'darwin') {
+  var iguanaDir = process.env.HOME + '/Library/Application Support/iguana'
+}
+if (os.platform() === 'linux') {
+  var iguanaDir = process.env.HOME + '.iguana'
+}
+if (os.platform() === 'win32') {
+  var iguanaDir = process.env.APPDATA + '/iguana'
+}
+
+console.log(iguanaDir);
+
+mkdirp(iguanaDir, function (err) {
+  if (err)
+    console.error(err)
+  else
+    fs.readdir(iguanaDir, (err, files) => {
+      files.forEach(file => {
+        console.log(file);
+      });
+    })
+});
+
 
 
 let mainWindow
@@ -46,10 +74,12 @@ function createWindow () {
   //ex(iguanaWin) //specify binary in startup
   //}
   if (os.platform() === 'linux') {
-  ig = spawn(iguanaLinux);
+    process.chdir(iguanaDir);
+    ig = spawn(iguanaLinux);
   }
   if (os.platform() === 'darwin') {
-  ig = spawn(iguanaOSX);
+    process.chdir(iguanaDir);
+    ig = spawn(iguanaOSX);
   }
   //}if (os.platform() === 'freeBSD') {
   //ex(iguanaFreeBSD)

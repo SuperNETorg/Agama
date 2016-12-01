@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "jquery": "^2.2.4",
+    "mkdirp": "^0.5.1",
     "toastr": "^2.1.2"
   }
 }
