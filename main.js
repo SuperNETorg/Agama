@@ -32,13 +32,13 @@ var rungui = guiapp.listen(17777, function () {
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
 var iguanaOSX = path.join(__dirname, '/assets/iguana/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/iguana/iguanaLinux');
-var iguanaWin = path.join(__dirname, '/assets/iguana/iguana');
+var iguanaWin = path.join(__dirname, '/assets/iguana/iguana32.exe');
 
 if (os.platform() === 'darwin') {
   var iguanaDir = process.env.HOME + '/Library/Application Support/iguana'
 }
 if (os.platform() === 'linux') {
-  var iguanaDir = process.env.HOME + '.iguana'
+  var iguanaDir = process.env.HOME + '/.iguana'
 }
 if (os.platform() === 'win32') {
   var iguanaDir = process.env.APPDATA + '/iguana'
