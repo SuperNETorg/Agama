@@ -4,7 +4,11 @@
 const electron = require('electron')
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
-
+const path = require('path')
+const url = require('url')
+const os = require('os')
+const spawn = require('child_process').spawn;
+const exec = require('child_process').exec;
 var fs = require('fs');
 var mkdirp = require('mkdirp');
 
@@ -12,7 +16,8 @@ var mkdirp = require('mkdirp');
 var express = require('express')
 var guiapp = express()
 
-guiapp.use('/gui', express.static('gui'))
+var guipath = path.join(__dirname, '/gui')
+guiapp.use('/gui', express.static(guipath))
 
 guiapp.get('/', function (req, res) {
   res.send('Hello World!')
@@ -23,12 +28,8 @@ var rungui = guiapp.listen(17777, function () {
 })
 // END GUI App Settings
 
-const path = require('path')
-const url = require('url')
-const os = require('os')
+
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
-const spawn = require('child_process').spawn;
-const exec = require('child_process').exec;
 var iguanaOSX = path.join(__dirname, '/assets/iguana/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/iguana/iguanaLinux');
 var iguanaWin = path.join(__dirname, '/assets/iguana/iguana');
