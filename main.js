@@ -86,9 +86,10 @@ function createWindow () {
   })
 
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
-  //if (os.platform() === 'win32') {
-  //ex(iguanaWin) //specify binary in startup
-  //}
+  if (os.platform() === 'win32') {
+    process.chdir(iguanaDir);
+    ig = spawn(iguanaWin); //specify binary in startup
+  }
   if (os.platform() === 'linux') {
     process.chdir(iguanaDir);
     ig = spawn(iguanaLinux);
