@@ -60,29 +60,28 @@ mkdirp(iguanaDir, function (err) {
 
 
 let mainWindow
+let loadingWindow
 
-function createWindow () {
+
+function createLoadingWindow() {
+  mainWindow = null;
 
   // initialise window
-  mainWindow = new BrowserWindow({width: 1280, height: 800})
+  loadingWindow = new BrowserWindow({width: 500, height: 300, frame: false})
 
   // load our index.html (i.e. easyDEX GUI)
-  mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
-  /*mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'EasyDEX-GUI/index.html'),
-    protocol: 'file:',
-    slashes: true
-  }))*/
+  loadingWindow.loadURL('http://localhost:17777/');
 
   // DEVTOOLS - only for dev purposes - ca333
-  //mainWindow.webContents.openDevTools()
+  //loadingWindow.webContents.openDevTools()
 
   // if window closed we kill iguana proc
-  mainWindow.on('closed', function () {
+  loadingWindow.on('closed', function () {
       ig.kill();
     // our app does not have multiwindow - so we dereference the window object instead of
     // putting them into an window_arr
-    mainWindow = null
+    loadingWindow = null
+    createWindow('open')
   })
 
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
@@ -108,7 +107,68 @@ function createWindow () {
       });
 }
 
-app.on('ready', createWindow)
+app.on('ready', createLoadingWindow)
+
+app.on('window-all-closed', function () {
+    ig.kill();
+  // in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
+  // so we do not kill the app --> for the case user clicks again on the iguana icon
+  // we open just a new window and respawn iguana proc
+  if (process.platform !== 'darwin') {
+    app.quit()
+  }
+})
+
+function createWindow (status) {
+  if ( status === 'open') {
+    // initialise window
+    mainWindow = new BrowserWindow({width: 1280, height: 800})
+
+    // load our index.html (i.e. easyDEX GUI)
+    mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
+    /*mainWindow.loadURL(url.format({
+      pathname: path.join(__dirname, 'EasyDEX-GUI/index.html'),
+      protocol: 'file:',
+      slashes: true
+    }))*/
+
+    // DEVTOOLS - only for dev purposes - ca333
+    //mainWindow.webContents.openDevTools()
+
+    // if window closed we kill iguana proc
+    mainWindow.on('closed', function () {
+        ig.kill();
+      // our app does not have multiwindow - so we dereference the window object instead of
+      // putting them into an window_arr
+      mainWindow = null
+    })
+
+    //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
+    //if (os.platform() === 'win32') {
+    //ex(iguanaWin) //specify binary in startup
+    //}
+    if (os.platform() === 'linux') {
+      process.chdir(iguanaDir);
+      ig = spawn(iguanaLinux);
+    }
+    if (os.platform() === 'darwin') {
+      process.chdir(iguanaDir);
+      ig = spawn(iguanaOSX);
+    }
+    //}if (os.platform() === 'freeBSD') {
+    //ex(iguanaFreeBSD)
+    //}
+    //ca333 - could also specifiy via os.arch (x86, x64, etc. ) in startup and pass via param to main proc
+
+    ig.stderr.on( 'error: ', data => {
+    console.log( `stderr: ${data}` );
+        });
+  }
+}
+
+app.on('ready', function() {
+  createLoadingWindow
+})
 
 app.on('window-all-closed', function () {
     ig.kill();
@@ -121,7 +181,8 @@ app.on('window-all-closed', function () {
 })
 
 app.on('activate', function () {
-  if (mainWindow === null) {
-    createWindow()
+  if (loadingWindow === null) {
+    //createWindow()
+    createLoadingWindow();
   }
 })
