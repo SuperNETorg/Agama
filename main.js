@@ -73,7 +73,7 @@ function createLoadingWindow() {
   loadingWindow.loadURL('http://localhost:17777/gui/');
 
   // DEVTOOLS - only for dev purposes - ca333
-  loadingWindow.webContents.openDevTools()
+  //loadingWindow.webContents.openDevTools()
 
   // if window closed we kill iguana proc
   loadingWindow.on('closed', function () {
