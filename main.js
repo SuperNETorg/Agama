@@ -70,10 +70,10 @@ function createLoadingWindow() {
   loadingWindow = new BrowserWindow({width: 500, height: 300, frame: false})
 
   // load our index.html (i.e. easyDEX GUI)
-  loadingWindow.loadURL('http://localhost:17777/');
+  loadingWindow.loadURL('http://localhost:17777/gui/');
 
   // DEVTOOLS - only for dev purposes - ca333
-  //loadingWindow.webContents.openDevTools()
+  loadingWindow.webContents.openDevTools()
 
   // if window closed we kill iguana proc
   loadingWindow.on('closed', function () {
