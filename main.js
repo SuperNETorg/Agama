@@ -118,7 +118,7 @@ function createWindow (status) {
     mainWindow.on('closed', function () {
       if (os.platform() !== 'win32') { ig.kill(); }
       if (os.platform() === 'win32') {
-        exec('taskkill /F /IM iguana.exe', {cwd: iguanaDir});
+        exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
       }
       // our app does not have multiwindow - so we dereference the window object instead of
       // putting them into an window_arr
