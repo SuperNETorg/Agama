@@ -78,7 +78,6 @@ function createLoadingWindow() {
 
   // if window closed we kill iguana proc
   loadingWindow.on('closed', function () {
-      ig.kill();
     // our app does not have multiwindow - so we dereference the window object instead of
     // putting them into an window_arr
     loadingWindow = null
@@ -99,9 +98,7 @@ function createLoadingWindow() {
     ig = spawn(iguanaOSX);
   }
 
-  ig.stderr.on( 'error: ', data => {
-  console.log( `stderr: ${data}` );
-      });
+  if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
 }
 
 app.on('ready', createLoadingWindow)
@@ -119,7 +116,7 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
-      ig.kill();
+      if (os.platform() !== 'win32') { ig.kill(); }
       if (os.platform() === 'win32') {
         exec('taskkill /F /IM iguana.exe', {cwd: iguanaDir});
       }
@@ -136,7 +133,7 @@ app.on('ready', function() {
 })
 
 app.on('window-all-closed', function () {
-    ig.kill();
+    //if (os.platform() !== 'win32') { ig.kill(); }
   // in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
   // so we do not kill the app --> for the case user clicks again on the iguana icon
   // we open just a new window and respawn iguana proc
