@@ -30,19 +30,20 @@ var rungui = guiapp.listen(17777, function () {
 
 
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
-var iguanaOSX = path.join(__dirname, '/assets/iguana/iguana');
-var iguanaLinux = path.join(__dirname, '/assets/iguana/iguanaLinux');
-var iguanaWin = path.join(__dirname, '/assets/iguana/iguana32.exe');
 
-if (os.platform() === 'darwin') {
-  var iguanaDir = process.env.HOME + '/Library/Application Support/iguana'
-}
-if (os.platform() === 'linux') {
-  var iguanaDir = process.env.HOME + '/.iguana'
-}
-if (os.platform() === 'win32') {
-  var iguanaDir = process.env.APPDATA + '/iguana'
-}
+// SELECTING IGUANA BUILD TO RUN AS PER OS DETECTED BY DESKTOP APP
+var iguanaOSX = path.join(__dirname, '/assets/bin/osx/iguana');
+var iguanaLinux = path.join(__dirname, '/assets/bin/linux64/iguana');
+var iguanaWin = path.join(__dirname, '/assets/bin/win64/iguana.exe');
+
+// SETTING OS DIR TO RUN IGUANA FROM
+if (os.platform() === 'darwin') { var iguanaDir = process.env.HOME + '/Library/Application Support/iguana' }
+if (os.platform() === 'linux') { var iguanaDir = process.env.HOME + '/.iguana' }
+if (os.platform() === 'win32') { var iguanaDir = process.env.APPDATA + '/iguana' }
+
+// SETTING APP ICON FOR LINUX AND WINDOWS
+if (os.platform() === 'linux') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png') }
+if (os.platform() === 'win32') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico') }
 
 //console.log(iguanaDir);
 
@@ -67,7 +68,7 @@ function createLoadingWindow() {
   mainWindow = null;
 
   // initialise window
-  loadingWindow = new BrowserWindow({width: 500, height: 300, frame: false})
+  loadingWindow = new BrowserWindow({width: 500, height: 300, frame: false, icon: iguanaIcon})
 
   // load our index.html (i.e. easyDEX GUI)
   loadingWindow.loadURL('http://localhost:17777/gui/');
@@ -122,7 +123,7 @@ app.on('window-all-closed', function () {
 function createWindow (status) {
   if ( status === 'open') {
     // initialise window
-    mainWindow = new BrowserWindow({width: 1280, height: 800})
+    mainWindow = new BrowserWindow({width: 1280, height: 800, icon: iguanaIcon})
 
     // load our index.html (i.e. easyDEX GUI)
     mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
@@ -176,7 +177,7 @@ app.on('window-all-closed', function () {
   // so we do not kill the app --> for the case user clicks again on the iguana icon
   // we open just a new window and respawn iguana proc
   if (process.platform !== 'darwin') {
-    app.quit()
+    //app.quit()
   }
 })
 

@@ -43,9 +43,9 @@ Refer to the original [electron-packager](https://github.com/electron-userland/e
 Change directory to iguana and execute the following command to build the Linux app
 ```shell
 cd iguana
-electron-packager . --platform=linux --arch=ia32 --out=build/
+electron-packager . --platform=linux --arch=x64 --out=build/
 ```
-change architecture build parameter to ```--arch=x64``` for 64 bit build
+change architecture build parameter to ```--arch=x32``` for 32 bit build
 
 ##### OSX
 Change directory to iguana and execute the following command to build the OSX app
@@ -58,6 +58,6 @@ electron-packager . --platform=darwin --arch=x64 --icon=assets/icons/iguana_app_
 Change directory to iguana and execute the following command to build the Windows app
 ```shell
 dir iguana
-electron-packager . --platform=win32 --arch=ia32 --icon=assets/icons/iguana_app_icon.ico --out=build/
+electron-packager . --platform=win32 --arch=win32 --icon=assets/icons/iguana_app_icon.ico --out=build/
 ```
 change architecture build parameter to ```--arch=x64``` for 64 bit build
