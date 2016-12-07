@@ -143,8 +143,7 @@ app.on('window-all-closed', function () {
 })
 
 app.on('activate', function () {
-  if (loadingWindow === null) {
-    //createWindow()
-    createLoadingWindow();
+  if (mainWindow === null) {
+    //createWindow('open');
   }
 })
