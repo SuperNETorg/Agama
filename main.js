@@ -88,7 +88,7 @@ function createLoadingWindow() {
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
   if (os.platform() === 'win32') {
     process.chdir(iguanaDir);
-    ig = spawn(iguanaWin); //specify binary in startup
+    exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
   }
   if (os.platform() === 'linux') {
     process.chdir(iguanaDir);
@@ -98,10 +98,6 @@ function createLoadingWindow() {
     process.chdir(iguanaDir);
     ig = spawn(iguanaOSX);
   }
-  //}if (os.platform() === 'freeBSD') {
-  //ex(iguanaFreeBSD)
-  //}
-  //ca333 - could also specifiy via os.arch (x86, x64, etc. ) in startup and pass via param to main proc
 
   ig.stderr.on( 'error: ', data => {
   console.log( `stderr: ${data}` );
@@ -117,43 +113,21 @@ function createWindow (status) {
 
     // load our index.html (i.e. easyDEX GUI)
     mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
-    /*mainWindow.loadURL(url.format({
-      pathname: path.join(__dirname, 'EasyDEX-GUI/index.html'),
-      protocol: 'file:',
-      slashes: true
-    }))*/
 
     // DEVTOOLS - only for dev purposes - ca333
     //mainWindow.webContents.openDevTools()
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
-        ig.kill();
+      ig.kill();
+      if (os.platform() === 'win32') {
+        exec('taskkill /F /IM iguana.exe', {cwd: iguanaDir});
+      }
       // our app does not have multiwindow - so we dereference the window object instead of
       // putting them into an window_arr
       mainWindow = null
-    })
-
-    //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
-    //if (os.platform() === 'win32') {
-    //ex(iguanaWin) //specify binary in startup
-    //}
-    if (os.platform() === 'linux') {
-      process.chdir(iguanaDir);
-      ig = spawn(iguanaLinux);
-    }
-    if (os.platform() === 'darwin') {
-      process.chdir(iguanaDir);
-      ig = spawn(iguanaOSX);
-    }
-    //}if (os.platform() === 'freeBSD') {
-    //ex(iguanaFreeBSD)
-    //}
-    //ca333 - could also specifiy via os.arch (x86, x64, etc. ) in startup and pass via param to main proc
-
-    ig.stderr.on( 'error: ', data => {
-    console.log( `stderr: ${data}` );
-        });
+      app.quit()
+    });
   }
 }
 
@@ -166,9 +140,9 @@ app.on('window-all-closed', function () {
   // in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
   // so we do not kill the app --> for the case user clicks again on the iguana icon
   // we open just a new window and respawn iguana proc
-  if (process.platform !== 'darwin') {
-    //app.quit()
-  }
+  /*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
+    app.quit()
+  }*/
 })
 
 app.on('activate', function () {
