@@ -110,16 +110,6 @@ function createLoadingWindow() {
 
 app.on('ready', createLoadingWindow)
 
-app.on('window-all-closed', function () {
-    ig.kill();
-  // in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
-  // so we do not kill the app --> for the case user clicks again on the iguana icon
-  // we open just a new window and respawn iguana proc
-  if (process.platform !== 'darwin') {
-    app.quit()
-  }
-})
-
 function createWindow (status) {
   if ( status === 'open') {
     // initialise window
