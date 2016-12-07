@@ -34,12 +34,12 @@ var rungui = guiapp.listen(17777, function () {
 // SELECTING IGUANA BUILD TO RUN AS PER OS DETECTED BY DESKTOP APP
 var iguanaOSX = path.join(__dirname, '/assets/bin/osx/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/bin/linux64/iguana');
-var iguanaWin = path.join(__dirname, '/assets/bin/win64/iguana.exe');
+var iguanaWin = path.join(__dirname, '/assets/bin/win64/iguana.exe'); iguanaWin = path.normalize(iguanaWin);
 
 // SETTING OS DIR TO RUN IGUANA FROM
 if (os.platform() === 'darwin') { var iguanaDir = process.env.HOME + '/Library/Application Support/iguana' }
 if (os.platform() === 'linux') { var iguanaDir = process.env.HOME + '/.iguana' }
-if (os.platform() === 'win32') { var iguanaDir = process.env.APPDATA + '/iguana' }
+if (os.platform() === 'win32') { var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir) }
 
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'linux') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png') }
