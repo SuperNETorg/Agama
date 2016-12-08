@@ -61,3 +61,11 @@ dir iguana
 electron-packager . --platform=win32 --arch=x64 --icon=assets/icons/iguana_app_icon.ico --out=build/
 ```
 change architecture build parameter to ```--arch=x64``` for 64 bit build
+
+
+## Troubleshooting Instructions
+
+### Windows DLL issues
+On Windows it's noticed iguana.exe complains about `VCRUNTIME140D.DLL` and `ucrtbased.dll` file.
+
+Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running Iguana App.
