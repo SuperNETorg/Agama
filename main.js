@@ -71,7 +71,7 @@ function createLoadingWindow() {
   loadingWindow = new BrowserWindow({width: 500, height: 300, frame: false, icon: iguanaIcon})
 
   // load our index.html (i.e. easyDEX GUI)
-  loadingWindow.loadURL('http://localhost:17777/gui/');
+  loadingWindow.loadURL('http://127.0.0.1:17777/gui/');
 
   // DEVTOOLS - only for dev purposes - ca333
   //loadingWindow.webContents.openDevTools()
@@ -109,10 +109,10 @@ function createWindow (status) {
     mainWindow = new BrowserWindow({width: 1280, height: 800, icon: iguanaIcon})
 
     // load our index.html (i.e. easyDEX GUI)
-    mainWindow.loadURL('http://localhost:17777/gui/EasyDEX-GUI/');
+    mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
 
     // DEVTOOLS - only for dev purposes - ca333
-    //mainWindow.webContents.openDevTools()
+    mainWindow.webContents.openDevTools()
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
