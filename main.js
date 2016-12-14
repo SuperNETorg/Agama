@@ -112,7 +112,7 @@ function createWindow (status) {
     mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
 
     // DEVTOOLS - only for dev purposes - ca333
-    mainWindow.webContents.openDevTools()
+    //mainWindow.webContents.openDevTools()
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
