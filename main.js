@@ -10,6 +10,7 @@ const os = require('os')
 const spawn = require('child_process').spawn;
 const exec = require('child_process').exec;
 var fs = require('fs');
+var fs = require('fs-extra')
 var mkdirp = require('mkdirp');
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
@@ -35,18 +36,29 @@ var rungui = guiapp.listen(17777, function () {
 var iguanaOSX = path.join(__dirname, '/assets/bin/osx/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/bin/linux64/iguana');
 var iguanaWin = path.join(__dirname, '/assets/bin/win64/iguana.exe'); iguanaWin = path.normalize(iguanaWin);
+var iguanaConfsDirSrc = path.join(__dirname, '/assets/deps/confs');
 
 // SETTING OS DIR TO RUN IGUANA FROM
-if (os.platform() === 'darwin') { var iguanaDir = process.env.HOME + '/Library/Application Support/iguana' }
-if (os.platform() === 'linux') { var iguanaDir = process.env.HOME + '/.iguana' }
-if (os.platform() === 'win32') { var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir) }
-
 // SETTING APP ICON FOR LINUX AND WINDOWS
-if (os.platform() === 'linux') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png') }
-if (os.platform() === 'win32') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico') }
+if (os.platform() === 'darwin') {
+  var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
+  var iguanaConfsDir = iguanaDir + '/confs';
+}
+if (os.platform() === 'linux') {
+  var iguanaDir = process.env.HOME + '/.iguana'
+  var iguanaConfsDir = iguanaDir + '/confs';
+  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
+}
+if (os.platform() === 'win32') {
+  var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir)
+  var iguanaConfsDir = process.env.APPDATA + '/iguana/confs'; iguanaConfsDir = path.normalize(iguanaConfsDir)
+  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
+  iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+}
 
 //console.log(iguanaDir);
 
+// MAKE SURE IGUANA DIR IS THERE FOR USER
 mkdirp(iguanaDir, function (err) {
   if (err)
     console.error(err)
@@ -58,6 +70,11 @@ mkdirp(iguanaDir, function (err) {
     })
 });
 
+// COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
+fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
+  if (err) return console.error(err)
+  console.log('confs files copied successfully at: '+ iguanaConfsDir )
+})
 
 
 let mainWindow
