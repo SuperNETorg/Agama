@@ -109,10 +109,12 @@ function createLoadingWindow() {
   if (os.platform() === 'linux') {
     process.chdir(iguanaDir);
     ig = spawn(iguanaLinux);
+    corsproxy_process = spawn('corsproxy');
   }
   if (os.platform() === 'darwin') {
     process.chdir(iguanaDir);
     ig = spawn(iguanaOSX);
+    corsproxy_process = spawn('corsproxy');
   }
 
   if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
@@ -133,7 +135,7 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
-      if (os.platform() !== 'win32') { ig.kill(); }
+      if (os.platform() !== 'win32') { ig.kill(); corsproxy_process.kill(); }
       if (os.platform() === 'win32') {
         exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
       }
