@@ -104,7 +104,8 @@ function createLoadingWindow() {
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
   if (os.platform() === 'win32') {
     process.chdir(iguanaDir);
-    exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
+    //exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
+    ig = spawn(iguanaWin);
   }
   if (os.platform() === 'linux') {
     process.chdir(iguanaDir);
@@ -137,7 +138,8 @@ function createWindow (status) {
     mainWindow.on('closed', function () {
       if (os.platform() !== 'win32') { ig.kill(); corsproxy_process.kill(); }
       if (os.platform() === 'win32') {
-        exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
+        //exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
+        ig.kill();
       }
       // our app does not have multiwindow - so we dereference the window object instead of
       // putting them into an window_arr

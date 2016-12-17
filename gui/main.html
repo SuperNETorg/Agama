@@ -6,12 +6,24 @@
     <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
     <script type="text/javascript" src="EasyDEX-GUI/assets/global/vendor/jquery/jquery.min.js"></script>
     <script>if (window.module) module = window.module;</script>
+    <script type="text/javascript">
+	function resizeMainWindow() {
+		/* set default map height */
+		var mapH = $(window).height();
+
+		$(".page-main").outerHeight(mapH);
+	}
+	jQuery(document).ready(function() {
+		resizeMainWindow();
+    	window.onresize = function(event) { resizeMainWindow(); };
+	});
+	</script>
 </head>
 <body>
 
-<div class="row">
-  <div class="col-xs-6 text-center" style="height: 100%; background: #acacac;">Wallet</div>
-  <div class="col-xs-6 text-center" style="height: 100%; background: #bfbfbf;">Wallet</div>
+<div class="row page-main">
+  <div class="col-xs-6 text-center" style="height: 100%; background: url(bg.jpg) no-repeat fixed; vertical-align: middle;"><h1 style="color: white;">Iguana Wallet<h1></div>
+  <div class="col-xs-6 text-center" style="height: 100%; background: url(bg2.jpg) no-repeat fixed; vertical-align: middle;"><h1 style="color: white;">EasyDEX</h1></div>
 </div>
 
 </body>
