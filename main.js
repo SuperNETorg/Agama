@@ -13,6 +13,16 @@ var fs = require('fs');
 var fs = require('fs-extra')
 var mkdirp = require('mkdirp');
 
+// preload.js
+const _setImmediate = setImmediate
+const _clearImmediate = clearImmediate
+process.once('loaded', () => {
+  global.setImmediate = _setImmediate
+  global.clearImmediate = _clearImmediate
+  if (os.platform() === 'darwin') { process.setFdLimit(90000); }
+  if (os.platform() === 'linux') { process.setFdLimit(1000000); }
+})
+
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var express = require('express')
 var guiapp = express()
@@ -136,7 +146,7 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
-      if (os.platform() !== 'win32') { ig.kill(); corsproxy_process.kill(); }
+      if (os.platform() !== 'win32') { ig.kill(); /*corsproxy_process.kill();*/ }
       if (os.platform() === 'win32') {
         //exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
         ig.kill();
