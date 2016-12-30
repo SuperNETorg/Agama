@@ -4,6 +4,8 @@
 const electron = require('electron')
 const app = electron.app
 const BrowserWindow = electron.BrowserWindow
+var express = require('express')
+var bodyParser = require('body-parser')
 const path = require('path')
 const url = require('url')
 const os = require('os')
@@ -24,24 +26,31 @@ process.once('loaded', () => {
 })
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
-var express = require('express')
-var guiapp = express()
+var shepherd = require('./routes/shepherd');
 
-var guipath = path.join(__dirname, '/gui')
-guiapp.use('/gui', express.static(guipath))
+var guiapp = express()
+guiapp.use(bodyParser.json()); // support json encoded bodies
+guiapp.use(bodyParser.urlencoded({ extended: false })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
   res.send('Hello World!')
 })
 
+var guipath = path.join(__dirname, '/gui')
+guiapp.use('/gui', express.static(guipath))
+
+guiapp.use('/shepherd', shepherd);
+
 var rungui = guiapp.listen(17777, function () {
   console.log('guiapp listening on port 17777!')
 })
+
+module.exports = guiapp;
 // END GUI App Settings
 
 
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
-
+/*
 // SELECTING IGUANA BUILD TO RUN AS PER OS DETECTED BY DESKTOP APP
 var iguanaOSX = path.join(__dirname, '/assets/bin/osx/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/bin/linux64/iguana');
@@ -65,9 +74,13 @@ if (os.platform() === 'win32') {
   var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
   iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 }
+*/
+
+if (os.platform() === 'linux') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png') }
+if (os.platform() === 'win32') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico') }
 
 //console.log(iguanaDir);
-
+/*
 // MAKE SURE IGUANA DIR IS THERE FOR USER
 mkdirp(iguanaDir, function (err) {
   if (err)
@@ -85,7 +98,7 @@ fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
   if (err) return console.error(err)
   console.log('confs files copied successfully at: '+ iguanaConfsDir )
 })
-
+*/
 
 let mainWindow
 let loadingWindow
@@ -112,7 +125,7 @@ function createLoadingWindow() {
   })
 
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
-  if (os.platform() === 'win32') {
+  /*if (os.platform() === 'win32') {
     process.chdir(iguanaDir);
     //exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
     ig = spawn(iguanaWin);
@@ -123,12 +136,12 @@ function createLoadingWindow() {
     //corsproxy_process = spawn('corsproxy');
   }
   if (os.platform() === 'darwin') {
-    process.chdir(iguanaDir);
-    ig = spawn(iguanaOSX);
+    //process.chdir(iguanaDir);
+    //ig = spawn(iguanaOSX);
     //corsproxy_process = spawn('corsproxy');
-  }
+  }*/
 
-  if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
+  //if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
 }
 
 app.on('ready', createLoadingWindow)
@@ -146,11 +159,11 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
-      if (os.platform() !== 'win32') { ig.kill(); /*corsproxy_process.kill();*/ }
-      if (os.platform() === 'win32') {
+      //if (os.platform() !== 'win32') { ig.kill(); /*corsproxy_process.kill();*/ }
+      /*if (os.platform() === 'win32') {
         //exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
         ig.kill();
-      }
+      }*/
       // our app does not have multiwindow - so we dereference the window object instead of
       // putting them into an window_arr
       mainWindow = null

@@ -22,9 +22,11 @@
     "electron": "^1.4.1"
   },
   "dependencies": {
+    "body-parser": "^1.15.2",
+    "corsproxy": "^1.5.0",
     "express": "^4.14.0",
     "fs-extra": "^1.0.0",
     "mkdirp": "^0.5.1",
-    "corsproxy": "^1.5.0"
+    "pm2": "^2.2.3"
   }
 }
