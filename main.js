@@ -14,6 +14,7 @@ const exec = require('child_process').exec;
 var fs = require('fs');
 var fs = require('fs-extra')
 var mkdirp = require('mkdirp');
+var pm2 = require('pm2');
 
 // preload.js
 const _setImmediate = setImmediate
@@ -159,6 +160,19 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
+
+      pm2.connect(function(err) { //start up pm2 god
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      pm2.killDaemon(function(err) {
+        pm2.disconnect();   // Disconnect from PM2
+          if (err) throw err
+        });
+      });
+
       //if (os.platform() !== 'win32') { ig.kill(); /*corsproxy_process.kill();*/ }
       /*if (os.platform() === 'win32') {
         //exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});

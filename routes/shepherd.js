@@ -135,12 +135,8 @@ function slayer(flock) {
 	console.log(flock);
 
 	pm2.delete('IGUANA', function(err, ret) {
-		should(err).be.null()
-		pm2.list(function(err, ret) {
-			should(err).be.null()
-			ret.length.should.eql(8);
-			done();
-		});
+		//console.log(err);
+		console.log(ret);
 	});
 }
 
