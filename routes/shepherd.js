@@ -7,8 +7,11 @@ const os = require('os')
 var fs = require('fs');
 var fs = require('fs-extra')
 var mkdirp = require('mkdirp');
-
+var express = require('express');
 var pm2 = require('pm2');
+Promise = require('bluebird');
+
+var shepherd = express.Router();
 
 
 // IGUANA FILES AND CONFIG SETTINGS
@@ -21,12 +24,18 @@ if (os.platform() === 'darwin') {
 	var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana');
 	var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
 	var iguanaConfsDir = iguanaDir + '/confs';
+	var komododBin = path.join(__dirname, '../assets/bin/osx/komodod');
+	var komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli');
+	var komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
 }
 if (os.platform() === 'linux') {
 	var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana');
 	var iguanaDir = process.env.HOME + '/.iguana'
 	var iguanaConfsDir = iguanaDir + '/confs';
 	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
+	var komododBin = path.join(__dirname, '../assets/bin/linux64/komodod');
+	var komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli');
+	var komodoDir = process.env.HOME + '/.komodo'
 }
 if (os.platform() === 'win32') {
 	var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe'); iguanaBin = path.normalize(iguanaBin);
@@ -42,8 +51,7 @@ console.log(iguanaBin);
 // END IGUANA FILES AND CONFIG SETTINGS
 
 
-var express = require('express');
-var shepherd = express.Router();
+
 
 shepherd.get('/', function(req, res, next) {
   res.send('Hello World!')
@@ -77,15 +85,15 @@ shepherd.post('/slay', function(req, res) {
 });
 
 
-function herder(flock, options) {
+function herder(flock, data) {
 	//console.log(flock);
-	//console.log(options);
+	//console.log(data);
 	
-	if (options == undefined) { options = 'none'; console.log('it is undefined'); }
+	if (data == undefined) { data = 'none'; console.log('it is undefined'); }
 
 	if (flock === 'iguana') {
 		console.log('iguana flock selected...');
-		console.log('selected options: '+options);
+		console.log('selected data: '+data);
 
 		// MAKE SURE IGUANA DIR IS THERE FOR USER
 		mkdirp(iguanaDir, function (err) {
@@ -126,7 +134,25 @@ function herder(flock, options) {
 
 	if (flock === 'komodod') {
 		console.log('komodod flock selected...');
-		console.log('selected options: '+options);
+		console.log('selected data: '+data);
+
+		pm2.connect(function(err) { //start up pm2 god
+		if (err) {
+			console.error(err);
+			process.exit(2);
+		}
+
+		pm2.start({
+			script    : komododBin,         // path to binary
+			name: 'PAXUSD',
+			exec_mode : 'fork',
+			cwd: komodoDir,
+			args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+		}, function(err, apps) {
+			pm2.disconnect();   // Disconnect from PM2
+				if (err) throw err
+			});
+		});
 	}
 }
 
@@ -134,7 +160,7 @@ function herder(flock, options) {
 function slayer(flock) {
 	console.log(flock);
 
-	pm2.delete('IGUANA', function(err, ret) {
+	pm2.delete(flock, function(err, ret) {
 		//console.log(err);
 		console.log(ret);
 	});
