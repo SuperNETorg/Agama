@@ -17,6 +17,8 @@ var mkdirp = require('mkdirp');
 var pm2 = require('pm2');
 Promise = require('bluebird');
 
+app.setName('Iguana');
+
 // preload.js
 const _setImmediate = setImmediate
 const _clearImmediate = clearImmediate
@@ -150,6 +152,9 @@ app.on('ready', createLoadingWindow)
 
 function createWindow (status) {
   if ( status === 'open') {
+
+    require(path.join(__dirname, 'private/mainmenu'));
+
     // initialise window
     mainWindow = new BrowserWindow({width: 1280, height: 800, icon: iguanaIcon})
 
@@ -232,9 +237,9 @@ function createWindow (status) {
   }
 }
 
-app.on('ready', function() {
-  createLoadingWindow
-})
+//app.on('ready', function() {
+  //createLoadingWindow
+//})
 
 app.on('window-all-closed', function () {
     //if (os.platform() !== 'win32') { ig.kill(); }
