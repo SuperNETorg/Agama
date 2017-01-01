@@ -15,6 +15,7 @@ var fs = require('fs');
 var fs = require('fs-extra')
 var mkdirp = require('mkdirp');
 var pm2 = require('pm2');
+Promise = require('bluebird');
 
 // preload.js
 const _setImmediate = setImmediate
@@ -160,28 +161,73 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
+      var ConnectToPm2 = function() {
 
-      pm2.connect(function(err) { //start up pm2 god
-      if (err) {
-        console.error(err);
-        process.exit(2);
+          return new Promise(function(resolve, reject) {
+              console.log('Closing Main Window...');
+              
+              pm2.connect(function(err) {
+                  console.log('connecting to pm2...');
+                  if (err) {
+                      console.log(err);
+                  }
+              });
+
+              var result = 'Connecting To Pm2: done'
+
+              console.log(result)
+              resolve(result);
+          })
       }
 
-      pm2.killDaemon(function(err) {
-        pm2.disconnect();   // Disconnect from PM2
-          if (err) throw err
-        });
-      });
+      var KillPm2 = function() {
 
-      //if (os.platform() !== 'win32') { ig.kill(); /*corsproxy_process.kill();*/ }
-      /*if (os.platform() === 'win32') {
-        //exec('TASKKILL /F /IM iguana.exe /T', {cwd: iguanaDir});
-        ig.kill();
-      }*/
-      // our app does not have multiwindow - so we dereference the window object instead of
-      // putting them into an window_arr
-      mainWindow = null
-      app.quit()
+          return new Promise(function(resolve, reject) {
+              console.log('killing to pm2...');
+              
+              pm2.killDaemon(function(err) {
+                  pm2.disconnect();
+                  console.log('killed to pm2...');
+                  if (err) throw err
+              });
+
+              var result = 'Killing Pm2: done'
+
+              setTimeout(function() {
+                  console.log(result)
+                  resolve(result);
+              }, 2000)
+          })
+      }
+
+      var HideMainWindow = function() {
+
+          return new Promise(function(resolve, reject) {
+              console.log('Exiting App...');
+              mainWindow = null
+
+              var result = 'Hiding Main Window: done'
+              console.log(result)
+              resolve(result);
+          })
+      }
+
+      var QuitApp = function() {
+
+          return new Promise(function(resolve, reject) {
+              app.quit();
+              var result = 'Quiting App: done'
+              console.log(result)
+              resolve(result);
+          })
+      }
+
+      ConnectToPm2()
+      .then(function(result) { 
+          return KillPm2();
+      })
+      .then(HideMainWindow)
+      .then(QuitApp)
     });
   }
 }
@@ -198,6 +244,7 @@ app.on('window-all-closed', function () {
   /*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
     app.quit()
   }*/
+
 })
 
 app.on('activate', function () {

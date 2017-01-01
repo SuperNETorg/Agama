@@ -22,6 +22,7 @@
     "electron": "^1.4.1"
   },
   "dependencies": {
+    "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
     "corsproxy": "^1.5.0",
     "express": "^4.14.0",

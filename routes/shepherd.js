@@ -141,4 +141,14 @@ function slayer(flock) {
 }
 
 
+function destroyer(flock) {
+	console.log(flock);
+
+	pm2.delete('IGUANA', function(err, ret) {
+		//console.log(err);
+		console.log(ret);
+	});
+}
+
+
 module.exports = shepherd;
