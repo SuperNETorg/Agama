@@ -11,6 +11,8 @@ var express = require('express');
 var pm2 = require('pm2');
 Promise = require('bluebird');
 
+var setconf = require("../private/setconf.js");
+
 var shepherd = express.Router();
 
 
@@ -85,6 +87,19 @@ shepherd.post('/slay', function(req, res) {
 });
 
 
+shepherd.post('/setconf', function(req, res) {
+	console.log('======= req.body =======');
+	//console.log(req);
+	console.log(req.body);
+	//console.log(req.body.chain);
+
+	setConf(req.body.chain);
+
+	res.end('{"msg": "success","result": "result"}');
+	
+});
+
+
 function herder(flock, data) {
 	//console.log(flock);
 	//console.log(data);
@@ -143,11 +158,12 @@ function herder(flock, data) {
 		}
 
 		pm2.start({
-			script    : komododBin,         // path to binary
-			name: 'PAXUSD',
+			script: komododBin,         // path to binary
+			name: data.ac_name,			//REVS, USD, EUR etc.
 			exec_mode : 'fork',
 			cwd: komodoDir,
-			args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+			args: data.ac_options,
+			//args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
 		}, function(err, apps) {
 			pm2.disconnect();   // Disconnect from PM2
 				if (err) throw err
@@ -162,7 +178,36 @@ function slayer(flock) {
 
 	pm2.delete(flock, function(err, ret) {
 		//console.log(err);
+		pm2.disconnect();
 		console.log(ret);
+	});
+}
+
+function setConf(flock) {
+	console.log(flock);
+
+	if (os.platform() === 'darwin') {
+		var komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+		var ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+	}
+	if (os.platform() === 'linux') {
+		var komodoDir = process.env.HOME + '/.komodo'
+		var ZcashDir = process.env.HOME + '/.zcash'
+	}
+
+
+	switch (flock) {
+		case 'komodod': var DaemonConfPath = komodoDir + '/komodo.conf';
+		break;
+		case 'zcashd': var DaemonConfPath = ZcashDir + '/zcash.conf';
+		break;
+		default: var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
+	}
+
+	console.log(DaemonConfPath);
+
+	setconf.status(DaemonConfPath, function(err, status) {
+		console.log(status);
 	});
 }
 
