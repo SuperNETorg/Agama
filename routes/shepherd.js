@@ -4,11 +4,12 @@ const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const url = require('url')
 const os = require('os')
-var fs = require('fs');
-var fs = require('fs-extra')
-var mkdirp = require('mkdirp');
-var express = require('express');
-var pm2 = require('pm2');
+//var fs = require('fs');
+const fs = require('fs-extra');
+const mkdirp = require('mkdirp');
+const express = require('express');
+const md5 = require('md5');
+const pm2 = require('pm2');
 Promise = require('bluebird');
 
 var setconf = require("../private/setconf.js");
@@ -206,9 +207,138 @@ function setConf(flock) {
 
 	console.log(DaemonConfPath);
 
-	setconf.status(DaemonConfPath, function(err, status) {
-		console.log(status);
-	});
+	var RemoveLines = function() {
+
+		return new Promise(function(resolve, reject) {
+			var result = 'RemoveLines is done'
+
+			fs.readFile(DaemonConfPath, 'utf8', function (err,data) {
+				if (err) {
+					return console.log(err);
+				}
+				var rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, "\n");
+				fs.writeFile(DaemonConfPath, rmlines, 'utf8', function (err) {
+					if (err) return console.log(err);
+				});
+			});
+
+			console.log(result)
+			resolve(result);
+		})
+	}
+
+	var CheckConf = function() {
+
+		return new Promise(function(resolve, reject) {
+			var result = 'CheckConf is done'
+
+			setconf.status(DaemonConfPath, function(err, status) {
+				//console.log(status[0]);
+				//console.log(status[0].rpcuser);
+				var rpcuser = function() {
+
+					return new Promise(function(resolve, reject) {
+						var result = 'checking rpcuser...'
+						
+						if(status[0].hasOwnProperty('rpcuser')){
+							console.log('rpcuser: OK');
+						}
+						else {
+							console.log('rpcuser: NOT FOUND')
+							var randomstring = md5(Math.random()*Math.random()*999);
+
+							fs.appendFile(DaemonConfPath, '\nrpcpass=user'+randomstring.substring(0,16), (err) => {
+								if (err) throw err;
+								console.log('rpcuser: ADDED')
+							});
+						}
+
+						//console.log(result)
+						resolve(result);
+					})
+				}
+
+				var rpcpass = function() {
+
+					return new Promise(function(resolve, reject) {
+						var result = 'checking rpcpass...'
+
+						if(status[0].hasOwnProperty('rpcpass')){
+							console.log('rpcpass: OK');
+						}
+						else {
+							console.log('rpcpass: NOT FOUND')
+							var randomstring = md5(Math.random()*Math.random()*999);
+
+							fs.appendFile(DaemonConfPath, '\nrpcpass='+randomstring, (err) => {
+								if (err) throw err;
+								console.log('rpcpass: ADDED')
+							});
+						}
+
+						//console.log(result)
+						resolve(result);
+						})
+					}
+
+				var server = function() {
+
+					return new Promise(function(resolve, reject) {
+						var result = 'checking server...'
+
+						if(status[0].hasOwnProperty('server')){
+							console.log('server: OK');
+						}
+						else {
+							console.log('server: NOT FOUND')
+							fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
+								if (err) throw err;
+								console.log('server: ADDED')
+							});
+						}
+						
+						//console.log(result)
+						resolve(result);
+						})
+					}
+
+				var addnode = function() {
+
+					return new Promise(function(resolve, reject) {
+						var result = 'checking addnode...'
+
+						if(status[0].hasOwnProperty('addnode')){
+							console.log('addnode: OK');
+						}
+						else {
+							console.log('addnode: NOT FOUND')
+							fs.appendFile(DaemonConfPath, '\naddnode=78.47.196.146\naddnode=5.9.102.210\naddnode=178.63.69.164\naddnode=88.198.65.74\naddnode=5.9.122.241\naddnode=144.76.94.3', (err) => {
+								if (err) throw err;
+								console.log('addnode: ADDED')
+							});
+						}
+						
+						//console.log(result)
+						resolve(result);
+						})
+					}
+
+				rpcuser()
+				.then(function(result) { 
+					return rpcpass();
+				})
+				.then(server)
+				.then(addnode)
+			});
+			console.log(result)
+			resolve(result);
+		})
+	}
+
+	RemoveLines()
+	.then(function(result) { 
+		return CheckConf();
+	})
 }
 
 module.exports = shepherd;

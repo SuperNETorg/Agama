@@ -44,10 +44,14 @@ function parse_status_block(block) {
   var match;
 
   var parsed = {
-    rpcuser: block.match(/rpcuser=([^\s]+)/)[1]
+    settings: 'exists'
   };
 
-  if ((match = block.match(/rpcpassword=\s*(.*)/))) {
+  if ((match = block.match(/rpcuser=\s*(.*)/))) {
+    parsed.rpcuser = match[1];
+  }
+
+  if ((match = block.match(/rpcpass=\s*(.*)/))) {
     parsed.rpcpass = match[1];
   }
 
