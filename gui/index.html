@@ -12,5 +12,33 @@
         <div style="text-align: center;">
             <div style="background-image: url('loading.gif'); background-repeat: no-repeat; background-position: center; height: 200px; width: 400px; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto;">Starting Wallet. Please wait...</div>
         </div>
+        <script type="text/javascript">
+            $(document).ready( function() {
+                //var check = Iguana_activehandle();
+                //console.log(check[0]) // here I invoke the checking function
+                const remote = require('electron').remote;
+                var window = remote.getCurrentWindow();
+
+                StartIguana();
+                
+                var portcheck;
+                function sartcheck() {
+                    portcheck = setInterval(function(){
+                        var check = Iguana_activehandle();
+                        console.log(check[0])
+                        if (check[0] !== 'error') {
+                            stopcheck();
+                            window.close();
+                        }
+                    },2000);
+                }
+
+                function stopcheck() {
+                    clearInterval(portcheck);
+                }
+                sartcheck();
+                //setTimeout(function(){ window.close(); }, 15000);
+            });
+        </script>
     </body>
 </html>

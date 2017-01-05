@@ -53,33 +53,3 @@ function StartIguana() {
         }
     });
 }
-
-
-
-
-$(document).ready( function() {
-    //var check = Iguana_activehandle();
-    //console.log(check[0]) // here I invoke the checking function
-    const remote = require('electron').remote;
-    var window = remote.getCurrentWindow();
-
-    StartIguana();
-    
-    var portcheck;
-    function sartcheck() {
-        portcheck = setInterval(function(){
-            var check = Iguana_activehandle();
-            console.log(check[0])
-            if (check[0] !== 'error') {
-                stopcheck();
-                window.close();
-            }
-        },2000);
-    }
-
-    function stopcheck() {
-        clearInterval(portcheck);
-    }
-    sartcheck();
-    //setTimeout(function(){ window.close(); }, 15000);
-});
