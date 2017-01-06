@@ -58,7 +58,7 @@ electron-packager . --platform=darwin --arch=x64 --icon=assets/icons/iguana_app_
 Change directory to iguana and execute the following command to build the Windows app
 ```shell
 dir iguana
-electron-packager . --platform=win32 --arch=x64 --icon=assets/icons/iguana_app_icon.ico --out=build/
+electron-packager . --platform=win32 --arch=x64 --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
 ```
 change architecture build parameter to ```--arch=x64``` for 64 bit build
 

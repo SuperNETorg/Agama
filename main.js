@@ -19,6 +19,9 @@ Promise = require('bluebird');
 
 app.setName('Iguana');
 
+process.env.ELECTRON_RUN_AS_NODE = true
+console.log(process.env);
+
 // preload.js
 const _setImmediate = setImmediate
 const _clearImmediate = clearImmediate
