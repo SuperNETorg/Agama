@@ -100,6 +100,20 @@ shepherd.post('/setconf', function(req, res) {
 	
 });
 
+shepherd.post('/getconf', function(req, res) {
+	console.log('======= req.body =======');
+	//console.log(req);
+	console.log(req.body);
+	//console.log(req.body.chain);
+
+	var confpath = getConf(req.body.chain);
+	console.log('got conf path is:')
+	console.log(confpath);
+
+	res.end('{"msg": "success","result": "' + confpath + '"}');
+	
+});
+
 
 function herder(flock, data) {
 	//console.log(flock);
@@ -339,6 +353,32 @@ function setConf(flock) {
 	.then(function(result) { 
 		return CheckConf();
 	})
+}
+
+
+function getConf(flock) {
+	console.log(flock);
+
+	if (os.platform() === 'darwin') {
+		var komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+		var ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+	}
+	if (os.platform() === 'linux') {
+		var komodoDir = process.env.HOME + '/.komodo'
+		var ZcashDir = process.env.HOME + '/.zcash'
+	}
+
+
+	switch (flock) {
+		case 'komodod': var DaemonConfPath = komodoDir;
+		break;
+		case 'zcashd': var DaemonConfPath = ZcashDir;
+		break;
+		default: var DaemonConfPath = komodoDir + '/' + flock;
+	}
+
+	console.log(DaemonConfPath);
+	return DaemonConfPath
 }
 
 module.exports = shepherd;
