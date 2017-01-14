@@ -220,6 +220,12 @@ function setConf(flock) {
 	}
 
 	console.log(DaemonConfPath);
+	
+	var CheckFileExists = function() {
+		fs.ensureFile(DaemonConfPath, function (err) {
+			console.log(err) // => null 
+		})
+	}
 
 	var RemoveLines = function() {
 
@@ -247,7 +253,7 @@ function setConf(flock) {
 			var result = 'CheckConf is done'
 
 			setconf.status(DaemonConfPath, function(err, status) {
-				//console.log(status[0]);
+				console.log(status[0]);
 				//console.log(status[0].rpcuser);
 				var rpcuser = function() {
 
@@ -349,10 +355,11 @@ function setConf(flock) {
 		})
 	}
 
-	RemoveLines()
+	CheckFileExists()
 	.then(function(result) { 
-		return CheckConf();
+		return RemoveLines();
 	})
+	.then(CheckConf)
 }
 
 
