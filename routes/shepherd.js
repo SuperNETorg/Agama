@@ -222,9 +222,17 @@ function setConf(flock) {
 	console.log(DaemonConfPath);
 	
 	var CheckFileExists = function() {
-		fs.ensureFile(DaemonConfPath, function (err) {
-			console.log(err) // => null 
-		})
+
+		return new Promise(function(resolve, reject) {
+			var result = 'Check Conf file exists is done'
+
+			fs.ensureFile(DaemonConfPath, function (err) {
+				console.log(err) // => null 
+			})
+
+			console.log(result)
+			resolve(result);
+		}
 	}
 
 	var RemoveLines = function() {
