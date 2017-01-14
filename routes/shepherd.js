@@ -232,7 +232,7 @@ function setConf(flock) {
 
 			console.log(result)
 			resolve(result);
-		}
+		})
 	}
 
 	var RemoveLines = function() {
@@ -261,7 +261,7 @@ function setConf(flock) {
 			var result = 'CheckConf is done'
 
 			setconf.status(DaemonConfPath, function(err, status) {
-				console.log(status[0]);
+				//console.log(status[0]);
 				//console.log(status[0].rpcuser);
 				var rpcuser = function() {
 
@@ -275,7 +275,7 @@ function setConf(flock) {
 							console.log('rpcuser: NOT FOUND')
 							var randomstring = md5(Math.random()*Math.random()*999);
 
-							fs.appendFile(DaemonConfPath, '\nrpcpass=user'+randomstring.substring(0,16), (err) => {
+							fs.appendFile(DaemonConfPath, '\nrpcuser=user'+randomstring.substring(0,16), (err) => {
 								if (err) throw err;
 								console.log('rpcuser: ADDED')
 							});
@@ -298,7 +298,7 @@ function setConf(flock) {
 							console.log('rpcpass: NOT FOUND')
 							var randomstring = md5(Math.random()*Math.random()*999);
 
-							fs.appendFile(DaemonConfPath, '\nrpcpass='+randomstring, (err) => {
+							fs.appendFile(DaemonConfPath, '\nrpcpass='+randomstring+'\nrpcpassword='+randomstring, (err) => {
 								if (err) throw err;
 								console.log('rpcpass: ADDED')
 							});
