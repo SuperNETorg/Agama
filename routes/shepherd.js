@@ -4,7 +4,7 @@ const BrowserWindow = electron.BrowserWindow
 const path = require('path')
 const url = require('url')
 const os = require('os')
-//var fs = require('fs');
+const fsnode = require('fs');
 const fs = require('fs-extra');
 const mkdirp = require('mkdirp');
 const express = require('express');
@@ -227,11 +227,27 @@ function setConf(flock) {
 			var result = 'Check Conf file exists is done'
 
 			fs.ensureFile(DaemonConfPath, function (err) {
-				console.log(err) // => null 
+				console.log(err) // => null
 			})
+			
+			setTimeout(function() {
+				console.log(result)
+				resolve(result);
+			}, 2000)
+		})
+	}
 
-			console.log(result)
-			resolve(result);
+	var FixFilePermissions = function() {
+
+		return new Promise(function(resolve, reject) {
+			var result = 'Conf file permissions updated to Read/Write'
+
+			fsnode.chmodSync(DaemonConfPath, '0666');
+			
+			setTimeout(function() {
+				console.log(result)
+				resolve(result);
+			}, 1000)
 		})
 	}
 
@@ -250,8 +266,11 @@ function setConf(flock) {
 				});
 			});
 
-			console.log(result)
-			resolve(result);
+			fsnode.chmodSync(DaemonConfPath, '0666');
+			setTimeout(function() {
+				console.log(result)
+				resolve(result);
+			}, 2000)
 		})
 	}
 
@@ -358,16 +377,34 @@ function setConf(flock) {
 				.then(server)
 				.then(addnode)
 			});
-			console.log(result)
-			resolve(result);
+			setTimeout(function() {
+				console.log(result)
+				resolve(result);
+			}, 2000)
+		})
+	}
+
+	var MakeConfReadOnly = function() {
+
+		return new Promise(function(resolve, reject) {
+			var result = 'Conf file permissions updated to Read Only'
+
+			fsnode.chmodSync(DaemonConfPath, '0400');
+			
+			setTimeout(function() {
+				console.log(result)
+				resolve(result);
+			}, 1000)
 		})
 	}
 
 	CheckFileExists()
 	.then(function(result) { 
-		return RemoveLines();
+		return FixFilePermissions();
 	})
+	.then(RemoveLines)
 	.then(CheckConf)
+	.then(MakeConfReadOnly)
 }
 
 
