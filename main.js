@@ -176,7 +176,7 @@ function createWindow (status) {
           return new Promise(function(resolve, reject) {
               console.log('Closing Main Window...');
               
-              pm2.connect(function(err) {
+              pm2.connect(true,function(err) {
                   console.log('connecting to pm2...');
                   if (err) {
                       console.log(err);

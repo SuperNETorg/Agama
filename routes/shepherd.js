@@ -11,6 +11,7 @@ const express = require('express');
 const md5 = require('md5');
 const pm2 = require('pm2');
 Promise = require('bluebird');
+const fixPath = require('fix-path');
 
 var setconf = require("../private/setconf.js");
 
@@ -24,6 +25,7 @@ var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs');
 // SETTING OS DIR TO RUN IGUANA FROM
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'darwin') {
+	fixPath();
 	var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana');
 	var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
 	var iguanaConfsDir = iguanaDir + '/confs';
@@ -144,7 +146,7 @@ function herder(flock, data) {
 		})
 
 
-		pm2.connect(function(err) { //start up pm2 god
+		pm2.connect(true,function(err) { //start up pm2 god
 		if (err) {
 			console.error(err);
 			process.exit(2);
@@ -166,7 +168,7 @@ function herder(flock, data) {
 		console.log('komodod flock selected...');
 		console.log('selected data: '+data);
 
-		pm2.connect(function(err) { //start up pm2 god
+		pm2.connect(true,function(err) { //start up pm2 god
 		if (err) {
 			console.error(err);
 			process.exit(2);
