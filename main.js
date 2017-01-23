@@ -9,9 +9,12 @@ var bodyParser = require('body-parser')
 const path = require('path')
 const url = require('url')
 const os = require('os')
+const spawn = require('child_process').spawn;
+const exec = require('child_process').exec;
 var fs = require('fs');
 var fs = require('fs-extra')
 var mkdirp = require('mkdirp');
+var pm2 = require('pm2');
 Promise = require('bluebird');
 
 app.setName('Iguana');
@@ -56,7 +59,7 @@ module.exports = guiapp;
 
 
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
-
+/*
 // SELECTING IGUANA BUILD TO RUN AS PER OS DETECTED BY DESKTOP APP
 var iguanaOSX = path.join(__dirname, '/assets/bin/osx/iguana');
 var iguanaLinux = path.join(__dirname, '/assets/bin/linux64/iguana');
@@ -66,39 +69,33 @@ var iguanaConfsDirSrc = path.join(__dirname, '/assets/deps/confs');
 // SETTING OS DIR TO RUN IGUANA FROM
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'darwin') {
-  var iguanaPath = process.env.HOME + '/Library/Application Support/iguana';
-  var komodoBinPath = path.join(__dirname, '/assets/bin/osx/komodo');
-  var iguanaBinPath = iguanaOSX;
-  var iguanaConfsDir = iguanaPath + '/confs';
+  var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
+  var iguanaConfsDir = iguanaDir + '/confs';
 }
 if (os.platform() === 'linux') {
-  var iguanaPath = process.env.HOME + '/.iguana'
-  var komodoBinPath = path.join(__dirname, '/assets/bin/linux/komodo');
-  var iguanaBinPath = iguanaLinux;
-  var iguanaConfsDir = iguanaPath + '/confs';
+  var iguanaDir = process.env.HOME + '/.iguana'
+  var iguanaConfsDir = iguanaDir + '/confs';
   var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
 }
 if (os.platform() === 'win32') {
-  var iguanaPath = process.env.APPDATA + '/iguana'; iguanaPath = path.normalize(iguanaPath)
-  var komodoBinPath = path.join(__dirname, '/assets/bin/win32/komodo');
-  var iguanaBinPath = iguanaWin;
+  var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir)
   var iguanaConfsDir = process.env.APPDATA + '/iguana/confs'; iguanaConfsDir = path.normalize(iguanaConfsDir)
   var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
   iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 }
-
+*/
 
 if (os.platform() === 'linux') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png') }
 if (os.platform() === 'win32') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico') }
 
-//console.log(iguanaPath);
+//console.log(iguanaDir);
 /*
 // MAKE SURE IGUANA DIR IS THERE FOR USER
-mkdirp(iguanaPath, function (err) {
+mkdirp(iguanaDir, function (err) {
   if (err)
     console.error(err)
   else
-    fs.readdir(iguanaPath, (err, files) => {
+    fs.readdir(iguanaDir, (err, files) => {
       files.forEach(file => {
         //console.log(file);
       });
@@ -127,7 +124,7 @@ function createLoadingWindow() {
 
   // DEVTOOLS - only for dev purposes - ca333
   //loadingWindow.webContents.openDevTools()
-  //launchPM2();
+
   // if window closed we kill iguana proc
   loadingWindow.on('closed', function () {
     // our app does not have multiwindow - so we dereference the window object instead of
@@ -138,17 +135,17 @@ function createLoadingWindow() {
 
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
   /*if (os.platform() === 'win32') {
-    process.chdir(iguanaPath);
-    //exec(iguanaWin, {cwd: iguanaPath}); //specify binary in startup
+    process.chdir(iguanaDir);
+    //exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
     ig = spawn(iguanaWin);
   }
   if (os.platform() === 'linux') {
-    process.chdir(iguanaPath);
+    process.chdir(iguanaDir);
     ig = spawn(iguanaLinux);
     //corsproxy_process = spawn('corsproxy');
   }
   if (os.platform() === 'darwin') {
-    //process.chdir(iguanaPath);
+    //process.chdir(iguanaDir);
     //ig = spawn(iguanaOSX);
     //corsproxy_process = spawn('corsproxy');
   }*/
@@ -158,10 +155,7 @@ function createLoadingWindow() {
 
 app.on('ready', createLoadingWindow)
 
-
-
 function createWindow (status) {
-
   if ( status === 'open') {
 
     require(path.join(__dirname, 'private/mainmenu'));
@@ -177,14 +171,11 @@ function createWindow (status) {
 
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
-
-/*
-
       var ConnectToPm2 = function() {
 
           return new Promise(function(resolve, reject) {
               console.log('Closing Main Window...');
-
+              
               pm2.connect(function(err) {
                   console.log('connecting to pm2...');
                   if (err) {
@@ -198,13 +189,12 @@ function createWindow (status) {
               resolve(result);
           })
       }
-*/
-/*   //we launch in nodaemonmode - pm2 exits with process
+
       var KillPm2 = function() {
 
           return new Promise(function(resolve, reject) {
               console.log('killing to pm2...');
-
+              
               pm2.killDaemon(function(err) {
                   pm2.disconnect();
                   console.log('killed to pm2...');
@@ -219,7 +209,7 @@ function createWindow (status) {
               }, 2000)
           })
       }
-*/
+
       var HideMainWindow = function() {
 
           return new Promise(function(resolve, reject) {
@@ -242,16 +232,12 @@ function createWindow (status) {
           })
       }
 
-/*  //
-
       ConnectToPm2()
-      .then(function(result) {
-          //return KillPm2();
+      .then(function(result) { 
+          return KillPm2();
       })
       .then(HideMainWindow)
       .then(QuitApp)
-*/
-
     });
   }
 }
@@ -261,11 +247,14 @@ function createWindow (status) {
 //})
 
 app.on('window-all-closed', function () {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
+    //if (os.platform() !== 'win32') { ig.kill(); }
+  // in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
+  // so we do not kill the app --> for the case user clicks again on the iguana icon
+  // we open just a new window and respawn iguana proc
+  /*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
     app.quit()
-  }
+  }*/
+
 })
 
 app.on('activate', function () {
@@ -273,59 +262,3 @@ app.on('activate', function () {
     //createWindow('open');
   }
 })
-
-
-function launchPM2() {
-/*
-if (os.platform() === 'darwin') {
-  fixPath();
-}
-
-pm2.connect(true, function(err) { //start up pm2 god
-  if (err) {
-    console.log(err);
-    process.exit(2);
-  }
-
-  pm2.start({
-    script    : iguanaBinPath,         // path to binary
-    exec_mode : 'fork',
-    cwd: iguanaPath,
-    //exec_interpreter = none /Users/crypto/Desktop/dev_projects/pm2_iguana_respawn
-    //exec_mode : cluster --> for server production enviroment... if highload...
-    //instances : 4,
-    //max_memory_restart : '100M'   // mem limit for restart
-    }, function(err, apps) {
-      pm2.disconnect();   // Disconnect from PM2
-      if (err) throw err
-    });
-
-
-    pm2.start({
-      script    : komodoBinPath,         // path to binary
-      exec_mode : 'fork'
-      //  cwd: './iguana_dir/',
-      //exec_interpreter = none /Users/crypto/Desktop/dev_projects/pm2_iguana_respawn
-      //exec_mode : cluster --> for server production enviroment... if highload...
-      //instances : 4,
-      //max_memory_restart : '100M'   // mem limit for restart
-      }, function(err, apps) {
-        pm2.disconnect();   // Disconnect from PM2
-        if (err) throw err
-      });
-});
-//pm2 startup workaround
-  /*  var fpath = path.join(__dirname, '/node_modules/pm2/bin/pm2 start iguana2.json');
-
-  exec(fpath, (error, stdout, stderr) => {
-  if (error) {
-    console.error(`exec error: ${error}`);
-    return;
-  }
-  console.log(`stdout: ${stdout}`);
-  console.log(`stderr: ${stderr}`);
-});
-  console.log("pm2 launched...");
-  //process.exit(2);
-    */
-}
