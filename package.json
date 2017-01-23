@@ -19,7 +19,8 @@
   "author": "ca333, grewalsatinder",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^1.4.1"
+    "electron": "^1.4.1",
+    "fix-path": "^2.1.0"
   },
   "dependencies": {
     "bluebird": "^3.4.7",
@@ -29,6 +30,7 @@
     "fs-extra": "^1.0.0",
     "md5": "^2.2.1",
     "mkdirp": "^0.5.1",
-    "pm2": "^2.2.3"
+    "pm2": "^2.3.0",
+    "fix-path": "^2.1.0"
   }
 }
