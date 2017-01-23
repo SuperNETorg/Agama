@@ -4,6 +4,27 @@ Desktop App for SuperNET DAPPs
 #### For Developers
 You must have `node.js` and `npm` installed on your machine.
 
+
+##### OS X Specific instructions
+```shell
+#Install brew
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+brew update
+brew install node
+brew install git
+```
+
+##### Windows Specific Instructions
+1. Download and install node.js from official website: https://nodejs.org/en/download/
+2. Download and install git for windows command line: https://git-scm.com/downloads
+
+
+#### Linux Specific Instructions
+1. Install node.js using official node.js website instructions: https://nodejs.org/en/download/package-manager/#debian-and-ubuntu-based-linux-distributions
+2. install git with command `apt-get install git`
+
+
+
 Clone Iguana Desktop App
 ```shell
 git clone https://github.com/SuperNETorg/iguana.git
