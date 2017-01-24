@@ -1,0 +1,301 @@
+<project>
+    <shortName>IguanaApp</shortName>
+    <fullName>iguana</fullName>
+    <version>0.1-beta-test</version>
+    <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
+    <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
+    <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
+    <splashImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_splash_image.png</splashImage>
+    <allowLanguageSelection>1</allowLanguageSelection>
+    <componentList>
+        <component>
+            <name>default</name>
+            <description>Default Component</description>
+            <canBeEdited>1</canBeEdited>
+            <selected>1</selected>
+            <show>1</show>
+            <desktopShortcutList>
+                <shortcut>
+                    <comment>Start Iguana App</comment>
+                    <exec></exec>
+                    <icon></icon>
+                    <name>Iguana App</name>
+                    <path></path>
+                    <platforms>all</platforms>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${WinInstallDir}/Iguana.exe</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${WinInstallDir}/</windowsPath>
+                </shortcut>
+            </desktopShortcutList>
+            <folderList>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfiles</name>
+                    <platforms>all</platforms>
+                    <shortcutList>
+                        <shortcut>
+                            <comment>Uninstall</comment>
+                            <exec>${installdir}/${uninstallerName}</exec>
+                            <icon></icon>
+                            <name>Uninstall ${product_fullname}</name>
+                            <path>${installdir}</path>
+                            <platforms>all</platforms>
+                            <runAsAdmin>0</runAsAdmin>
+                            <runInTerminal>0</runInTerminal>
+                            <windowsExec>${WinInstallDir}/${uninstallerName}.exe</windowsExec>
+                            <windowsExecArgs></windowsExecArgs>
+                            <windowsIcon></windowsIcon>
+                            <windowsPath>${WinInstallDir}</windowsPath>
+                        </shortcut>
+                    </shortcutList>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfileslinux</name>
+                    <platforms>linux</platforms>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${WinInstallDir}</destination>
+                    <name>programfileswindows</name>
+                    <platforms>windows</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/locales</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/resources</origin>
+                        </distributionDirectory>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/blink_image_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/content_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/content_shell.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/ui_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/views_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/icudtl.dat</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/LICENSES.chromium.html</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/natives_blob.bin</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/snapshot_blob.bin</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/d3dcompiler_47.dll</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/ffmpeg.dll</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/libEGL.dll</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/libGLESv2.dll</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/node.dll</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/xinput1_3.dll</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/LICENSE</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/version</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/Iguana.exe</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfilesosx</name>
+                    <platforms>osx</platforms>
+                </folder>
+            </folderList>
+            <startMenuShortcutList>
+                <startMenuShortcut>
+                    <comment>Uninstall ${product_fullname}</comment>
+                    <name>Uninstall Iguana App</name>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${installdir}/</windowsPath>
+                </startMenuShortcut>
+                <startMenuShortcut>
+                    <comment>Start Iguana App</comment>
+                    <name>Iguana App</name>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${WinInstallDir}/Iguana.exe</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${WinInstallDir}/</windowsPath>
+                </startMenuShortcut>
+                <startMenuShortcut>
+                    <comment>Right Click and Run As Administrator</comment>
+                    <name>DLL Fix (Run As Administrator)</name>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec>${windows_folder_profile}/${product_shortname}/resources/app/windeps/CopyWinDepsFiles.bat</windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath>${windows_folder_profile}/${product_shortname}/resources/app/windeps/</windowsPath>
+                </startMenuShortcut>
+            </startMenuShortcutList>
+        </component>
+    </componentList>
+    <readyToInstallActionList>
+        <showProgressDialog>
+            <title>Downloading files</title>
+            <actionList>
+                <httpGet>
+                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+                    <filename>vc_redist.x64.exe</filename>
+                    <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+                    <url>https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x64.exe</url>
+                </httpGet>
+            </actionList>
+        </showProgressDialog>
+        <runProgram>
+            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+            <program>vc_redist.x64.exe</program>
+            <programArguments>/install /passive</programArguments>
+            <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+        </runProgram>
+        <deleteFile>
+            <path>vc_redist.x64.exe</path>
+        </deleteFile>
+        <showProgressDialog>
+            <title>Downloading files</title>
+            <actionList>
+                <httpGet>
+                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+                    <filename>vc_redist.x86.exe</filename>
+                    <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+                    <url>https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x86.exe</url>
+                </httpGet>
+            </actionList>
+        </showProgressDialog>
+        <runProgram>
+            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+            <program>vc_redist.x86.exe</program>
+            <programArguments>/install /passive</programArguments>
+            <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+        </runProgram>
+        <deleteFile>
+            <path>vc_redist.x86.exe</path>
+        </deleteFile>
+    </readyToInstallActionList>
+    <postInstallationActionList>
+        <actionGroup>
+            <actionList>
+                <copyFile>
+                    <destination>C:\Windows\System32\</destination>
+                    <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
+                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/ucrtbased.dll</origin>
+                    <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
+                </copyFile>
+                <copyFile>
+                    <destination>C:\Windows\System32\</destination>
+                    <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
+                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/vcruntime140d.dll</origin>
+                    <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
+                </copyFile>
+            </actionList>
+            <ruleList>
+                <platformTest type="windows-x86"/>
+            </ruleList>
+        </actionGroup>
+        <actionGroup>
+            <actionList>
+                <copyFile>
+                    <destination>C:\Windows\System32\</destination>
+                    <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
+                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x64/ucrtbased.dll</origin>
+                    <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
+                </copyFile>
+                <copyFile>
+                    <destination>C:\Windows\System32\</destination>
+                    <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
+                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x64/vcruntime140d.dll</origin>
+                    <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
+                </copyFile>
+                <copyFile>
+                    <destination>C:\Windows\SysWOW64\</destination>
+                    <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
+                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/ucrtbased.dll</origin>
+                    <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
+                </copyFile>
+                <copyFile>
+                    <destination>C:\Windows\SysWOW64\</destination>
+                    <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
+                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/vcruntime140d.dll</origin>
+                    <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
+                </copyFile>
+            </actionList>
+            <ruleList>
+                <platformTest type="windows-x64"/>
+            </ruleList>
+        </actionGroup>
+    </postInstallationActionList>
+    <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
+    <enableRollback>1</enableRollback>
+    <enableSslSupport>1</enableSslSupport>
+    <enableTimestamp>1</enableTimestamp>
+    <vendor>SuperNETOrg</vendor>
+    <parameterList>
+        <directoryParameter>
+            <name>installdir</name>
+            <description>Installer.Parameter.installdir.description</description>
+            <explanation>Installer.Parameter.installdir.explanation</explanation>
+            <value></value>
+            <default>${platform_install_prefix}/${product_shortname}</default>
+            <allowEmptyValue>0</allowEmptyValue>
+            <cliOptionName>prefix</cliOptionName>
+            <mustBeWritable>1</mustBeWritable>
+            <mustExist>0</mustExist>
+            <width>30</width>
+        </directoryParameter>
+        <directoryParameter>
+            <name>WinInstallDir</name>
+            <description>Installer.Parameter.installdir.description</description>
+            <explanation>Installer.Parameter.installdir.explanation</explanation>
+            <value></value>
+            <default>${windows_folder_profile}/${product_shortname}</default>
+            <allowEmptyValue>0</allowEmptyValue>
+            <mustBeWritable>0</mustBeWritable>
+            <mustExist>0</mustExist>
+            <width>30</width>
+        </directoryParameter>
+    </parameterList>
+    <platformOptionsList>
+        <platformOptions>
+            <platform>windows</platform>
+        </platformOptions>
+    </platformOptionsList>
+</project>
+
