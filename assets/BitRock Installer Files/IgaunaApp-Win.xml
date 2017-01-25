@@ -1,7 +1,7 @@
 <project>
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1-beta-test</version>
+    <version>0.1.1-beta-test</version>
     <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
     <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
@@ -173,41 +173,67 @@
             <title>Downloading files</title>
             <actionList>
                 <httpGet>
+                    <abortOnError>0</abortOnError>
                     <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
-                    <filename>vc_redist.x64.exe</filename>
+                    <filename>${system_temp_directory}/vc_redist.x64.exe</filename>
                     <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+                    <showMessageOnError>0</showMessageOnError>
                     <url>https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x64.exe</url>
                 </httpGet>
             </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${system_temp_directory}/vc_redist.x64.exe</path>
+                </fileExists>
+            </ruleList>
         </showProgressDialog>
         <runProgram>
+            <abortOnError>0</abortOnError>
             <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
             <program>vc_redist.x64.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+            <showMessageOnError>0</showMessageOnError>
         </runProgram>
         <deleteFile>
+            <abortOnError>0</abortOnError>
             <path>vc_redist.x64.exe</path>
+            <showMessageOnError>0</showMessageOnError>
         </deleteFile>
         <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <showMessageOnError>0</showMessageOnError>
             <title>Downloading files</title>
             <actionList>
                 <httpGet>
+                    <abortOnError>0</abortOnError>
                     <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
-                    <filename>vc_redist.x86.exe</filename>
+                    <filename>${system_temp_directory}/vc_redist.x86.exe</filename>
                     <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+                    <showMessageOnError>0</showMessageOnError>
                     <url>https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x86.exe</url>
                 </httpGet>
             </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${system_temp_directory}/vc_redist.x64.exe</path>
+                </fileExists>
+            </ruleList>
         </showProgressDialog>
         <runProgram>
+            <abortOnError>0</abortOnError>
             <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
             <program>vc_redist.x86.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+            <showMessageOnError>0</showMessageOnError>
         </runProgram>
         <deleteFile>
+            <abortOnError>0</abortOnError>
             <path>vc_redist.x86.exe</path>
+            <showMessageOnError>0</showMessageOnError>
         </deleteFile>
     </readyToInstallActionList>
     <postInstallationActionList>

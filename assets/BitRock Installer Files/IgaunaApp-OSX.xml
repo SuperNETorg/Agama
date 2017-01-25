@@ -1,7 +1,7 @@
 <project>
-    <shortName>IgaunaApp</shortName>
+    <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1-beta-test</version>
+    <version>0.1.1-beta-test</version>
     <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
     <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
@@ -47,8 +47,56 @@
             </folderList>
         </component>
     </componentList>
+    <readyToInstallActionList>
+        <createDirectory>
+            <abortOnError>0</abortOnError>
+            <explanation>Creating ZcashParam directory</explanation>
+            <path>${user_home_directory}/Library/Application Support/ZcashParams/</path>
+            <progressText>Creating ZcashParam directory</progressText>
+            <showMessageOnError>0</showMessageOnError>
+        </createDirectory>
+        <showProgressDialog>
+            <title>Downloading files</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-proving.key</explanation>
+                    <filename>${user_home_directory}/Library/Application Support/ZcashParams/sprout-proving.key</filename>
+                    <progressText>Zcash Params file: sprout-proving.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-proving.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${user_home_directory}/Library/Application Support/ZcashParams/sprout-proving.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+        <showProgressDialog>
+            <title>Downloading files</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-verifying.key</explanation>
+                    <filename>${user_home_directory}/Library/Application Support/ZcashParams/sprout-verifying.key</filename>
+                    <progressText>Zcash Params file: sprout-verifying.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-verifying.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${user_home_directory}/Library/Application Support/ZcashParams/sprout-verifying.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+    </readyToInstallActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
     <enableRollback>1</enableRollback>
+    <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
     <uninstallerDirectory>${installdir}/Iguana/</uninstallerDirectory>
     <uninstallerName>Uninstall-Iguana</uninstallerName>
