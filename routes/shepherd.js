@@ -21,6 +21,7 @@ var shepherd = express.Router();
 // IGUANA FILES AND CONFIG SETTINGS
 
 var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs');
+var CorsProxyBin = path.join(__dirname, '../node_modules/corsproxy/bin/corsproxy');
 
 // SETTING OS DIR TO RUN IGUANA FROM
 // SETTING APP ICON FOR LINUX AND WINDOWS
@@ -181,6 +182,28 @@ function herder(flock, data) {
 			cwd: komodoDir,
 			args: data.ac_options,
 			//args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+		}, function(err, apps) {
+			pm2.disconnect();   // Disconnect from PM2
+				if (err) throw err
+			});
+		});
+	}
+
+	if (flock === 'corsproxy') {
+		console.log('corsproxy flock selected...');
+		console.log('selected data: '+data);
+
+		pm2.connect(true,function(err) { //start up pm2 god
+		if (err) {
+			console.error(err);
+			process.exit(2);
+		}
+
+		pm2.start({
+			script: CorsProxyBin,         // path to binary
+			name: 'CORSPROXY',			//REVS, USD, EUR etc.
+			exec_mode : 'fork',
+			cwd: iguanaDir,
 		}, function(err, apps) {
 			pm2.disconnect();   // Disconnect from PM2
 				if (err) throw err

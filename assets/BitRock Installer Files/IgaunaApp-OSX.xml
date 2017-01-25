@@ -56,7 +56,11 @@
             <showMessageOnError>0</showMessageOnError>
         </createDirectory>
         <showProgressDialog>
-            <title>Downloading files</title>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-proving.key</explanation>
+            <progressText>Zcash Params file: sprout-proving.key</progressText>
+            <showMessageOnError>0</showMessageOnError>
+            <title>Downloading Zcash Params file</title>
             <actionList>
                 <httpGet>
                     <abortOnError>0</abortOnError>
@@ -75,7 +79,10 @@
             </ruleList>
         </showProgressDialog>
         <showProgressDialog>
-            <title>Downloading files</title>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-verifying.key</explanation>
+            <progressText>Zcash Params file: sprout-verifying.key</progressText>
+            <title>Downloading Zcash Params files</title>
             <actionList>
                 <httpGet>
                     <abortOnError>0</abortOnError>
