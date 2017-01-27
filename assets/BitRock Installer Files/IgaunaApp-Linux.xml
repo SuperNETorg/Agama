@@ -1,7 +1,8 @@
 <project>
-    <shortName>IgaunaApp</shortName>
+    <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1</version>
+    <version>0.1.2-beta-test</version>
+    <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
     <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
     <splashImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_splash_image.png</splashImage>
@@ -13,12 +14,78 @@
             <canBeEdited>1</canBeEdited>
             <selected>1</selected>
             <show>1</show>
+            <desktopShortcutList>
+                <shortcut>
+                    <comment>Iguana Desktop</comment>
+                    <exec>${installdir}/Iguana</exec>
+                    <icon>${installdir}/resources/app/assets/icons/iguana_app_icon_png/96x96.png</icon>
+                    <name>Iguana Desktop</name>
+                    <path>${installdir}</path>
+                    <platforms>all</platforms>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec></windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath></windowsPath>
+                </shortcut>
+            </desktopShortcutList>
             <folderList>
                 <folder>
                     <description>Program Files</description>
                     <destination>${installdir}</destination>
                     <name>programfiles</name>
                     <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/locales</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/resources</origin>
+                        </distributionDirectory>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/version</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/content_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/LICENSE</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/blink_image_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/views_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/ui_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/natives_blob.bin</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/snapshot_blob.bin</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/LICENSES.chromium.html</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/libffmpeg.so</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/content_shell.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/icudtl.dat</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/libnode.so</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/Iguana</origin>
+                        </distributionFile>
+                    </distributionFileList>
                 </folder>
                 <folder>
                     <description>Program Files</description>
@@ -37,27 +104,106 @@
                     <destination>/Applications</destination>
                     <name>programfilesosx</name>
                     <platforms>osx</platforms>
-                    <distributionFileList>
-                        <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-darwin-x64/Iguana.app</origin>
-                        </distributionFile>
-                    </distributionFileList>
                 </folder>
             </folderList>
         </component>
     </componentList>
+    <readyToInstallActionList>
+        <createDirectory>
+            <abortOnError>0</abortOnError>
+            <explanation>Creating ZcashParam directory</explanation>
+            <path>${user_home_directory}/.zcash-params/</path>
+            <progressText>Creating ZcashParam directory</progressText>
+            <showMessageOnError>0</showMessageOnError>
+        </createDirectory>
+        <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-proving.key</explanation>
+            <progressText>Zcash Params file: sprout-proving.key</progressText>
+            <showMessageOnError>0</showMessageOnError>
+            <title>Downloading Zcash Params file</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-proving.key</explanation>
+                    <filename>${user_home_directory}/.zcash-params/sprout-proving.key</filename>
+                    <progressText>Zcash Params file: sprout-proving.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-proving.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${user_home_directory}/.zcash-params/sprout-proving.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+        <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-verifying.key</explanation>
+            <progressText>Zcash Params file: sprout-verifying.key</progressText>
+            <title>Downloading Zcash Params files</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-verifying.key</explanation>
+                    <filename>${user_home_directory}/.zcash-params/sprout-verifying.key</filename>
+                    <progressText>Zcash Params file: sprout-verifying.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-verifying.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${user_home_directory}/.zcash-params/sprout-verifying.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+    </readyToInstallActionList>
+    <postInstallationActionList>
+        <createSymLink>
+            <abortOnError>0</abortOnError>
+            <linkName>/bin/Iguana</linkName>
+            <target>${installdir}/Iguana</target>
+        </createSymLink>
+        <changeOwnerAndGroup>
+            <files>${user_home_directory}/Desktop/Iguana Desktop.desktop</files>
+            <group>users</group>
+            <owner>nobody</owner>
+        </changeOwnerAndGroup>
+    </postInstallationActionList>
+    <postUninstallationActionList>
+        <deleteFile>
+            <abortOnError>0</abortOnError>
+            <path>/bin/Iguana</path>
+        </deleteFile>
+    </postUninstallationActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
+    <defaultUnixFilePermissions>755</defaultUnixFilePermissions>
     <enableRollback>1</enableRollback>
+    <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
+    <requireInstallationByRootUser>1</requireInstallationByRootUser>
+    <uninstallerName>Uninstall-Iguana</uninstallerName>
     <vendor>SuperNETOrg</vendor>
+    <finalPageActionList>
+        <runProgram>
+            <program>/bin/Iguana</program>
+            <programArguments>&amp;</programArguments>
+            <progressText>Do you want to launch ${project.fullName} now?</progressText>
+        </runProgram>
+    </finalPageActionList>
     <parameterList>
         <directoryParameter>
             <name>installdir</name>
             <description>Installer.Parameter.installdir.description</description>
             <explanation>Installer.Parameter.installdir.explanation</explanation>
             <value></value>
-            <default>/Applications</default>
+            <default>/opt/IguanaApp</default>
             <allowEmptyValue>0</allowEmptyValue>
+            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>

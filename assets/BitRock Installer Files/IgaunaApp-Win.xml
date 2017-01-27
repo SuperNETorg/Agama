@@ -1,7 +1,7 @@
 <project>
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.1-beta-test</version>
+    <version>0.1.2-beta-test</version>
     <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
     <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
@@ -191,19 +191,11 @@
         <runProgram>
             <abortOnError>0</abortOnError>
             <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
-            <program>vc_redist.x64.exe</program>
+            <program>${system_temp_directory}/vc_redist.x64.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
-            <showMessageOnError>0</showMessageOnError>
         </runProgram>
-        <deleteFile>
-            <abortOnError>0</abortOnError>
-            <path>vc_redist.x64.exe</path>
-            <showMessageOnError>0</showMessageOnError>
-        </deleteFile>
         <showProgressDialog>
-            <abortOnError>0</abortOnError>
-            <showMessageOnError>0</showMessageOnError>
             <title>Downloading files</title>
             <actionList>
                 <httpGet>
@@ -218,23 +210,17 @@
             <ruleList>
                 <fileExists>
                     <negate>1</negate>
-                    <path>${system_temp_directory}/vc_redist.x64.exe</path>
+                    <path>${system_temp_directory}/vc_redist.x86.exe</path>
                 </fileExists>
             </ruleList>
         </showProgressDialog>
         <runProgram>
             <abortOnError>0</abortOnError>
             <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
-            <program>vc_redist.x86.exe</program>
+            <program>${system_temp_directory}/vc_redist.x86.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
-            <showMessageOnError>0</showMessageOnError>
         </runProgram>
-        <deleteFile>
-            <abortOnError>0</abortOnError>
-            <path>vc_redist.x86.exe</path>
-            <showMessageOnError>0</showMessageOnError>
-        </deleteFile>
     </readyToInstallActionList>
     <postInstallationActionList>
         <actionGroup>
@@ -293,6 +279,14 @@
     <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
     <vendor>SuperNETOrg</vendor>
+    <windows64bitMode>1</windows64bitMode>
+    <finalPageActionList>
+        <runProgram>
+            <program>${windows_folder_profile}/${product_shortname}/Iguana.exe</program>
+            <programArguments>&amp;</programArguments>
+            <progressText>Do you want to launch ${project.fullName} now?</progressText>
+        </runProgram>
+    </finalPageActionList>
     <parameterList>
         <directoryParameter>
             <name>installdir</name>
@@ -301,6 +295,7 @@
             <value></value>
             <default>${platform_install_prefix}/${product_shortname}</default>
             <allowEmptyValue>0</allowEmptyValue>
+            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>
@@ -313,6 +308,7 @@
             <value></value>
             <default>${windows_folder_profile}/${product_shortname}</default>
             <allowEmptyValue>0</allowEmptyValue>
+            <ask>0</ask>
             <mustBeWritable>0</mustBeWritable>
             <mustExist>0</mustExist>
             <width>30</width>

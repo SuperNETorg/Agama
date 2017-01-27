@@ -108,6 +108,13 @@
     <uninstallerDirectory>${installdir}/Iguana/</uninstallerDirectory>
     <uninstallerName>Uninstall-Iguana</uninstallerName>
     <vendor>SuperNETOrg</vendor>
+    <finalPageActionList>
+        <runProgram>
+            <program>open</program>
+            <programArguments>/Applications/Iguana.app</programArguments>
+            <progressText>Do you want to launch ${project.fullName} now?</progressText>
+        </runProgram>
+    </finalPageActionList>
     <parameterList>
         <directoryParameter>
             <name>installdir</name>
