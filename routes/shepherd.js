@@ -74,7 +74,7 @@ shepherd.post('/herd', function(req, res) {
 	herder(req.body.herd, req.body.options);
 
 	res.end('{"msg": "success","result": "result"}');
-	
+
 });
 
 shepherd.post('/herdlist', function(req, res) {
@@ -84,17 +84,17 @@ shepherd.post('/herdlist', function(req, res) {
 	//console.log(req.body.herd);
 	//console.log(req.body.options);
 
-	pm2.connect(true,function(err) {
-		pm2.describe('IGUANA', function(err, list){
-			console.log(list[0]);
-			for(var i = 0, l = list.length - 1; i < l; i++) {
-				console.log(list[i].pm2_env.status);
-			}
-		});
+	pm2.connect(true, function(err) {
+	  if (err) throw err; //todo: proper error handling
+		pm2.describe("IGUANA", function(err, list) {
+	    pm2.disconnect();   //disconnect after getting proc info list
+	    if (err) throw err //todo: proper error handling
+	    console.log(list[0].pm2_env.status) //print status of IGUANA proc
+	  });
 	});
 
 	res.end('{"msg": "success","result": "result"}');
-	
+
 });
 
 
@@ -107,7 +107,7 @@ shepherd.post('/slay', function(req, res) {
 	slayer(req.body.slay);
 
 	res.end('{"msg": "success","result": "result"}');
-	
+
 });
 
 
@@ -120,7 +120,7 @@ shepherd.post('/setconf', function(req, res) {
 	setConf(req.body.chain);
 
 	res.end('{"msg": "success","result": "result"}');
-	
+
 });
 
 shepherd.post('/getconf', function(req, res) {
@@ -134,14 +134,14 @@ shepherd.post('/getconf', function(req, res) {
 	console.log(confpath);
 
 	res.end('{"msg": "success","result": "' + confpath + '"}');
-	
+
 });
 
 
 function herder(flock, data) {
 	//console.log(flock);
 	//console.log(data);
-	
+
 	if (data == undefined) { data = 'none'; console.log('it is undefined'); }
 
 	if (flock === 'iguana') {
@@ -159,7 +159,7 @@ function herder(flock, data) {
 				});
 			})
 		});
-		
+
 		// COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
 		fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 		if (err) return console.error(err)
@@ -265,7 +265,7 @@ function setConf(flock) {
 	}
 
 	console.log(DaemonConfPath);
-	
+
 	var CheckFileExists = function() {
 
 		return new Promise(function(resolve, reject) {
@@ -274,7 +274,7 @@ function setConf(flock) {
 			fs.ensureFile(DaemonConfPath, function (err) {
 				console.log(err) // => null
 			})
-			
+
 			setTimeout(function() {
 				console.log(result)
 				resolve(result);
@@ -288,7 +288,7 @@ function setConf(flock) {
 			var result = 'Conf file permissions updated to Read/Write'
 
 			fsnode.chmodSync(DaemonConfPath, '0666');
-			
+
 			setTimeout(function() {
 				console.log(result)
 				resolve(result);
@@ -331,7 +331,7 @@ function setConf(flock) {
 
 					return new Promise(function(resolve, reject) {
 						var result = 'checking rpcuser...'
-						
+
 						if(status[0].hasOwnProperty('rpcuser')){
 							console.log('rpcuser: OK');
 						}
@@ -388,7 +388,7 @@ function setConf(flock) {
 								console.log('server: ADDED')
 							});
 						}
-						
+
 						//console.log(result)
 						resolve(result);
 						})
@@ -409,14 +409,14 @@ function setConf(flock) {
 								console.log('addnode: ADDED')
 							});
 						}
-						
+
 						//console.log(result)
 						resolve(result);
 						})
 					}
 
 				rpcuser()
-				.then(function(result) { 
+				.then(function(result) {
 					return rpcpass();
 				})
 				.then(server)
@@ -435,7 +435,7 @@ function setConf(flock) {
 			var result = 'Conf file permissions updated to Read Only'
 
 			fsnode.chmodSync(DaemonConfPath, '0400');
-			
+
 			setTimeout(function() {
 				console.log(result)
 				resolve(result);
@@ -444,7 +444,7 @@ function setConf(flock) {
 	}
 
 	CheckFileExists()
-	.then(function(result) { 
+	.then(function(result) {
 		return FixFilePermissions();
 	})
 	.then(RemoveLines)
