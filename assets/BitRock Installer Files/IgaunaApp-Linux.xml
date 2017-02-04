@@ -1,7 +1,7 @@
 <project>
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.3-beta</version>
+    <version>0.1.4.1-beta</version>
     <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
     <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>

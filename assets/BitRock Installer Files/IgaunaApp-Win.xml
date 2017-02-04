@@ -1,7 +1,7 @@
 <project>
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.3-beta</version>
+    <version>0.1.4-beta</version>
     <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
     <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
@@ -194,6 +194,7 @@
             <program>${system_temp_directory}/vc_redist.x64.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+            <showMessageOnError>0</showMessageOnError>
         </runProgram>
         <showProgressDialog>
             <title>Downloading files</title>
@@ -220,6 +221,7 @@
             <program>${system_temp_directory}/vc_redist.x86.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
+            <showMessageOnError>0</showMessageOnError>
         </runProgram>
     </readyToInstallActionList>
     <postInstallationActionList>
