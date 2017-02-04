@@ -86,7 +86,7 @@ shepherd.post('/herdlist', function(req, res) {
 
 	pm2.connect(true, function(err) {
 	  if (err) throw err; //todo: proper error handling
-		pm2.describe("IGUANA", function(err, list) {
+	pm2.describe("IGUANA", function(err, list) {
 	    pm2.disconnect();   //disconnect after getting proc info list
 	    if (err) throw err //todo: proper error handling
 	    console.log(list[0].pm2_env.status) //print status of IGUANA proc
