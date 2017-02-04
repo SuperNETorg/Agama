@@ -77,6 +77,26 @@ shepherd.post('/herd', function(req, res) {
 	
 });
 
+shepherd.post('/herdlist', function(req, res) {
+	//console.log('======= req.body =======');
+	//console.log(req);
+	//console.log(req.body);
+	//console.log(req.body.herd);
+	//console.log(req.body.options);
+
+	pm2.connect(true,function(err) {
+		pm2.describe('IGUANA', function(err, list){
+			console.log(list[0]);
+			for(var i = 0, l = list.length - 1; i < l; i++) {
+				console.log(list[i].pm2_env.status);
+			}
+		});
+	});
+
+	res.end('{"msg": "success","result": "result"}');
+	
+});
+
 
 shepherd.post('/slay', function(req, res) {
 	console.log('======= req.body =======');
