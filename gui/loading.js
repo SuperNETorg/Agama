@@ -88,17 +88,19 @@ function EDEX_DEXnotarychains() {
 
 function EDEX_DEXgetinfoAll() {
     var result = [];
+    var ajax_data = '';
+    var tmpIguanaRPCAuth = 'tmpIgRPCUser@'+sessionStorage.getItem('IguanaRPCAuth');
 
     var get_dex_notarychains = EDEX_DEXnotarychains();
     console.log(get_dex_notarychains.length)
     
     $.each(get_dex_notarychains, function( coin_index, coin_value ) {
         console.log(coin_index + ': ' + coin_value);
-        var tmpIguanaRPCAuth = 'tmpIgRPCUser@'+sessionStorage.getItem('IguanaRPCAuth');
         var ajax_data = {'userpass':tmpIguanaRPCAuth,"agent":"dex","method":"getinfo","symbol":coin_value}
-        //console.log(ajax_data);
+        console.log('==> ajax_data')
+        console.log(ajax_data);
         $.ajax({
-            async: false,
+            //async: false,
             type: 'POST',
             data: JSON.stringify(ajax_data),
             url: 'http://127.0.0.1:7778',
@@ -108,13 +110,20 @@ function EDEX_DEXgetinfoAll() {
                 //console.log('== EDEX_DEXgetinfoAll Data OutPut ==');
                 console.log(AjaxOutputData);
                 result.push(AjaxOutputData);
-                //if (AjaxOutputData.error === 'less than required responses') {
-                //}
+                var tmp_index = parseInt(coin_index) + 1
+                $('#loading_sub_status_text').text('Connection status... ' + tmp_index + '/' + get_dex_notarychains.length + ': ' + coin_value)
+                if (AjaxOutputData.error === 'less than required responses') {
+                    $('#loading_sub_status_output_text').text('Output: ' + AjaxOutputData.error)
+                } else {
+                    $('#loading_sub_status_output_text').text('Output: Connected')
+                }
+                if ( tmp_index == 50 ) {
+                    window.close();
+                }
             },
             error: function(xhr, textStatus, error) {
                 console.log(xhr.statusText);
                 if ( xhr.readyState == 0 ) {
-                    Iguana_ServiceUnavailable();
                 }
                 console.log(textStatus);
                 console.log(error);

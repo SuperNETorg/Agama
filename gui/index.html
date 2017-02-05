@@ -6,13 +6,17 @@
         <link rel="stylesheet" href="jRoll.min.css">
         <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
         <script type="text/javascript" src="EasyDEX-GUI/assets/global/vendor/jquery/jquery.min.js"></script>
+        <script type="text/javascript" src="bluebird.min.js"></script>
         <script type="text/javascript" src="loading.js"></script>
         <script type="text/javascript" src="jRoll.min.js"></script>
         <script>if (window.module) module = window.module;</script>
     </head>
     <body>
         <div style="text-align: center;">
-            <div style="/*background-image: url('loading.gif'); background-repeat: no-repeat; background-position: center;*/ height: 200px; width: 400px; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto;"><span id="loading_status_text">Starting Wallet. Please wait...</span><br>
+            <div style="/*background-image: url('loading.gif'); background-repeat: no-repeat; background-position: center;*/ height: 240px; width: 400px; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto;">
+            <span id="loading_status_text">Starting Wallet. Please wait...</span><br>
+            <span id="loading_sub_status_text"></span><br>
+            <span id="loading_sub_status_output_text"></span>
             <div id="pulse"></div></div>
         </div>
         <script type="text/javascript">
@@ -21,8 +25,6 @@
                     radius: 100,
                     animation: "pulse"
                 });
-                //var check = Iguana_activehandle();
-                //console.log(check[0]) // here I invoke the checking function
                 const remote = require('electron').remote;
                 var window = remote.getCurrentWindow();
                 $('#loading_status_text').text('Starting Iguana daemon...')
@@ -37,7 +39,7 @@
                             stopcheck();
                             $('#loading_status_text').text('Connecting to Basilisk Network...')
                             EDEX_DEXgetinfoAll()
-                            window.close();
+                            //window.close();
                         }
                     },2000);
                 }
