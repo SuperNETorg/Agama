@@ -81,19 +81,19 @@ shepherd.post('/herdlist', function(req, res) {
 	//console.log('======= req.body =======');
 	//console.log(req);
 	//console.log(req.body);
-	//console.log(req.body.herd);
+	console.log(req.body.herdname);
 	//console.log(req.body.options);
 
 	pm2.connect(true, function(err) {
 	  if (err) throw err; //todo: proper error handling
-	pm2.describe("IGUANA", function(err, list) {
+	pm2.describe(req.body.herdname, function(err, list) {
 	    pm2.disconnect();   //disconnect after getting proc info list
 	    if (err) throw err //todo: proper error handling
 	    console.log(list[0].pm2_env.status) //print status of IGUANA proc
+		console.log(list[0].pid) //print pid of IGUANA proc
+		res.end('{"herdname": '+req.body.herdname+',"status": '+list[0].pm2_env.status+',"pid":'+list[0].pid+'}');
 	  });
 	});
-
-	res.end('{"msg": "success","result": "result"}');
 
 });
 

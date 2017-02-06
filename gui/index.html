@@ -11,13 +11,14 @@
         <script type="text/javascript" src="jRoll.min.js"></script>
         <script>if (window.module) module = window.module;</script>
     </head>
-    <body>
+    <body style="overflow:hidden;">
         <div style="text-align: center;">
             <div style="/*background-image: url('loading.gif'); background-repeat: no-repeat; background-position: center;*/ height: 240px; width: 400px; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto;">
             <span id="loading_status_text">Starting Wallet. Please wait...</span><br>
             <span id="loading_sub_status_text"></span><br>
             <span id="loading_sub_status_output_text"></span>
-            <div id="pulse"></div></div>
+            </div>
+            <div id="pulse" style="margin: 80px 50px"></div>
         </div>
         <script type="text/javascript">
             $(document).ready( function() {
