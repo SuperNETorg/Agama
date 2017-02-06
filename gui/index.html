@@ -34,14 +34,17 @@
                 var portcheck;
                 function sartcheck() {
                     portcheck = setInterval(function(){
-                        var check = Iguana_activehandle();
-                        console.log(check[0])
-                        if (check[0] !== 'error') {
-                            stopcheck();
-                            $('#loading_status_text').text('Connecting to Basilisk Network...')
-                            EDEX_DEXgetinfoAll()
-                            //window.close();
-                        }
+                        Iguana_activehandle().then(function(result){
+                            console.log(result)
+                            if (result !== 'error') {
+                                stopcheck();
+                                $('#loading_status_text').text('Connecting to Basilisk Network...')
+                                EDEX_DEXgetinfoAll()
+                                //window.close();
+                            }
+                        })
+                        //var check = Iguana_activehandle();
+                        //console.log(check[0])
                     },2000);
                 }
 

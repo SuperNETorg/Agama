@@ -1,39 +1,48 @@
-function Iguana_activehandle() {    
-    var result = [];
-    //comment
-    var ajax_data = {"agent":"SuperNET","method":"activehandle"};
-    //console.log(ajax_data);
-    $.ajax({
-        async: false,
-        type: 'POST',
+function IguanaAJAX(url,ajax_data) {
+
+    return $.ajax({
         data: JSON.stringify(ajax_data),
-        url: 'http://127.0.0.1:7778',
-        //dataType: 'text',
-        success: function(data, textStatus, jqXHR) {
-            var AjaxOutputData = JSON.parse(data);
-            //console.log('== ActiveHandle Data OutPut ==');
+        url: url,
+        type: 'POST',
+        dataType: 'json',
+        //beforeSend: showLoadingImgFn
+    })
+    .fail(function(xhr, textStatus, error) {
+        // handle request failures
+    });
+}
+
+
+function Iguana_activehandle(callback) {    
+    return new Promise((resolve) =>{ 
+    
+        var ajax_data = {"agent":"SuperNET","method":"activehandle"};
+        var AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
+            //console.log(AjaxOutputData.responseText);
+            AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
             //console.log(AjaxOutputData);
-            result.push(AjaxOutputData);
-        },
-        error: function(xhr, textStatus, error) {
+            resolve(AjaxOutputData);
+        }).fail(function(xhr, textStatus, error) {
+            // handle request failures
             console.log(xhr.statusText);
             if ( xhr.readyState == 0 ) {
-                //Iguana_ServiceUnavailable();
-                result.push('error')
             }
             console.log(textStatus);
             console.log(error);
-        }
-    });
-    //return 'Executed Iguana_activehandle. Check Iguana_activehandle_output var value.';
-    return result;
+        })
+    })
 }
+
+//Iguana_activehandle().then(function(result){
+    //console.log(result)
+//})
+
 
 function StartIguana() {
     var ajax_data = {"herd":"iguana"};
     console.log(ajax_data);
     $.ajax({
-        async: false,
+        //async: false,
         type: 'POST',
         data: JSON.stringify(ajax_data),
         url: 'http://127.0.0.1:17777/shepherd/herd',
@@ -55,82 +64,63 @@ function StartIguana() {
 }
 
 function EDEX_DEXnotarychains() {
-    var result = [];
-
-    var tmpIguanaRPCAuth = 'tmpIgRPCUser@'+sessionStorage.getItem('IguanaRPCAuth');
-    var ajax_data = {'userpass':tmpIguanaRPCAuth,"agent":"dpow","method":"notarychains"}
-    console.log(ajax_data);
-    $.ajax({
-        async: false,
-        type: 'POST',
-        data: JSON.stringify(ajax_data),
-        url: 'http://127.0.0.1:7778',
-        //dataType: 'text',
-        success: function(data, textStatus, jqXHR) {
-            var AjaxOutputData = JSON.parse(data);
-            //console.log('== EDEX_DEXnotarychains Data OutPut ==');
+    return new Promise((resolve) =>{ 
+        var ajax_data = {"agent":"dpow","method":"notarychains"}
+        var AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
+            //console.log(AjaxOutputData.responseText);
+            AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
             //console.log(AjaxOutputData);
-            result.push(AjaxOutputData);
-        },
-        error: function(xhr, textStatus, error) {
+            resolve(AjaxOutputData);
+        }).fail(function(xhr, textStatus, error) {
+            // handle request failures
             console.log(xhr.statusText);
             if ( xhr.readyState == 0 ) {
-                Iguana_ServiceUnavailable();
             }
             console.log(textStatus);
             console.log(error);
-        }
+        })
     });
-    //console.log(result);
-    return result[0];
 }
 
 
 function EDEX_DEXgetinfoAll() {
-    var result = [];
-    var ajax_data = '';
     var tmpIguanaRPCAuth = 'tmpIgRPCUser@'+sessionStorage.getItem('IguanaRPCAuth');
-
-    var get_dex_notarychains = EDEX_DEXnotarychains();
-    console.log(get_dex_notarychains.length)
+    var ajax_data = {'userpass':tmpIguanaRPCAuth,"agent":"dpow","method":"notarychains"}
+    var get_dex_notarychains = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
+        //console.log(get_dex_notarychains.responseText);
+        get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText)
+        //console.log(get_dex_notarychains)
     
-    $.each(get_dex_notarychains, function( coin_index, coin_value ) {
-        console.log(coin_index + ': ' + coin_value);
-        var ajax_data = {'userpass':tmpIguanaRPCAuth,"agent":"dex","method":"getinfo","symbol":coin_value}
-        console.log('==> ajax_data')
-        console.log(ajax_data);
-        $.ajax({
-            //async: false,
-            type: 'POST',
-            data: JSON.stringify(ajax_data),
-            url: 'http://127.0.0.1:7778',
-            //dataType: 'text',
-            success: function(data, textStatus, jqXHR) {
-                var AjaxOutputData = JSON.parse(data); //Ajax output gets the whole list of unspent coin with addresses
-                //console.log('== EDEX_DEXgetinfoAll Data OutPut ==');
-                console.log(AjaxOutputData);
-                result.push(AjaxOutputData);
-                var tmp_index = parseInt(coin_index) + 1
-                $('#loading_sub_status_text').text('Connection status... ' + tmp_index + '/' + get_dex_notarychains.length + ': ' + coin_value)
-                if (AjaxOutputData.error === 'less than required responses') {
-                    $('#loading_sub_status_output_text').text('Output: ' + AjaxOutputData.error)
-                } else {
-                    $('#loading_sub_status_output_text').text('Output: Connected')
-                }
-                if ( tmp_index == 50 ) {
-                    window.close();
-                }
-            },
-            error: function(xhr, textStatus, error) {
-                console.log(xhr.statusText);
-                if ( xhr.readyState == 0 ) {
-                }
-                console.log(textStatus);
-                console.log(error);
+        $.each(get_dex_notarychains, function( coin_index, coin_value ) {
+            console.log(coin_index + ': ' + coin_value);
+            var tmpIguanaRPCAuth = 'tmpIgRPCUser@'+sessionStorage.getItem('IguanaRPCAuth');
+            var ajax_data = {'userpass':tmpIguanaRPCAuth,"agent":"dex","method":"getinfo","symbol":coin_value}
+            console.log(ajax_data);
+            
+            if (coin_value !== 'MESH') {
+                var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
+                    getinfo_each_chain = JSON.parse(getinfo_each_chain.responseText)
+                    console.log(getinfo_each_chain)
+                    var tmp_index = parseInt(coin_index) + 1
+                    $('#loading_sub_status_text').text('Connection status... ' + tmp_index + '/' + get_dex_notarychains.length + ': ' + coin_value)
+                    if (getinfo_each_chain.error === 'less than required responses') {
+                        $('#loading_sub_status_output_text').text('Output: ' + getinfo_each_chain.error)
+                    } else {
+                        $('#loading_sub_status_output_text').text('Output: Connected')
+                    }
+                    if ( tmp_index == 10 ) {
+                        window.close();
+                    }
+                }).fail(function(xhr, textStatus, error) {
+                    // handle request failures
+                    console.log(xhr.statusText);
+                    if ( xhr.readyState == 0 ) {
+                    }
+                    console.log(textStatus);
+                    console.log(error);
+                })
             }
         });
     });
 
-    //console.log(result);
-    return result[0];
 }
