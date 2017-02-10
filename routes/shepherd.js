@@ -63,6 +63,10 @@ shepherd.get('/', function(req, res, next) {
   res.send('Hello World!')
 })
 
+shepherd.get('/appconf', function(req, res, next) {
+	var obj = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+	res.send(obj);
+})
 
 shepherd.post('/herd', function(req, res) {
 	console.log('======= req.body =======');

@@ -29,30 +29,39 @@
                 const remote = require('electron').remote;
                 var window = remote.getCurrentWindow();
                 $('#loading_status_text').text('Starting Iguana daemon...')
-                StartIguana();
-                
-                var portcheck;
-                function sartcheck() {
-                    portcheck = setInterval(function(){
-                        Iguana_activehandle().then(function(result){
-                            console.log(result)
-                            if (result !== 'error') {
-                                stopcheck();
-                                $('#loading_status_text').text('Connecting to Basilisk Network...')
-                                EDEX_DEXgetinfoAll()
-                                //window.close();
-                            }
-                        })
-                        //var check = Iguana_activehandle();
-                        //console.log(check[0])
-                    },2000);
+                var appConf = GetAppConf();
+
+                if (appConf && !appConf.manualIguanaStart) {
+                    StartIguana();
                 }
 
-                function stopcheck() {
-                    clearInterval(portcheck);
+                if (appConf && !appConf.skipBasiliskNetworkCheck) {
+                    var portcheck;
+                    function sartcheck() {
+                        portcheck = setInterval(function(){
+                            Iguana_activehandle().then(function(result){
+                                console.log(result)
+                                if (result !== 'error') {
+                                    stopcheck();
+                                    $('#loading_status_text').text('Connecting to Basilisk Network...')
+                                    EDEX_DEXgetinfoAll()
+                                    //window.close();
+                                }
+                            })
+                            //var check = Iguana_activehandle();
+                            //console.log(check[0])
+                        },2000);
+                    }
+
+                    function stopcheck() {
+                        clearInterval(portcheck);
+                    }
+                    sartcheck();
+                    //setTimeout(function(){ window.close(); }, 15000);
+                } else {
+                    $('#loading_status_text').text(appConf)
+                    //window.close();
                 }
-                sartcheck();
-                //setTimeout(function(){ window.close(); }, 15000);
             });
         </script>
     </body>
