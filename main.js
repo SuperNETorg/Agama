@@ -166,7 +166,6 @@ function createWindow (status) {
     mainWindow = new BrowserWindow({width: 1280, height: 800, icon: iguanaIcon})
 
     // load our index.html (i.e. easyDEX GUI)
-    //mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
     if (appConfig.edexGuiOnly) {
       mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
     } else {
