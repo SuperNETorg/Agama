@@ -65,15 +65,16 @@ function StartIguana() {
 
 function GetAppConf() { // get iguana app conf
     var ajax_data = {"herd":"iguana"};
+    var data = false;
     console.log(ajax_data);
     $.ajax({
         async: false,
         type: 'GET',
         url: 'http://127.0.0.1:17777/shepherd/appconf'
-    }).done(function(data) {
+    }).done(function(_data) {
         console.log('== App Conf Data OutPut ==');
-        console.log(data);
-        return data;
+        console.log(_data);
+        data = _data;
     }).fail(function(xhr, textStatus, error) {
         // handle request failures
         console.log(xhr.statusText);
@@ -81,9 +82,9 @@ function GetAppConf() { // get iguana app conf
         }
         console.log(textStatus);
         console.log(error);
-
-        return false;
     });
+
+    return data;
 }
 
 function EDEX_DEXnotarychains() {

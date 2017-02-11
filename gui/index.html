@@ -28,7 +28,7 @@
                 });
                 const remote = require('electron').remote;
                 var window = remote.getCurrentWindow();
-                $('#loading_status_text').text('Starting Iguana daemon...')
+                $('#loading_status_text').text('Starting Iguana daemon...');
                 var appConf = GetAppConf();
 
                 if (appConf && !appConf.manualIguanaStart) {
@@ -43,9 +43,9 @@
                                 console.log(result)
                                 if (result !== 'error') {
                                     stopcheck();
-                                    $('#loading_status_text').text('Connecting to Basilisk Network...')
-                                    EDEX_DEXgetinfoAll()
-                                    //window.close();
+                                    $('#loading_status_text').text('Connecting to Basilisk Network...');
+                                    EDEX_DEXgetinfoAll();
+                                    window.close();
                                 }
                             })
                             //var check = Iguana_activehandle();
@@ -59,8 +59,7 @@
                     sartcheck();
                     //setTimeout(function(){ window.close(); }, 15000);
                 } else {
-                    $('#loading_status_text').text(appConf)
-                    //window.close();
+                    window.close();
                 }
             });
         </script>
