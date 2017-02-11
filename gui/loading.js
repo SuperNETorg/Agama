@@ -13,9 +13,9 @@ function IguanaAJAX(url,ajax_data) {
 }
 
 
-function Iguana_activehandle(callback) {    
-    return new Promise((resolve) =>{ 
-    
+function Iguana_activehandle(callback) {
+    return new Promise((resolve) =>{
+
         var ajax_data = {"agent":"SuperNET","method":"activehandle"};
         var AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
             //console.log(AjaxOutputData.responseText);
@@ -63,8 +63,32 @@ function StartIguana() {
     });
 }
 
+function GetAppConf() { // get iguana app conf
+    var ajax_data = {"herd":"iguana"};
+    var data = false;
+    console.log(ajax_data);
+    $.ajax({
+        async: false,
+        type: 'GET',
+        url: 'http://127.0.0.1:17777/shepherd/appconf'
+    }).done(function(_data) {
+        console.log('== App Conf Data OutPut ==');
+        console.log(_data);
+        data = _data;
+    }).fail(function(xhr, textStatus, error) {
+        // handle request failures
+        console.log(xhr.statusText);
+        if ( xhr.readyState == 0 ) {
+        }
+        console.log(textStatus);
+        console.log(error);
+    });
+
+    return data;
+}
+
 function EDEX_DEXnotarychains() {
-    return new Promise((resolve) =>{ 
+    return new Promise((resolve) =>{
         var ajax_data = {"agent":"dpow","method":"notarychains"}
         var AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
             //console.log(AjaxOutputData.responseText);
@@ -90,13 +114,13 @@ function EDEX_DEXgetinfoAll() {
         //console.log(get_dex_notarychains.responseText);
         get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText)
         //console.log(get_dex_notarychains)
-    
+
         $.each(get_dex_notarychains, function( coin_index, coin_value ) {
             console.log(coin_index + ': ' + coin_value);
             var tmpIguanaRPCAuth = 'tmpIgRPCUser@'+sessionStorage.getItem('IguanaRPCAuth');
             var ajax_data = {'userpass':tmpIguanaRPCAuth,"agent":"dex","method":"getinfo","symbol":coin_value}
             console.log(ajax_data);
-            
+
             if (coin_value !== 'MESH') {
                 var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
                     getinfo_each_chain = JSON.parse(getinfo_each_chain.responseText)

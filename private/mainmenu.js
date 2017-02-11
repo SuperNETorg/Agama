@@ -1,6 +1,7 @@
 const {Menu} = require('electron')
 const electron = require('electron')
 const app = electron.app
+const {shell} = require('electron')
 
 const template = [
   {
@@ -85,10 +86,37 @@ const template = [
   },
   {
     role: 'help',
+    label: 'Support',
     submenu: [
       {
-        label: 'Learn More',
-        click () { require('electron').shell.openExternal('http://electron.atom.io') }
+        label: 'Supernet.org',
+        click () {
+          if (process.platform === 'linux') {
+            require('child_process').exec('xdg-open http://support.supernet.org');
+          } else {
+            shell.openExternal('http://support.supernet.org')
+          }
+        }
+      },
+      {
+        label: 'Slack',
+        click () {
+          if (process.platform === 'linux') {
+            require('child_process').exec('xdg-open https://sprnt.slack.com/messages/support');
+          } else {
+            shell.openExternal('https://sprnt.slack.com/messages/support')
+          }
+        }
+      },
+      {
+        label: 'Github',
+        click () {
+          if (process.platform === 'linux') {
+            require('child_process').exec('xdg-open https://github.com/SuperNETorg/iguana/issues');
+          } else {
+            shell.openExternal('https://github.com/SuperNETorg/iguana/issues')
+          }
+        }
       }
     ]
   }

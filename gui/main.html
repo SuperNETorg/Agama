@@ -13,18 +13,72 @@
 
 		$(".page-main").outerHeight(mapH);
 	}
+  function StartIguana() {
+      var ajax_data = {"herd":"iguana"};
+      console.log(ajax_data);
+      $.ajax({
+          //async: false,
+          type: 'POST',
+          data: JSON.stringify(ajax_data),
+          url: 'http://127.0.0.1:17777/shepherd/herd',
+          dataType: "xml/html/script/json", // expected format for response
+          contentType: "application/json", // send as JSON
+          success: function(data, textStatus, jqXHR) {
+              var AjaxOutputData = JSON.parse(data);
+              console.log('== ActiveHandle Data OutPut ==');
+              console.log(AjaxOutputData);
+          },
+          error: function(xhr, textStatus, error) {
+              console.log(xhr.statusText);
+              if ( xhr.readyState == 0 ) {
+              }
+              console.log(textStatus);
+              console.log(error);
+          }
+      });
+  }
+  function StartCorsproxy() {
+      var ajax_data = {"herd":"corsproxy"};
+      console.log(ajax_data);
+      $.ajax({
+          //async: false,
+          type: 'POST',
+          data: JSON.stringify(ajax_data),
+          url: 'http://127.0.0.1:17777/shepherd/herd',
+          dataType: "xml/html/script/json", // expected format for response
+          contentType: "application/json", // send as JSON
+          success: function(data, textStatus, jqXHR) {
+              var AjaxOutputData = JSON.parse(data);
+              console.log('== ActiveHandle Data OutPut ==');
+              console.log(AjaxOutputData);
+          },
+          error: function(xhr, textStatus, error) {
+              console.log(xhr.statusText);
+              if ( xhr.readyState == 0 ) {
+              }
+              console.log(textStatus);
+              console.log(error);
+          }
+      });
+  }
 	jQuery(document).ready(function() {
 		resizeMainWindow();
     	window.onresize = function(event) { resizeMainWindow(); };
 	});
 	</script>
 </head>
-<body>
-
-<div class="page-main">
-  <div class="col-xs-6 text-center" style="height: 100%; background: url(bg.jpg) no-repeat fixed; background-color: #c7c7c7; vertical-align: middle;"><h1 style="color: white;">Iguana Wallet<h1><a type="button" class="btn btn-default btn-lg" href="Iguana-GUI/index.html">Open Iguana Wallet</a></div>
-  <div class="col-xs-6 text-center" style="height: 100%; background: url(bg2.jpg) no-repeat fixed; background-color: #d8d8d8; vertical-align: middle;"><h1 style="color: white;">EasyDEX</h1><a type="button" class="btn btn-default btn-lg" href="EasyDEX-GUI/index.html">Open EasyDEX</a></div>
-</div>
-
-</body>
+  <body>
+    <div class="page-main">
+      <div class="col-xs-6 text-center" style="height: 100%; background: url(bg.jpg) no-repeat fixed; background-color: #c7c7c7; vertical-align: middle;" id="iguanaGuiStart">
+        <h1 style="color: white;">Iguana Wallet<h1>
+        <a type="button" class="btn btn-default btn-lg" href="Iguana-GUI/index.html">Open Iguana Wallet</a><br/><br/>
+        <a type="button" class="btn btn-default btn-lg" href="#" onclick="StartCorsproxy()">Launch proxy server</a><br/><br/>
+        <a type="button" class="btn btn-default btn-lg" href="#" onclick="StartIguana()">Start Iguana Core</a>
+      </div>
+      <div class="col-xs-6 text-center" style="height: 100%; background: url(bg2.jpg) no-repeat fixed; background-color: #d8d8d8; vertical-align: middle;" id="edexGuiStart">
+        <h1 style="color: white;">EasyDEX</h1>
+        <a type="button" class="btn btn-default btn-lg" href="EasyDEX-GUI/index.html">Open EasyDEX</a>
+      </div>
+    </div>
+  </body>
 </html>

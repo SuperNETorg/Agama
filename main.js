@@ -17,6 +17,8 @@ var mkdirp = require('mkdirp');
 var pm2 = require('pm2');
 Promise = require('bluebird');
 
+var appConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+
 app.setName('Iguana');
 
 if (os.platform() === 'linux') {
@@ -164,7 +166,12 @@ function createWindow (status) {
     mainWindow = new BrowserWindow({width: 1280, height: 800, icon: iguanaIcon})
 
     // load our index.html (i.e. easyDEX GUI)
-    mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
+    //mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
+    if (appConfig.edexGuiOnly) {
+      mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
+    } else {
+      mainWindow.loadURL('http://127.0.0.1:17777/gui/main.html');
+    }
 
     // DEVTOOLS - only for dev purposes - ca333
     //mainWindow.webContents.openDevTools()
@@ -175,7 +182,7 @@ function createWindow (status) {
 
           return new Promise(function(resolve, reject) {
               console.log('Closing Main Window...');
-              
+
               pm2.connect(true,function(err) {
                   console.log('connecting to pm2...');
                   if (err) {
@@ -194,7 +201,7 @@ function createWindow (status) {
 
           return new Promise(function(resolve, reject) {
               console.log('killing to pm2...');
-              
+
               pm2.killDaemon(function(err) {
                   pm2.disconnect();
                   console.log('killed to pm2...');
@@ -233,7 +240,7 @@ function createWindow (status) {
       }
 
       ConnectToPm2()
-      .then(function(result) { 
+      .then(function(result) {
           return KillPm2();
       })
       .then(HideMainWindow)
