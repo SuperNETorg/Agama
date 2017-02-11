@@ -8,10 +8,12 @@ const fsnode = require('fs');
 const fs = require('fs-extra');
 const mkdirp = require('mkdirp');
 const express = require('express');
+const exec = require('child_process').exec;
 const md5 = require('md5');
 const pm2 = require('pm2');
 Promise = require('bluebird');
 const fixPath = require('fix-path');
+var ps = require('ps-node');
 
 var setconf = require("../private/setconf.js");
 
@@ -151,6 +153,32 @@ function herder(flock, data) {
 	if (flock === 'iguana') {
 		console.log('iguana flock selected...');
 		console.log('selected data: '+data);
+
+		//Make sure iguana isn't running before starting new process, kill it dammit!
+		// A simple pid lookup 
+		/*ps.lookup({
+			command: 'iguana',
+			//arguments: '--debug',
+			}, function(err, resultList ) {
+			if (err) {
+				throw new Error( err );
+			}
+			resultList.forEach(function( process ){
+				if( process ){
+					console.log( 'PID: %s, COMMAND: %s, ARGUMENTS: %s', process.pid, process.command, process.arguments );
+					console.log(process.pid);
+					// A simple pid lookup 
+					ps.kill( process.pid, function( err ) {
+						if (err) {
+							throw new Error( err );
+						}
+						else {
+							console.log( 'Process %s has been killed!', process.pid );
+						}
+					});
+				}
+			});
+		});*/
 
 		// MAKE SURE IGUANA DIR IS THERE FOR USER
 		mkdirp(iguanaDir, function (err) {
