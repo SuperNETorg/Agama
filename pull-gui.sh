@@ -19,7 +19,7 @@ if [ -d "Iguana-application" ]; then
   git checkout 0.3
   git pull
 else
-  git clone https://github.com/SuperNETorg/Iguana-application.git -b 0.3
+  git clone https://github.com/SuperNETorg/Iguana-application.git -b 0.3.1
   cd Iguana-application
 fi
 
