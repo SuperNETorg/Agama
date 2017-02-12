@@ -16,11 +16,13 @@ fi
 
 if [ -d "Iguana-application" ]; then
   cd Iguana-application
-  git checkout 0.3
+  git checkout 0.3.1
+  git branch 0.3.1 --track origin/0.3.1
   git pull
 else
-  git clone https://github.com/SuperNETorg/Iguana-application.git -b 0.3
+  git clone https://github.com/SuperNETorg/Iguana-application.git -b 0.3.1
   cd Iguana-application
+  git branch 0.3.1 --track origin/0.3.1
 fi
 
 bower install
