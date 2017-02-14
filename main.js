@@ -1,20 +1,23 @@
 //main proc for EasyDEX GUI
 //this app spawns iguana in background in nontech-mode
 
-const electron = require('electron')
-const app = electron.app
-const BrowserWindow = electron.BrowserWindow
-var express = require('express')
-var bodyParser = require('body-parser')
-const path = require('path')
-const url = require('url')
-const os = require('os')
-const spawn = require('child_process').spawn;
-const exec = require('child_process').exec;
-var fs = require('fs');
-var fs = require('fs-extra')
-var mkdirp = require('mkdirp');
-var pm2 = require('pm2');
+const electron = require('electron'),
+      app = electron.app,
+      BrowserWindow = electron.BrowserWindow;
+var express = require('express'),
+    bodyParser = require('body-parser');
+const path = require('path'),
+      url = require('url'),
+      os = require('os'),
+      spawn = require('child_process').spawn
+      exec = require('child_process').exec;
+var fs = require('fs'),
+    fs = require('fs-extra'),
+    mkdirp = require('mkdirp')
+    pm2 = require('pm2');
+
+var iguanaAppPort = 17777;    
+
 Promise = require('bluebird');
 
 var appConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'));
@@ -22,29 +25,34 @@ var appConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 app.setName('Iguana');
 
 if (os.platform() === 'linux') {
-  process.env.ELECTRON_RUN_AS_NODE = true
+  process.env.ELECTRON_RUN_AS_NODE = true;
   console.log(process.env);
 }
 
 // preload.js
-const _setImmediate = setImmediate
-const _clearImmediate = clearImmediate
+const _setImmediate = setImmediate,
+      _clearImmediate = clearImmediate;
 process.once('loaded', () => {
   global.setImmediate = _setImmediate
   global.clearImmediate = _clearImmediate
-  if (os.platform() === 'darwin') { process.setFdLimit(90000); }
-  if (os.platform() === 'linux') { process.setFdLimit(1000000); }
+  
+  if (os.platform() === 'darwin') {
+    process.setFdLimit(90000);
+  }
+  if (os.platform() === 'linux') {
+    process.setFdLimit(1000000);
+  }
 })
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
-var shepherd = require('./routes/shepherd');
+var shepherd = require('./routes/shepherd'),
+    guiapp = express();
 
-var guiapp = express()
 guiapp.use(bodyParser.json()); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({ extended: false })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
-  res.send('Hello World!')
+  res.send('Iguana app server')
 })
 
 var guipath = path.join(__dirname, '/gui')
@@ -52,8 +60,8 @@ guiapp.use('/gui', express.static(guipath))
 
 guiapp.use('/shepherd', shepherd);
 
-var rungui = guiapp.listen(17777, function () {
-  console.log('guiapp listening on port 17777!')
+var rungui = guiapp.listen(iguanaAppPort, function () {
+  console.log('guiapp listening on port ' + iguanaAppPort + '!')
 })
 
 module.exports = guiapp;
@@ -87,8 +95,12 @@ if (os.platform() === 'win32') {
 }
 */
 
-if (os.platform() === 'linux') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png') }
-if (os.platform() === 'win32') { var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico') }
+if (os.platform() === 'linux') {
+  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
+}
+if (os.platform() === 'win32') {
+  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
+}
 
 //console.log(iguanaDir);
 /*
@@ -114,12 +126,16 @@ fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 let mainWindow
 let loadingWindow
 
-
 function createLoadingWindow() {
   mainWindow = null;
 
   // initialise window
-  loadingWindow = new BrowserWindow({width: 500, height: 300, frame: false, icon: iguanaIcon})
+  loadingWindow = new BrowserWindow({
+    width: 500,
+    height: 300,
+    frame: false,
+    icon: iguanaIcon
+  });
 
   // load our index.html (i.e. easyDEX GUI)
   loadingWindow.loadURL('http://127.0.0.1:17777/gui/');
@@ -131,8 +147,8 @@ function createLoadingWindow() {
   loadingWindow.on('closed', function () {
     // our app does not have multiwindow - so we dereference the window object instead of
     // putting them into an window_arr
-    loadingWindow = null
-    createWindow('open')
+    loadingWindow = null;
+    createWindow('open');
   })
 
   //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
@@ -163,13 +179,17 @@ function createWindow (status) {
     require(path.join(__dirname, 'private/mainmenu'));
 
     // initialise window
-    mainWindow = new BrowserWindow({width: 1280, height: 800, icon: iguanaIcon})
+    mainWindow = new BrowserWindow({
+      width: 1280,
+      height: 800,
+      icon: iguanaIcon
+    });
 
     // load our index.html (i.e. easyDEX GUI)
     if (appConfig.edexGuiOnly) {
-      mainWindow.loadURL('http://127.0.0.1:17777/gui/EasyDEX-GUI/');
+      mainWindow.loadURL('http://127.0.0.1:' + iguanaAppPort + '/gui/EasyDEX-GUI/');
     } else {
-      mainWindow.loadURL('http://127.0.0.1:17777/gui/main.html');
+      mainWindow.loadURL('http://127.0.0.1:' + iguanaAppPort + '/gui/main.html');
     }
 
     // DEVTOOLS - only for dev purposes - ca333
@@ -178,72 +198,70 @@ function createWindow (status) {
     // if window closed we kill iguana proc
     mainWindow.on('closed', function () {
       var ConnectToPm2 = function() {
+        return new Promise(function(resolve, reject) {
+          console.log('Closing Main Window...');
 
-          return new Promise(function(resolve, reject) {
-              console.log('Closing Main Window...');
+          pm2.connect(true,function(err) {
+            console.log('connecting to pm2...');
+            
+            if (err) {
+              console.log(err);
+            }
+          });
 
-              pm2.connect(true,function(err) {
-                  console.log('connecting to pm2...');
-                  if (err) {
-                      console.log(err);
-                  }
-              });
+          var result = 'Connecting To Pm2: done';
 
-              var result = 'Connecting To Pm2: done'
-
-              console.log(result)
-              resolve(result);
-          })
+          console.log(result);
+          resolve(result);
+        })
       }
 
       var KillPm2 = function() {
+        return new Promise(function(resolve, reject) {
+          console.log('killing to pm2...');
 
-          return new Promise(function(resolve, reject) {
-              console.log('killing to pm2...');
+          pm2.killDaemon(function(err) {
+            pm2.disconnect();
+            console.log('killed to pm2...');
+            if (err) throw err;
+          });
 
-              pm2.killDaemon(function(err) {
-                  pm2.disconnect();
-                  console.log('killed to pm2...');
-                  if (err) throw err
-              });
+          var result = 'Killing Pm2: done';
 
-              var result = 'Killing Pm2: done'
+          setTimeout(function() {
+            console.log(result);
 
-              setTimeout(function() {
-                  console.log(result)
-                  resolve(result);
-              }, 2000)
-          })
+            resolve(result);
+          }, 2000)
+        })
       }
 
       var HideMainWindow = function() {
+        return new Promise(function(resolve, reject) {
+          console.log('Exiting App...');
+          mainWindow = null;
 
-          return new Promise(function(resolve, reject) {
-              console.log('Exiting App...');
-              mainWindow = null
-
-              var result = 'Hiding Main Window: done'
-              console.log(result)
-              resolve(result);
-          })
+          var result = 'Hiding Main Window: done';
+          console.log(result);
+          resolve(result);
+        });
       }
 
       var QuitApp = function() {
-
-          return new Promise(function(resolve, reject) {
-              app.quit();
-              var result = 'Quiting App: done'
-              console.log(result)
-              resolve(result);
-          })
+        return new Promise(function(resolve, reject) {
+          app.quit();
+          var result = 'Quiting App: done';
+          console.log(result);
+          resolve(result);
+        });
       }
 
       ConnectToPm2()
       .then(function(result) {
-          return KillPm2();
+        return KillPm2();
       })
       .then(HideMainWindow)
-      .then(QuitApp)
+      .then(QuitApp);
     });
   }
 }
@@ -260,7 +278,6 @@ app.on('window-all-closed', function () {
   /*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
     app.quit()
   }*/
-
 })
 
 app.on('activate', function () {

@@ -21,10 +21,10 @@
  *
  */
 
-const child_process = require('child_process');
-const fs = require('fs')
-const path = require('path')
-const os = require('os')
+const child_process = require('child_process'),
+      fs = require('fs'),
+      path = require('path'),
+      os = require('os');
 
 var coind_conf = module.exports = {
   exec: child_process.exec,
@@ -89,11 +89,14 @@ function parse_status_block(block) {
  */
 function parse_status(callback) {
   return function(error, stdout, stderr) {
-    if (error) callback(error);
-    else callback(error,
+    if (error) {
+      callback(error);
+    } else {
+      callback(error,
       stdout.trim().split('\n\n').map(parse_status_block));
       //stdout.trim().split(/\s\*-usb:/g).map(parse_status_block));
       //console.log(stdout.trim().split(/\s\*-usb:/g))
+    }
   };
 }
 
@@ -128,8 +131,8 @@ function status(confPath, callback) {
   if (os.platform() === 'darwin' || os.platform() === 'linux') {
     this.exec('cat "' + confPath + '"', parse_status(callback));
   }
+
   if (os.platform() === 'win32') {
     this.exec('type "' + confPath + '"', parse_status(callback));
   }
-
 }

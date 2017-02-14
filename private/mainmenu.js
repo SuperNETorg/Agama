@@ -1,7 +1,7 @@
-const {Menu} = require('electron')
-const electron = require('electron')
-const app = electron.app
-const {shell} = require('electron')
+const {Menu} = require('electron'),
+      electron = require('electron'),
+      app = electron.app,
+      {shell} = require('electron');
 
 const template = [
   {
@@ -43,14 +43,16 @@ const template = [
         label: 'Reload',
         accelerator: 'CmdOrCtrl+R',
         click (item, focusedWindow) {
-          if (focusedWindow) focusedWindow.reload()
+          if (focusedWindow)
+            focusedWindow.reload()
         }
       },
       {
         label: 'Toggle Developer Tools',
         accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
         click (item, focusedWindow) {
-          if (focusedWindow) focusedWindow.webContents.toggleDevTools()
+          if (focusedWindow)
+            focusedWindow.webContents.toggleDevTools()
         }
       },
       {
@@ -123,7 +125,8 @@ const template = [
 ]
 
 if (process.platform === 'darwin') {
-  const name = app.getName()
+  const name = app.getName();
+  
   template.unshift({
     label: name,
     submenu: [
@@ -158,7 +161,7 @@ if (process.platform === 'darwin') {
         role: 'close'
       }
     ]
-  })
+  });
   // Edit menu.
   template[1].submenu.push(
     {
@@ -175,7 +178,7 @@ if (process.platform === 'darwin') {
         }
       ]
     }
-  )
+  );
   // Window menu.
   template[3].submenu = [
     {
@@ -200,7 +203,7 @@ if (process.platform === 'darwin') {
       role: 'front'
     }
   ]
-}
+};
 
-const menu = Menu.buildFromTemplate(template)
-Menu.setApplicationMenu(menu)
+const menu = Menu.buildFromTemplate(template);
+Menu.setApplicationMenu(menu);
