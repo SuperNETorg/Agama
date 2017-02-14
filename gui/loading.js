@@ -1,90 +1,87 @@
-function IguanaAJAX(url,ajax_data) {
-
-    return $.ajax({
-        data: JSON.stringify(ajax_data),
-        url: url,
-        type: 'POST',
-        dataType: 'json',
-        //beforeSend: showLoadingImgFn
-    })
-    .fail(function(xhr, textStatus, error) {
-        // handle request failures
-    });
+function IguanaAJAX(url, ajax_data) {
+  return $.ajax({
+    data: JSON.stringify(ajax_data),
+    url: url,
+    type: 'POST',
+    dataType: 'json',
+    //beforeSend: showLoadingImgFn
+  })
+  .fail(function(xhr, textStatus, error) {
+    // handle request failures
+  });
 }
 
 
 function Iguana_activehandle(callback) {
-    return new Promise((resolve) =>{
-
-        var ajax_data = {"agent":"SuperNET","method":"activehandle"};
-        var AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
-            //console.log(AjaxOutputData.responseText);
-            AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
-            //console.log(AjaxOutputData);
-            resolve(AjaxOutputData);
-        }).fail(function(xhr, textStatus, error) {
-            // handle request failures
-            console.log(xhr.statusText);
-            if ( xhr.readyState == 0 ) {
-            }
-            console.log(textStatus);
-            console.log(error);
-        })
-    })
+  return new Promise((resolve) => {
+    var ajax_data = { 'agent': 'SuperNET', 'method': 'activehandle' },
+        AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+      //console.log(AjaxOutputData.responseText);
+      AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
+      //console.log(AjaxOutputData);
+      resolve(AjaxOutputData);
+    }).fail(function(xhr, textStatus, error) {
+      // handle request failures
+      console.log(xhr.statusText);
+      if ( xhr.readyState == 0 ) {
+      }
+      console.log(textStatus);
+      console.log(error);
+    });
+  });
 }
-
 //Iguana_activehandle().then(function(result){
     //console.log(result)
 //})
 
-
 function StartIguana() {
-    var ajax_data = {"herd":"iguana"};
-    console.log(ajax_data);
-    $.ajax({
-        //async: false,
-        type: 'POST',
-        data: JSON.stringify(ajax_data),
-        url: 'http://127.0.0.1:17777/shepherd/herd',
-        dataType: "xml/html/script/json", // expected format for response
-        contentType: "application/json", // send as JSON
-        success: function(data, textStatus, jqXHR) {
-            var AjaxOutputData = JSON.parse(data);
-            console.log('== ActiveHandle Data OutPut ==');
-            console.log(AjaxOutputData);
-        },
-        error: function(xhr, textStatus, error) {
-            console.log(xhr.statusText);
-            if ( xhr.readyState == 0 ) {
-            }
-            console.log(textStatus);
-            console.log(error);
-        }
-    });
+  var ajax_data = { 'herd': 'iguana'};
+  
+  console.log(ajax_data);
+  $.ajax({
+    type: 'POST',
+    data: JSON.stringify(ajax_data),
+    url: 'http://127.0.0.1:17777/shepherd/herd',
+    dataType: 'xml/html/script/json', // expected format for response
+    contentType: 'application/json', // send as JSON
+    success: function(data, textStatus, jqXHR) {
+      var AjaxOutputData = JSON.parse(data);
+      console.log('== ActiveHandle Data OutPut ==');
+      console.log(AjaxOutputData);
+    },
+    error: function(xhr, textStatus, error) {
+      console.log(xhr.statusText);
+      if ( xhr.readyState == 0 ) {
+      }
+      console.log(textStatus);
+      console.log(error);
+    }
+  });
 }
 
 function GetAppConf() { // get iguana app conf
-    var ajax_data = {"herd":"iguana"};
-    var data = false;
-    console.log(ajax_data);
-    $.ajax({
-        async: false,
-        type: 'GET',
-        url: 'http://127.0.0.1:17777/shepherd/appconf'
-    }).done(function(_data) {
-        console.log('== App Conf Data OutPut ==');
-        console.log(_data);
-        data = _data;
-    }).fail(function(xhr, textStatus, error) {
-        // handle request failures
-        console.log(xhr.statusText);
-        if ( xhr.readyState == 0 ) {
-        }
-        console.log(textStatus);
-        console.log(error);
-    });
+  var ajax_data = { 'herd': 'iguana' };
+      data = false;
+  
+  console.log(ajax_data);
+  $.ajax({
+      async: false,
+      type: 'GET',
+      url: 'http://127.0.0.1:17777/shepherd/appconf'
+  }).done(function(_data) {
+      console.log('== App Conf Data OutPut ==');
+      console.log(_data);
+      data = _data;
+  }).fail(function(xhr, textStatus, error) {
+      // handle request failures
+      console.log(xhr.statusText);
+      if ( xhr.readyState == 0 ) {
+      }
+      console.log(textStatus);
+      console.log(error);
+  });
 
-    return data;
+  return data;
 }
 
 function EDEX_DEXnotarychains() {
