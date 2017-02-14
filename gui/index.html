@@ -1,71 +1,5 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
-<<<<<<< HEAD
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-        <link rel="stylesheet" href="EasyDEX-GUI/assets/global/css/bootstrap.min.css">
-        <link rel="stylesheet" href="jRoll.min.css">
-        <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
-        <script type="text/javascript" src="EasyDEX-GUI/assets/global/vendor/jquery/jquery.min.js"></script>
-        <script type="text/javascript" src="bluebird.min.js"></script>
-        <script type="text/javascript" src="loading.js"></script>
-        <script type="text/javascript" src="jRoll.min.js"></script>
-        <script>if (window.module) module = window.module;</script>
-    </head>
-    <body style="overflow:hidden;">
-        <div style="text-align: center;">
-            <div style="/*background-image: url('loading.gif'); background-repeat: no-repeat; background-position: center;*/ height: 240px; width: 400px; position: absolute; top: 0; bottom: 0; left: 0; right: 0; margin: auto;">
-            <span id="loading_status_text">Starting Wallet. Please wait...</span><br>
-            <span id="loading_sub_status_text"></span><br>
-            <span id="loading_sub_status_output_text"></span>
-            </div>
-            <div id="pulse" style="margin: 80px 50px"></div>
-        </div>
-        <script type="text/javascript">
-            $(document).ready( function() {
-                $("#pulse").jRoll({
-                    radius: 100,
-                    animation: "pulse"
-                });
-                const remote = require('electron').remote;
-                var window = remote.getCurrentWindow();
-                $('#loading_status_text').text('Starting Iguana daemon...');
-                var appConf = GetAppConf();
-
-                if (appConf && !appConf.manualIguanaStart) {
-                    StartIguana();
-                }
-
-                if (appConf && !appConf.skipBasiliskNetworkCheck) {
-                    var portcheck;
-                    function sartcheck() {
-                        portcheck = setInterval(function(){
-                            Iguana_activehandle().then(function(result){
-                                console.log(result)
-                                if (result !== 'error') {
-                                    stopcheck();
-                                    $('#loading_status_text').text('Connecting to Basilisk Network...');
-                                    EDEX_DEXgetinfoAll();
-                                }
-                            })
-                            //var check = Iguana_activehandle();
-                            //console.log(check[0])
-                        },2000);
-                    }
-
-                    function stopcheck() {
-                        clearInterval(portcheck);
-                    }
-                    sartcheck();
-                    //setTimeout(function(){ window.close(); }, 15000);
-                } else {
-                    window.hide();
-                }
-            });
-        </script>
-    </body>
-</html>
-=======
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
     <link rel="stylesheet" href="EasyDEX-GUI/assets/global/css/bootstrap.min.css">
@@ -94,4 +28,3 @@
     <script type="text/javascript" src="init.js"></script>
   </body>
 </html>
->>>>>>> 33b27edf01aa08c729aed00193444311d807a3bb
