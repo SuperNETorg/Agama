@@ -144,7 +144,7 @@ function createLoadingWindow() {
   //loadingWindow.webContents.openDevTools()
 
   // if window closed we kill iguana proc
-  loadingWindow.on('closed', function () {
+  loadingWindow.on('hide', function () {
     // our app does not have multiwindow - so we dereference the window object instead of
     // putting them into an window_arr
     loadingWindow = null;
@@ -279,6 +279,37 @@ app.on('window-all-closed', function () {
     app.quit()
   }*/
 })
+
+
+//Emitted before the application starts closing its windows.
+//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
+app.on('before-quit', function (event) {
+  if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
+    //loading window is still open
+    console.log("before-quit prevented");
+    event.preventDefault();
+  }
+})
+
+//Emitted when all windows have been closed and the application will quit.
+//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
+app.on('will-quit', function (event) {
+  if (mainWindow === null && loadingWindow != null) {
+    //loading window is still open
+    console.log("will-quit while loading window active");
+    event.preventDefault();
+  }
+})
+
+//Emitted when the application is quitting.
+//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
+app.on('quit', function (event) {
+  if (mainWindow === null && loadingWindow != null) {
+    console.log("quit while loading window active");
+    event.preventDefault();
+  }
+})
+
 
 app.on('activate', function () {
   if (mainWindow === null) {
