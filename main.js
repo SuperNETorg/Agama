@@ -16,7 +16,7 @@ var fs = require('fs'),
     mkdirp = require('mkdirp')
     pm2 = require('pm2');
 
-var iguanaAppPort = 17777;    
+var iguanaAppPort = 17777;
 
 Promise = require('bluebird');
 
@@ -35,7 +35,7 @@ const _setImmediate = setImmediate,
 process.once('loaded', () => {
   global.setImmediate = _setImmediate
   global.clearImmediate = _clearImmediate
-  
+
   if (os.platform() === 'darwin') {
     process.setFdLimit(90000);
   }
@@ -144,7 +144,7 @@ function createLoadingWindow() {
   //loadingWindow.webContents.openDevTools()
 
   // if window closed we kill iguana proc
-  loadingWindow.on('hide', function () {
+  loadingWindow.on('closed', function () {
     // our app does not have multiwindow - so we dereference the window object instead of
     // putting them into an window_arr
     loadingWindow = null;
@@ -203,7 +203,7 @@ function createWindow (status) {
 
           pm2.connect(true,function(err) {
             console.log('connecting to pm2...');
-            
+
             if (err) {
               console.log(err);
             }
@@ -279,37 +279,6 @@ app.on('window-all-closed', function () {
     app.quit()
   }*/
 })
-
-
-//Emitted before the application starts closing its windows.
-//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('before-quit', function (event) {
-  if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
-    //loading window is still open
-    console.log("before-quit prevented");
-    event.preventDefault();
-  }
-})
-
-//Emitted when all windows have been closed and the application will quit.
-//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('will-quit', function (event) {
-  if (mainWindow === null && loadingWindow != null) {
-    //loading window is still open
-    console.log("will-quit while loading window active");
-    event.preventDefault();
-  }
-})
-
-//Emitted when the application is quitting.
-//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('quit', function (event) {
-  if (mainWindow === null && loadingWindow != null) {
-    console.log("quit while loading window active");
-    event.preventDefault();
-  }
-})
-
 
 app.on('activate', function () {
   if (mainWindow === null) {

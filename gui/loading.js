@@ -36,7 +36,7 @@ function Iguana_activehandle(callback) {
 
 function StartIguana() {
   var ajax_data = { 'herd': 'iguana'};
-  
+
   console.log(ajax_data);
   $.ajax({
     type: 'POST',
@@ -62,7 +62,7 @@ function StartIguana() {
 function GetAppConf() { // get iguana app conf
   var ajax_data = { 'herd': 'iguana' };
       data = false;
-  
+
   console.log(ajax_data);
   $.ajax({
       async: false,
@@ -130,7 +130,7 @@ function EDEX_DEXgetinfoAll() {
                         $('#loading_sub_status_output_text').text('Output: Connected')
                     }
                     if ( tmp_index == 10 ) {
-                        window.hide();
+                        window.close();
                     }
                 }).fail(function(xhr, textStatus, error) {
                     // handle request failures
