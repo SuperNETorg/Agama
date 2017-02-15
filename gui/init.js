@@ -5,8 +5,6 @@ $(document).ready(function() {
   });
 
   var appConf = GetAppConf();
-  const remote = require('electron').remote;
-  var window = remote.getCurrentWindow();
 
   $('#loading_status_text').text('Starting Iguana daemon...');
 

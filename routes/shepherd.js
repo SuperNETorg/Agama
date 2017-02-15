@@ -46,10 +46,13 @@ if (os.platform() === 'linux') {
 }
 
 if (os.platform() === 'win32') {
-	var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe'); iguanaBin = path.normalize(iguanaBin),
-			iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir),
-			iguanaConfsDir = process.env.APPDATA + '/iguana/confs'; iguanaConfsDir = path.normalize(iguanaConfsDir),
-			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
+	var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe');
+			iguanaBin = path.normalize(iguanaBin);
+	var iguanaDir = process.env.APPDATA + '/iguana';
+			iguanaDir = path.normalize(iguanaDir);
+	var iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
+			iguanaConfsDir = path.normalize(iguanaConfsDir);
+	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 }
 
@@ -192,20 +195,20 @@ function herder(flock, data) {
 		});
 
 		pm2.connect(true,function(err) { //start up pm2 god
-		if (err) {
-			console.error(err);
-			process.exit(2);
-		}
+			if (err) {
+				console.error(err);
+				process.exit(2);
+			}
 
-		pm2.start({
-			script: iguanaBin, // path to binary
-			name: 'IGUANA',
-			exec_mode : 'fork',
-			cwd: iguanaDir, //set correct iguana directory
-		}, function(err, apps) {
-			pm2.disconnect(); // Disconnect from PM2
-				if (err)
-					throw err
+			pm2.start({
+				script: iguanaBin, // path to binary
+				name: 'IGUANA',
+				exec_mode : 'fork',
+				cwd: iguanaDir, //set correct iguana directory
+			}, function(err, apps) {
+				pm2.disconnect(); // Disconnect from PM2
+					if (err)
+						throw err
 			});
 		});
 	}
@@ -215,22 +218,22 @@ function herder(flock, data) {
 		console.log('selected data: ' + data);
 
 		pm2.connect(true, function(err) { // start up pm2 god
-		if (err) {
-			console.error(err);
-			process.exit(2);
-		}
+			if (err) {
+				console.error(err);
+				process.exit(2);
+			}
 
-		pm2.start({
-			script: komododBin, // path to binary
-			name: data.ac_name, // REVS, USD, EUR etc.
-			exec_mode : 'fork',
-			cwd: komodoDir,
-			args: data.ac_options,
-			//args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
-		}, function(err, apps) {
-			pm2.disconnect();   // Disconnect from PM2
-				if (err)
-					throw err;
+			pm2.start({
+				script: komododBin, // path to binary
+				name: data.ac_name, // REVS, USD, EUR etc.
+				exec_mode : 'fork',
+				cwd: komodoDir,
+				args: data.ac_options,
+				//args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+			}, function(err, apps) {
+				pm2.disconnect();   // Disconnect from PM2
+					if (err)
+						throw err;
 			});
 		});
 	}
@@ -482,7 +485,6 @@ function setConf(flock) {
 	.then(CheckConf)
 	.then(MakeConfReadOnly);
 }
-
 
 function getConf(flock) {
 	console.log(flock);
