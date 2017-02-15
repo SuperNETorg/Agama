@@ -40,6 +40,6 @@ $(document).ready(function() {
     sartcheck();
     //setTimeout(function(){ window.close(); }, 15000);
   } else {
-    window.close();
+    window.hide();
   }
 });

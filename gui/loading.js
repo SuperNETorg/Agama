@@ -130,7 +130,7 @@ function EDEX_DEXgetinfoAll() {
                         $('#loading_sub_status_output_text').text('Output: Connected')
                     }
                     if ( tmp_index == 10 ) {
-                        window.close();
+                        window.hide();
                     }
                 }).fail(function(xhr, textStatus, error) {
                     // handle request failures
