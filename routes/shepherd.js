@@ -61,13 +61,14 @@ console.log(iguanaBin);
 
 // END IGUANA FILES AND CONFIG SETTINGS
 shepherd.get('/', function(req, res, next) {
-  res.send('Iguana app server')
-})
+  res.send('Iguana app server');
+});
 
 shepherd.get('/appconf', function(req, res, next) {
+	saveLocalAppConf();
 	var obj = JSON.parse(fs.readFileSync('config.json', 'utf8'));
 	res.send(obj);
-})
+});
 
 shepherd.post('/herd', function(req, res) {
 	console.log('======= req.body =======');
@@ -93,7 +94,8 @@ shepherd.post('/herdlist', function(req, res) {
 		pm2.describe(req.body.herdname, function(err, list) {
 		  pm2.disconnect(); // disconnect after getting proc info list
 		  
-		  if (err) throw err // TODO: proper error handling
+		  if (err)
+		  	throw err; // TODO: proper error handling
 		  
 		  console.log(list[0].pm2_env.status) // print status of IGUANA proc
 			console.log(list[0].pid) // print pid of IGUANA proc
@@ -130,7 +132,7 @@ shepherd.post('/getconf', function(req, res) {
 	//console.log(req.body.chain);
 
 	var confpath = getConf(req.body.chain);
-	console.log('got conf path is:')
+	console.log('got conf path is:');
 	console.log(confpath);
 	res.end('{ "msg": "success", "result": "' + confpath + '" }');
 });
@@ -208,7 +210,7 @@ function herder(flock, data) {
 			}, function(err, apps) {
 				pm2.disconnect(); // Disconnect from PM2
 					if (err)
-						throw err
+						throw err;
 			});
 		});
 	}
@@ -255,7 +257,8 @@ function herder(flock, data) {
 			cwd: iguanaDir,
 		}, function(err, apps) {
 			pm2.disconnect(); // Disconnect from PM2
-				if (err) throw err
+				if (err)
+					throw err;
 			});
 		});
 	}
@@ -269,6 +272,29 @@ function slayer(flock) {
 		pm2.disconnect();
 		console.log(ret);
 	});
+}
+
+function saveLocalAppConf() {
+	var appConfFileName = iguanaDir + '/conf.json';
+	console.log(iguanaDir);
+
+	var fsWrite = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'write file is done'
+
+				fs.writeFile(appConfFileName, 'test', 'utf8', function(err) {
+					if (err)
+						return console.log(err);
+				});
+
+			fsnode.chmodSync(appConfFileName, '0666');
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 2000);
+		});
+	}
+
 }
 
 function setConf(flock) {
@@ -303,7 +329,7 @@ function setConf(flock) {
 
 			fs.ensureFile(DaemonConfPath, function(err) {
 				console.log(err); // => null
-			})
+			});
 
 			setTimeout(function() {
 				console.log(result);

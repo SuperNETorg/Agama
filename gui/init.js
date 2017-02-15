@@ -1,4 +1,7 @@
 $(document).ready(function() {
+  const remote = require('electron').remote;
+  var window = remote.getCurrentWindow();
+
   $('#pulse').jRoll({
     radius: 100,
     animation: 'pulse'

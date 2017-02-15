@@ -92,7 +92,7 @@ function EDEX_DEXnotarychains() {
       'agent': 'dpow',
       'method': 'notarychains'
     },
-    AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
+    AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
       //console.log(AjaxOutputData.responseText);
       AjaxOutputData = JSON.parse(AjaxOutputData.responseText);
       //console.log(AjaxOutputData);
