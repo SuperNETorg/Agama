@@ -9,11 +9,11 @@ var express = require('express'),
 const path = require('path'),
       url = require('url'),
       os = require('os'),
-      spawn = require('child_process').spawn
+      spawn = require('child_process').spawn,
       exec = require('child_process').exec;
 var fs = require('fs'),
     fs = require('fs-extra'),
-    mkdirp = require('mkdirp')
+    mkdirp = require('mkdirp'),
     pm2 = require('pm2');
 
 var iguanaAppPort = 17777;
@@ -33,8 +33,8 @@ if (os.platform() === 'linux') {
 const _setImmediate = setImmediate,
       _clearImmediate = clearImmediate;
 process.once('loaded', () => {
-  global.setImmediate = _setImmediate
-  global.clearImmediate = _clearImmediate
+  global.setImmediate = _setImmediate;
+  global.clearImmediate = _clearImmediate;
 
   if (os.platform() === 'darwin') {
     process.setFdLimit(90000);
@@ -42,7 +42,7 @@ process.once('loaded', () => {
   if (os.platform() === 'linux') {
     process.setFdLimit(1000000);
   }
-})
+});
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd'),
@@ -52,16 +52,16 @@ guiapp.use(bodyParser.json()); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({ extended: false })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
-  res.send('Iguana app server')
+  res.send('Iguana app server');
 })
 
-var guipath = path.join(__dirname, '/gui')
-guiapp.use('/gui', express.static(guipath))
+var guipath = path.join(__dirname, '/gui');
+guiapp.use('/gui', express.static(guipath));
 
 guiapp.use('/shepherd', shepherd);
 
 var rungui = guiapp.listen(iguanaAppPort, function () {
-  console.log('guiapp listening on port ' + iguanaAppPort + '!')
+  console.log('guiapp listening on port ' + iguanaAppPort + '!');
 })
 
 module.exports = guiapp;
@@ -96,10 +96,10 @@ if (os.platform() === 'win32') {
 */
 
 if (os.platform() === 'linux') {
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
+  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png');
 }
 if (os.platform() === 'win32') {
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
+  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico');
 }
 
 //console.log(iguanaDir);
@@ -123,8 +123,8 @@ fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 })
 */
 
-let mainWindow
-let loadingWindow
+let mainWindow;
+let loadingWindow;
 
 function createLoadingWindow() {
   mainWindow = null;
@@ -223,7 +223,8 @@ function createWindow (status) {
           pm2.killDaemon(function(err) {
             pm2.disconnect();
             console.log('killed to pm2...');
-            if (err) throw err;
+            if (err)
+              throw err;
           });
 
           var result = 'Killing Pm2: done';
@@ -285,26 +286,26 @@ app.on('window-all-closed', function () {
 app.on('before-quit', function (event) {
   if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
     //loading window is still open
-    console.log("before-quit prevented");
+    console.log('before-quit prevented');
     event.preventDefault();
   }
-})
+});
 
 //Emitted when all windows have been closed and the application will quit.
 //Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('will-quit', function (event) {
   if (mainWindow === null && loadingWindow != null) {
     //loading window is still open
-    console.log("will-quit while loading window active");
+    console.log('will-quit while loading window active');
     event.preventDefault();
   }
-})
+});
 
 //Emitted when the application is quitting.
 //Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', function (event) {
   if (mainWindow === null && loadingWindow != null) {
-    console.log("quit while loading window active");
+    console.log('quit while loading window active');
     event.preventDefault();
   }
 })
@@ -313,4 +314,4 @@ app.on('activate', function () {
   if (mainWindow === null) {
     //createWindow('open');
   }
-})
+});
