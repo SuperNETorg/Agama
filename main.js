@@ -27,6 +27,12 @@ if (os.platform() === 'linux') {
   console.log(process.env);
 }
 
+// GUI APP settings and starting gui on address http://120.0.0.1:17777
+var shepherd = require('./routes/shepherd'),
+    guiapp = express();
+
+var appConfig = shepherd.loadLocalConfig(); // load app config
+
 // preload.js
 const _setImmediate = setImmediate,
       _clearImmediate = clearImmediate;
@@ -36,18 +42,12 @@ process.once('loaded', () => {
   global.clearImmediate = _clearImmediate;
 
   if (os.platform() === 'darwin') {
-    process.setFdLimit(90000);
+    process.setFdLimit(appConfig.maxDescriptors.darwin);
   }
   if (os.platform() === 'linux') {
-    process.setFdLimit(1000000);
+    process.setFdLimit(appConfig.maxDescriptors.linux);
   }
 });
-
-// GUI APP settings and starting gui on address http://120.0.0.1:17777
-var shepherd = require('./routes/shepherd'),
-    guiapp = express();
-
-var appConfig = shepherd.loadLocalConfig();
 
 guiapp.use(bodyParser.json()); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({ extended: false })); // support encoded bodies
@@ -67,7 +67,6 @@ var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
 
 module.exports = guiapp;
 // END GUI App Settings
-
 
 //require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
 /*
@@ -139,7 +138,7 @@ function createLoadingWindow() {
   });
 
   // load our index.html (i.e. easyDEX GUI)
-  loadingWindow.loadURL('http://127.0.0.1:17777/gui/');
+  loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/');
 
   // DEVTOOLS - only for dev purposes - ca333
   //loadingWindow.webContents.openDevTools()
@@ -172,7 +171,7 @@ function createLoadingWindow() {
   //if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
 }
 
-app.on('ready', createLoadingWindow)
+app.on('ready', createLoadingWindow);
 
 function createWindow (status) {
   if ( status === 'open') {
@@ -188,9 +187,9 @@ function createWindow (status) {
 
     // load our index.html (i.e. easyDEX GUI)
     if (appConfig.edexGuiOnly) {
-      mainWindow.loadURL('http://127.0.0.1:' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
+      mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
     } else {
-      mainWindow.loadURL('http://127.0.0.1:' + appConfig.iguanaAppPort + '/gui/main.html');
+      mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/main.html');
     }
 
     // DEVTOOLS - only for dev purposes - ca333
@@ -202,7 +201,7 @@ function createWindow (status) {
         return new Promise(function(resolve, reject) {
           console.log('Closing Main Window...');
 
-          pm2.connect(true,function(err) {
+          pm2.connect(true, function(err) {
             console.log('connecting to pm2...');
 
             if (err) {
@@ -224,6 +223,7 @@ function createWindow (status) {
           pm2.killDaemon(function(err) {
             pm2.disconnect();
             console.log('killed to pm2...');
+
             if (err)
               throw err;
           });
