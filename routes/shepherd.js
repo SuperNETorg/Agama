@@ -10,7 +10,8 @@ const electron = require('electron'),
 			express = require('express'),
 			exec = require('child_process').exec,
 			md5 = require('md5'),
-			pm2 = require('pm2');
+			pm2 = require('pm2'),
+			readLastLines = require('read-last-lines');
 
 Promise = require('bluebird');
 
@@ -79,50 +80,10 @@ shepherd.get('/', function(req, res, next) {
 });
 
 shepherd.get('/appconf', function(req, res, next) {
+	shepherd.readDebugLog();
 	var obj = shepherd.loadLocalConfig();
 	res.send(obj);
 });
-
-shepherd.loadLocalConfig = function() {
-	if (fs.existsSync(iguanaDir + '/config.json')) {
-		var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
-	  console.log('app config set from local file');
-
-	  // find diff between local and hardcoded configs
-	  // append diff to local config
-		var compareJSON = function(obj1, obj2) {
-		  var result = {};
-
-		  for (var i in obj1) {
-		    if (!obj2.hasOwnProperty(i)) {
-		      result[i] = obj1[i];
-		    }
-		  }
-
-		  return result;
-		};
-
-		var compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-		if (Object.keys(compareConfigs).length) {
-			var newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
-			
-			console.log('config diff is found, updating local config');
-			console.log('config diff:');
-			console.log(compareConfigs);
-			
-			shepherd.saveLocalAppConf(newConfig);
-		  return newConfig;
-		} else {
-		  return JSON.parse(localAppConfig);			
-		}
-
-	} else {
-		console.log('local config file is not found!');
-		shepherd.saveLocalAppConf(shepherd.appConfig);
-
-		return shepherd.appConfig;
-	}
-};
 
 shepherd.post('/herd', function(req, res) {
 	console.log('======= req.body =======');
@@ -190,6 +151,56 @@ shepherd.post('/getconf', function(req, res) {
 	console.log(confpath);
 	res.end('{ "msg": "success", "result": "' + confpath + '" }');
 });
+
+shepherd.loadLocalConfig = function() {
+	if (fs.existsSync(iguanaDir + '/config.json')) {
+		var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
+	  console.log('app config set from local file');
+
+	  // find diff between local and hardcoded configs
+	  // append diff to local config
+		var compareJSON = function(obj1, obj2) {
+		  var result = {};
+
+		  for (var i in obj1) {
+		    if (!obj2.hasOwnProperty(i)) {
+		      result[i] = obj1[i];
+		    }
+		  }
+
+		  return result;
+		};
+
+		var compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
+		if (Object.keys(compareConfigs).length) {
+			var newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
+			
+			console.log('config diff is found, updating local config');
+			console.log('config diff:');
+			console.log(compareConfigs);
+			
+			shepherd.saveLocalAppConf(newConfig);
+		  return newConfig;
+		} else {
+		  return JSON.parse(localAppConfig);			
+		}
+
+	} else {
+		console.log('local config file is not found!');
+		shepherd.saveLocalAppConf(shepherd.appConfig);
+
+		return shepherd.appConfig;
+	}
+};
+
+shepherd.readDebugLog = function() {
+	console.log('reading debug.log');
+	console.log(komodoDir + '/debug.log');
+
+	readLastLines
+		.read(komodoDir + '/debug.log', 50)
+	  .then((lines) => console.log(lines));
+};
 
 function herder(flock, data) {
 	//console.log(flock);
