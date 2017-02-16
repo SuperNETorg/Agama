@@ -65,8 +65,7 @@ shepherd.get('/', function(req, res, next) {
 });
 
 shepherd.get('/appconf', function(req, res, next) {
-	saveLocalAppConf();
-	var obj = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+	var obj = JSON.parse(fs.readFileSync(iguanaDir + '/config.json', 'utf8'));
 	res.send(obj);
 });
 
@@ -93,13 +92,13 @@ shepherd.post('/herdlist', function(req, res) {
 	  if (err) throw err; // TODO: proper error handling
 		pm2.describe(req.body.herdname, function(err, list) {
 		  pm2.disconnect(); // disconnect after getting proc info list
-		  
+
 		  if (err)
 		  	throw err; // TODO: proper error handling
-		  
+
 		  console.log(list[0].pm2_env.status) // print status of IGUANA proc
 			console.log(list[0].pid) // print pid of IGUANA proc
-			
+
 			res.end('{ "herdname": ' + req.body.herdname + ', "status": ' + list[0].pm2_env.status + ', "pid": ' + list[0].pid + '}');
 		 });
 	});
@@ -151,7 +150,7 @@ function herder(flock, data) {
 		console.log('selected data: ' + data);
 
 		//Make sure iguana isn't running before starting new process, kill it dammit!
-		// A simple pid lookup 
+		// A simple pid lookup
 		/*ps.lookup({
 			command: 'iguana',
 			//arguments: '--debug',
@@ -163,7 +162,7 @@ function herder(flock, data) {
 				if( process ){
 					console.log( 'PID: %s, COMMAND: %s, ARGUMENTS: %s', process.pid, process.command, process.arguments );
 					console.log(process.pid);
-					// A simple pid lookup 
+					// A simple pid lookup
 					ps.kill( process.pid, function( err ) {
 						if (err) {
 							throw new Error( err );
@@ -192,7 +191,7 @@ function herder(flock, data) {
 		fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 			if (err)
 				return console.error(err);
-			
+
 			console.log('confs files copied successfully at: ' + iguanaConfsDir);
 		});
 
@@ -274,20 +273,18 @@ function slayer(flock) {
 	});
 }
 
-function saveLocalAppConf() {
+shepherd.saveLocalAppConf = function(appSettings) {
 	var appConfFileName = iguanaDir + '/conf.json';
 	console.log(iguanaDir);
 
-	var fsWrite = function() {
+	var CheckFileExists = function() {
 		return new Promise(function(resolve, reject) {
-			var result = 'write file is done'
+			var result = 'Check app conf.json file exists is done'
 
-				fs.writeFile(appConfFileName, 'test', 'utf8', function(err) {
-					if (err)
-						return console.log(err);
-				});
+			fs.ensureFile(appConfFileName, function(err) {
+				console.log(err); // => null
+			});
 
-			fsnode.chmodSync(appConfFileName, '0666');
 			setTimeout(function() {
 				console.log(result);
 				resolve(result);
@@ -295,6 +292,42 @@ function saveLocalAppConf() {
 		});
 	}
 
+	var FixFilePermissions = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'conf.json file permissions updated to Read/Write';
+
+			fsnode.chmodSync(appConfFileName, '0666');
+
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 1000);
+		});
+	}
+
+	var FsWrite = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'write file is done'
+
+			fs.writeFile(appConfFileName, JSON.stringify(appSettings), 'utf8', function(err) {
+				if (err)
+					return console.log(err);
+			});
+
+			fsnode.chmodSync(appConfFileName, '0666');
+			setTimeout(function() {
+				console.log(result);
+				console.log('app conf.json file is copied successfully at: ' + iguanaConfsDir);
+				resolve(result);
+			}, 2000);
+		});
+	}
+
+	CheckFileExists()
+	.then(function(result) {
+		return FixFilePermissions();
+	})
+	.then(FsWrite);
 }
 
 function setConf(flock) {
@@ -361,7 +394,7 @@ function setConf(flock) {
 				}
 
 				var rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
-				
+
 				fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
 					if (err)
 						return console.log(err);
@@ -456,7 +489,7 @@ function setConf(flock) {
 							console.log('addnode: OK');
 						} else {
 							console.log('addnode: NOT FOUND')
-							fs.appendFile(DaemonConfPath, 
+							fs.appendFile(DaemonConfPath,
 														'\naddnode=78.47.196.146' +
 														'\naddnode=5.9.102.210' +
 														'\naddnode=178.63.69.164' +

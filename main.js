@@ -10,8 +10,10 @@ const path = require('path'),
       url = require('url'),
       os = require('os'),
       spawn = require('child_process').spawn,
-      exec = require('child_process').exec;
+      exec = require('child_process').exec,
+      fixPath = require('fix-path');
 var fs = require('fs'),
+    fsnode = require('fs'),
     fs = require('fs-extra'),
     mkdirp = require('mkdirp'),
     pm2 = require('pm2');
@@ -20,18 +22,41 @@ var iguanaAppPort = 17777;
 
 Promise = require('bluebird');
 
-var appConfig = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-
 app.setName('Iguana');
 
 if (os.platform() === 'linux') {
   process.env.ELECTRON_RUN_AS_NODE = true;
   console.log(process.env);
 }
+if (os.platform() === 'darwin') {
+  fixPath();
+  var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
+      iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
+}
+
+if (os.platform() === 'linux') {
+  var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
+      iguanaDir = process.env.HOME + '/.iguana';
+}
+
+if (os.platform() === 'win32') {
+  var iguanaDir = process.env.APPDATA + '/iguana';
+      iguanaDir = path.normalize(iguanaDir);
+}
+
+var appSettings = {
+  "edexGuiOnly": true,
+  "iguanaGuiOnly": false,
+  "manualIguanaStart": false,
+  "skipBasiliskNetworkCheck": false
+};
+
+var appConfig = appSettings;
 
 // preload.js
 const _setImmediate = setImmediate,
       _clearImmediate = clearImmediate;
+
 process.once('loaded', () => {
   global.setImmediate = _setImmediate;
   global.clearImmediate = _clearImmediate;
@@ -48,12 +73,14 @@ process.once('loaded', () => {
 var shepherd = require('./routes/shepherd'),
     guiapp = express();
 
+shepherd.saveLocalAppConf(appSettings);
+
 guiapp.use(bodyParser.json()); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({ extended: false })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
   res.send('Iguana app server');
-})
+});
 
 var guipath = path.join(__dirname, '/gui');
 guiapp.use('/gui', express.static(guipath));
