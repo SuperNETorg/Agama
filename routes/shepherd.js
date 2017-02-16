@@ -10,7 +10,8 @@ const electron = require('electron'),
 			express = require('express'),
 			exec = require('child_process').exec,
 			md5 = require('md5'),
-			pm2 = require('pm2');
+			pm2 = require('pm2'),
+			readLastLines = require('read-last-lines');
 
 Promise = require('bluebird');
 
@@ -56,18 +57,33 @@ if (os.platform() === 'win32') {
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 }
 
-console.log(iguanaDir);
-console.log(iguanaBin);
+shepherd.appConfig = {
+  "edexGuiOnly": true,
+  "iguanaGuiOnly": false,
+  "manualIguanaStart": false,
+  "skipBasiliskNetworkCheck": false,
+  "host": "127.0.0.1",
+  "iguanaAppPort": 17777,
+  "iguanaCorePort": 7778,
+  "maxDescriptors": {
+  	"darwin": 90000,
+  	"linux": 1000000
+  }
+};
+
+console.log('iguana dir: ' + iguanaDir);
+console.log('iguana bin: ' + iguanaBin);
 
 // END IGUANA FILES AND CONFIG SETTINGS
 shepherd.get('/', function(req, res, next) {
-  res.send('Iguana app server')
-})
+  res.send('Iguana app server');
+});
 
 shepherd.get('/appconf', function(req, res, next) {
-	var obj = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+	shepherd.readDebugLog();
+	var obj = shepherd.loadLocalConfig();
 	res.send(obj);
-})
+});
 
 shepherd.post('/herd', function(req, res) {
 	console.log('======= req.body =======');
@@ -92,12 +108,13 @@ shepherd.post('/herdlist', function(req, res) {
 	  if (err) throw err; // TODO: proper error handling
 		pm2.describe(req.body.herdname, function(err, list) {
 		  pm2.disconnect(); // disconnect after getting proc info list
-		  
-		  if (err) throw err // TODO: proper error handling
-		  
+
+		  if (err)
+		  	throw err; // TODO: proper error handling
+
 		  console.log(list[0].pm2_env.status) // print status of IGUANA proc
 			console.log(list[0].pid) // print pid of IGUANA proc
-			
+
 			res.end('{ "herdname": ' + req.body.herdname + ', "status": ' + list[0].pm2_env.status + ', "pid": ' + list[0].pid + '}');
 		 });
 	});
@@ -130,10 +147,60 @@ shepherd.post('/getconf', function(req, res) {
 	//console.log(req.body.chain);
 
 	var confpath = getConf(req.body.chain);
-	console.log('got conf path is:')
+	console.log('got conf path is:');
 	console.log(confpath);
 	res.end('{ "msg": "success", "result": "' + confpath + '" }');
 });
+
+shepherd.loadLocalConfig = function() {
+	if (fs.existsSync(iguanaDir + '/config.json')) {
+		var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
+	  console.log('app config set from local file');
+
+	  // find diff between local and hardcoded configs
+	  // append diff to local config
+		var compareJSON = function(obj1, obj2) {
+		  var result = {};
+
+		  for (var i in obj1) {
+		    if (!obj2.hasOwnProperty(i)) {
+		      result[i] = obj1[i];
+		    }
+		  }
+
+		  return result;
+		};
+
+		var compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
+		if (Object.keys(compareConfigs).length) {
+			var newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
+			
+			console.log('config diff is found, updating local config');
+			console.log('config diff:');
+			console.log(compareConfigs);
+			
+			shepherd.saveLocalAppConf(newConfig);
+		  return newConfig;
+		} else {
+		  return JSON.parse(localAppConfig);			
+		}
+
+	} else {
+		console.log('local config file is not found!');
+		shepherd.saveLocalAppConf(shepherd.appConfig);
+
+		return shepherd.appConfig;
+	}
+};
+
+shepherd.readDebugLog = function() {
+	console.log('reading debug.log');
+	console.log(komodoDir + '/debug.log');
+
+	readLastLines
+		.read(komodoDir + '/debug.log', 50)
+	  .then((lines) => console.log(lines));
+};
 
 function herder(flock, data) {
 	//console.log(flock);
@@ -149,7 +216,7 @@ function herder(flock, data) {
 		console.log('selected data: ' + data);
 
 		//Make sure iguana isn't running before starting new process, kill it dammit!
-		// A simple pid lookup 
+		// A simple pid lookup
 		/*ps.lookup({
 			command: 'iguana',
 			//arguments: '--debug',
@@ -161,7 +228,7 @@ function herder(flock, data) {
 				if( process ){
 					console.log( 'PID: %s, COMMAND: %s, ARGUMENTS: %s', process.pid, process.command, process.arguments );
 					console.log(process.pid);
-					// A simple pid lookup 
+					// A simple pid lookup
 					ps.kill( process.pid, function( err ) {
 						if (err) {
 							throw new Error( err );
@@ -190,7 +257,7 @@ function herder(flock, data) {
 		fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 			if (err)
 				return console.error(err);
-			
+
 			console.log('confs files copied successfully at: ' + iguanaConfsDir);
 		});
 
@@ -208,7 +275,7 @@ function herder(flock, data) {
 			}, function(err, apps) {
 				pm2.disconnect(); // Disconnect from PM2
 					if (err)
-						throw err
+						throw err;
 			});
 		});
 	}
@@ -255,7 +322,8 @@ function herder(flock, data) {
 			cwd: iguanaDir,
 		}, function(err, apps) {
 			pm2.disconnect(); // Disconnect from PM2
-				if (err) throw err
+				if (err)
+					throw err;
 			});
 		});
 	}
@@ -269,6 +337,49 @@ function slayer(flock) {
 		pm2.disconnect();
 		console.log(ret);
 	});
+}
+
+shepherd.saveLocalAppConf = function(appSettings) {
+	var appConfFileName = iguanaDir + '/config.json';
+
+	var FixFilePermissions = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'config.json file permissions updated to Read/Write';
+
+			fsnode.chmodSync(appConfFileName, '0666');
+
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 1000);
+		});
+	}
+
+	var FsWrite = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'config.json write file is done'
+
+			fs.writeFile(appConfFileName, 
+									 JSON.stringify(appSettings)
+									 .replace(/,/g, ',\n') // format json in human readable form
+									 .replace(/:/g, ': ')
+									 .replace(/{/g, '{\n')
+									 .replace(/}/g, '\n}'), 'utf8', function(err) {
+				if (err)
+					return console.log(err);
+			});
+
+			fsnode.chmodSync(appConfFileName, '0666');
+			setTimeout(function() {
+				console.log(result);
+				console.log('app conf.json file is created successfully at: ' + iguanaConfsDir);
+				resolve(result);
+			}, 2000);
+		});
+	}
+
+	FsWrite()
+	.then(FixFilePermissions()); // not really required now
 }
 
 function setConf(flock) {
@@ -303,7 +414,7 @@ function setConf(flock) {
 
 			fs.ensureFile(DaemonConfPath, function(err) {
 				console.log(err); // => null
-			})
+			});
 
 			setTimeout(function() {
 				console.log(result);
@@ -335,7 +446,7 @@ function setConf(flock) {
 				}
 
 				var rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
-				
+
 				fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
 					if (err)
 						return console.log(err);
@@ -430,7 +541,7 @@ function setConf(flock) {
 							console.log('addnode: OK');
 						} else {
 							console.log('addnode: NOT FOUND')
-							fs.appendFile(DaemonConfPath, 
+							fs.appendFile(DaemonConfPath,
 														'\naddnode=78.47.196.146' +
 														'\naddnode=5.9.102.210' +
 														'\naddnode=178.63.69.164' +

@@ -92,7 +92,7 @@ function EDEX_DEXnotarychains() {
       'agent': 'dpow',
       'method': 'notarychains'
     },
-    AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778',ajax_data).done(function(data) {
+    AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
       //console.log(AjaxOutputData.responseText);
       AjaxOutputData = JSON.parse(AjaxOutputData.responseText);
       //console.log(AjaxOutputData);
@@ -131,17 +131,17 @@ function EDEX_DEXgetinfoAll() {
                   'symbol': coin_value
                 },
                 basiliskMinNotariesConnected = 10;
-            
+
             console.log(ajax_data);
 
             if (coin_value !== 'MESH' || coin_value !== 'CEAL') {
               var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
                 getinfo_each_chain = JSON.parse(getinfo_each_chain.responseText);
                 console.log(getinfo_each_chain);
-                
+
                 tmp_index = parseInt(coin_index) + 1;
                 $('#loading_sub_status_text').text('Connection status... ' + tmp_index + '/' + get_dex_notarychains.length + ': ' + coin_value);
-                
+
                 if (getinfo_each_chain.error === 'less than required responses') {
                   $('#loading_sub_status_output_text').text('Output: ' + getinfo_each_chain.error);
                 } else {
@@ -151,7 +151,7 @@ function EDEX_DEXgetinfoAll() {
                 if ( tmp_index == 10 ) {
                   console.log('min notaries connected');
                   const remote = require('electron').remote;
-                  var window = remote.getCurrentWindow();                   
+                  var window = remote.getCurrentWindow();
                   window.hide();
                 }
               }).fail(function(xhr, textStatus, error) {
