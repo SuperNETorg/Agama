@@ -3,22 +3,20 @@
 
 const electron = require('electron'),
       app = electron.app,
-      BrowserWindow = electron.BrowserWindow;
-var express = require('express'),
-    bodyParser = require('body-parser');
-const path = require('path'),
+      BrowserWindow = electron.BrowserWindow,
+      path = require('path'),
       url = require('url'),
       os = require('os'),
       spawn = require('child_process').spawn,
       exec = require('child_process').exec,
-      fixPath = require('fix-path');
-var fs = require('fs'),
+      fixPath = require('fix-path');      
+var express = require('express'),
+    bodyParser = require('body-parser'),
+    fs = require('fs'),
     fsnode = require('fs'),
     fs = require('fs-extra'),
     mkdirp = require('mkdirp'),
-    pm2 = require('pm2');
-
-var iguanaAppPort = 17777;
+    pm2 = require('pm2');    
 
 Promise = require('bluebird');
 
@@ -28,30 +26,6 @@ if (os.platform() === 'linux') {
   process.env.ELECTRON_RUN_AS_NODE = true;
   console.log(process.env);
 }
-if (os.platform() === 'darwin') {
-  fixPath();
-  var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
-      iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
-}
-
-if (os.platform() === 'linux') {
-  var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
-      iguanaDir = process.env.HOME + '/.iguana';
-}
-
-if (os.platform() === 'win32') {
-  var iguanaDir = process.env.APPDATA + '/iguana';
-      iguanaDir = path.normalize(iguanaDir);
-}
-
-var appSettings = {
-  "edexGuiOnly": true,
-  "iguanaGuiOnly": false,
-  "manualIguanaStart": false,
-  "skipBasiliskNetworkCheck": false
-};
-
-var appConfig = appSettings;
 
 // preload.js
 const _setImmediate = setImmediate,
@@ -73,7 +47,7 @@ process.once('loaded', () => {
 var shepherd = require('./routes/shepherd'),
     guiapp = express();
 
-shepherd.saveLocalAppConf(appSettings);
+var appConfig = shepherd.loadLocalConfig();
 
 guiapp.use(bodyParser.json()); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({ extended: false })); // support encoded bodies
@@ -87,8 +61,8 @@ guiapp.use('/gui', express.static(guipath));
 
 guiapp.use('/shepherd', shepherd);
 
-var rungui = guiapp.listen(iguanaAppPort, function () {
-  console.log('guiapp listening on port ' + iguanaAppPort + '!');
+var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
+  console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
 })
 
 module.exports = guiapp;
@@ -214,9 +188,9 @@ function createWindow (status) {
 
     // load our index.html (i.e. easyDEX GUI)
     if (appConfig.edexGuiOnly) {
-      mainWindow.loadURL('http://127.0.0.1:' + iguanaAppPort + '/gui/EasyDEX-GUI/');
+      mainWindow.loadURL('http://127.0.0.1:' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
     } else {
-      mainWindow.loadURL('http://127.0.0.1:' + iguanaAppPort + '/gui/main.html');
+      mainWindow.loadURL('http://127.0.0.1:' + appConfig.iguanaAppPort + '/gui/main.html');
     }
 
     // DEVTOOLS - only for dev purposes - ca333

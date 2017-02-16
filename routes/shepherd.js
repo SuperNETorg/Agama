@@ -56,6 +56,15 @@ if (os.platform() === 'win32') {
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 }
 
+shepherd.appConfig = {
+  "edexGuiOnly": true,
+  "iguanaGuiOnly": false,
+  "manualIguanaStart": false,
+  "skipBasiliskNetworkCheck": false,
+  "iguanaAppPort": 17777,
+  "iguanaCorePort": 7778
+};
+
 console.log(iguanaDir);
 console.log(iguanaBin);
 
@@ -65,9 +74,21 @@ shepherd.get('/', function(req, res, next) {
 });
 
 shepherd.get('/appconf', function(req, res, next) {
-	var obj = JSON.parse(fs.readFileSync(iguanaDir + '/config.json', 'utf8'));
+	var obj = shepherd.loadLocalConfig();
 	res.send(obj);
 });
+
+shepherd.loadLocalConfig = function() {
+	if (fs.existsSync(iguanaDir + '/config.json')) {
+		var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
+	  console.log('app config set from local file');
+	  return JSON.parse(localAppConfig);
+	} else {
+		console.log('local config file is not found!');
+		shepherd.saveLocalAppConf(shepherd.appConfig);
+		return shepherd.appConfig;
+	}
+};
 
 shepherd.post('/herd', function(req, res) {
 	console.log('======= req.body =======');
@@ -274,27 +295,11 @@ function slayer(flock) {
 }
 
 shepherd.saveLocalAppConf = function(appSettings) {
-	var appConfFileName = iguanaDir + '/conf.json';
-	console.log(iguanaDir);
-
-	var CheckFileExists = function() {
-		return new Promise(function(resolve, reject) {
-			var result = 'Check app conf.json file exists is done'
-
-			fs.ensureFile(appConfFileName, function(err) {
-				console.log(err); // => null
-			});
-
-			setTimeout(function() {
-				console.log(result);
-				resolve(result);
-			}, 2000);
-		});
-	}
+	var appConfFileName = iguanaDir + '/config.json';
 
 	var FixFilePermissions = function() {
 		return new Promise(function(resolve, reject) {
-			var result = 'conf.json file permissions updated to Read/Write';
+			var result = 'config.json file permissions updated to Read/Write';
 
 			fsnode.chmodSync(appConfFileName, '0666');
 
@@ -307,9 +312,14 @@ shepherd.saveLocalAppConf = function(appSettings) {
 
 	var FsWrite = function() {
 		return new Promise(function(resolve, reject) {
-			var result = 'write file is done'
+			var result = 'config.json write file is done'
 
-			fs.writeFile(appConfFileName, JSON.stringify(appSettings), 'utf8', function(err) {
+			fs.writeFile(appConfFileName, 
+									 JSON.stringify(appSettings)
+									 .replace(/,/g, ',\n') // format json in human readable form
+									 .replace(/:/g, ': ')
+									 .replace('{', '{\n')
+									 .replace('}', '\n}'), 'utf8', function(err) {
 				if (err)
 					return console.log(err);
 			});
@@ -317,17 +327,14 @@ shepherd.saveLocalAppConf = function(appSettings) {
 			fsnode.chmodSync(appConfFileName, '0666');
 			setTimeout(function() {
 				console.log(result);
-				console.log('app conf.json file is copied successfully at: ' + iguanaConfsDir);
+				console.log('app conf.json file is created successfully at: ' + iguanaConfsDir);
 				resolve(result);
 			}, 2000);
 		});
 	}
 
-	CheckFileExists()
-	.then(function(result) {
-		return FixFilePermissions();
-	})
-	.then(FsWrite);
+	FsWrite()
+	.then(FixFilePermissions()); // not really required now
 }
 
 function setConf(flock) {
