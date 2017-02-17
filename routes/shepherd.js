@@ -80,9 +80,31 @@ shepherd.get('/', function(req, res, next) {
 });
 
 shepherd.get('/appconf', function(req, res, next) {
-	shepherd.readDebugLog();
 	var obj = shepherd.loadLocalConfig();
 	res.send(obj);
+});
+
+shepherd.post('/debuglog', function(req, res) {
+	var _herd = req.body.herdname,
+			_lastNLines = req.body.lastLines,
+			_location;
+
+			console.log(req.body.lastLines);
+
+	if (_herd === 'iguana') {
+		_location = iguanaDir;
+	} else if (_herd === 'komodo') {
+		_location = komodoDir;
+	}
+
+	shepherd.readDebugLog(_location + '/debug.log', _lastNLines)
+		.then(function(result) {
+			var _obj = { 'msg': 'success', 'result': result };
+			res.send(_obj);
+		}, function(result) {
+			var _obj = { 'msg': 'error', 'result': result };
+			res.send(_obj);
+		});
 });
 
 shepherd.post('/herd', function(req, res) {
@@ -174,15 +196,15 @@ shepherd.loadLocalConfig = function() {
 		var compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
 		if (Object.keys(compareConfigs).length) {
 			var newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
-			
+
 			console.log('config diff is found, updating local config');
 			console.log('config diff:');
 			console.log(compareConfigs);
-			
+
 			shepherd.saveLocalAppConf(newConfig);
 		  return newConfig;
 		} else {
-		  return JSON.parse(localAppConfig);			
+		  return JSON.parse(localAppConfig);
 		}
 
 	} else {
@@ -193,13 +215,24 @@ shepherd.loadLocalConfig = function() {
 	}
 };
 
-shepherd.readDebugLog = function() {
-	console.log('reading debug.log');
-	console.log(komodoDir + '/debug.log');
+shepherd.readDebugLog = function(fileLocation, lastNLines) {
+  return new Promise(
+    function(resolve, reject) {
+			if (lastNLines) {
+				if (fs.existsSync(fileLocation)) {
+					console.log('reading ' + fileLocation);
 
-	readLastLines
-		.read(komodoDir + '/debug.log', 50)
-	  .then((lines) => console.log(lines));
+					readLastLines
+						.read(fileLocation, lastNLines)
+					  .then((lines) => resolve(lines));
+				} else {
+					reject('file ' + fileLocation + ' doesn\'t exist!');
+				}
+			} else {
+				reject('readDebugLog error: lastNLines param is not provided!');
+			}
+   	}
+  );
 };
 
 function herder(flock, data) {
@@ -271,7 +304,7 @@ function herder(flock, data) {
 				script: iguanaBin, // path to binary
 				name: 'IGUANA',
 				exec_mode : 'fork',
-				cwd: iguanaDir, //set correct iguana directory
+				cwd: iguanaDir //set correct iguana directory
 			}, function(err, apps) {
 				pm2.disconnect(); // Disconnect from PM2
 					if (err)
@@ -295,7 +328,7 @@ function herder(flock, data) {
 				name: data.ac_name, // REVS, USD, EUR etc.
 				exec_mode : 'fork',
 				cwd: komodoDir,
-				args: data.ac_options,
+				args: data.ac_options
 				//args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
 			}, function(err, apps) {
 				pm2.disconnect();   // Disconnect from PM2
@@ -317,9 +350,9 @@ function herder(flock, data) {
 
 		pm2.start({
 			script: CorsProxyBin, // path to binary
-			name: 'CORSPROXY', // REVS, USD, EUR etc.
+			name: 'CORSPROXY',
 			exec_mode : 'fork',
-			cwd: iguanaDir,
+			cwd: iguanaDir
 		}, function(err, apps) {
 			pm2.disconnect(); // Disconnect from PM2
 				if (err)
@@ -359,7 +392,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
 		return new Promise(function(resolve, reject) {
 			var result = 'config.json write file is done'
 
-			fs.writeFile(appConfFileName, 
+			fs.writeFile(appConfFileName,
 									 JSON.stringify(appSettings)
 									 .replace(/,/g, ',\n') // format json in human readable form
 									 .replace(/:/g, ': ')

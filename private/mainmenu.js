@@ -44,7 +44,7 @@ const template = [
         accelerator: 'CmdOrCtrl+R',
         click (item, focusedWindow) {
           if (focusedWindow)
-            focusedWindow.reload()
+            focusedWindow.reload();
         }
       },
       {
@@ -52,7 +52,7 @@ const template = [
         accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
         click (item, focusedWindow) {
           if (focusedWindow)
-            focusedWindow.webContents.toggleDevTools()
+            focusedWindow.webContents.toggleDevTools();
         }
       },
       {
@@ -96,7 +96,7 @@ const template = [
           if (process.platform === 'linux') {
             require('child_process').exec('xdg-open http://support.supernet.org');
           } else {
-            shell.openExternal('http://support.supernet.org')
+            shell.openExternal('http://support.supernet.org');
           }
         }
       },
@@ -106,7 +106,7 @@ const template = [
           if (process.platform === 'linux') {
             require('child_process').exec('xdg-open https://sprnt.slack.com/messages/support');
           } else {
-            shell.openExternal('https://sprnt.slack.com/messages/support')
+            shell.openExternal('https://sprnt.slack.com/messages/support');
           }
         }
       },
@@ -116,7 +116,7 @@ const template = [
           if (process.platform === 'linux') {
             require('child_process').exec('xdg-open https://github.com/SuperNETorg/iguana/issues');
           } else {
-            shell.openExternal('https://github.com/SuperNETorg/iguana/issues')
+            shell.openExternal('https://github.com/SuperNETorg/iguana/issues');
           }
         }
       }
@@ -126,7 +126,7 @@ const template = [
 
 if (process.platform === 'darwin') {
   const name = app.getName();
-  
+
   template.unshift({
     label: name,
     submenu: [
