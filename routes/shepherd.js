@@ -89,8 +89,6 @@ shepherd.post('/debuglog', function(req, res) {
 			_lastNLines = req.body.lastLines,
 			_location;
 
-			console.log(req.body.lastLines);
-
 	if (_herd === 'iguana') {
 		_location = iguanaDir;
 	} else if (_herd === 'komodo') {
@@ -99,11 +97,19 @@ shepherd.post('/debuglog', function(req, res) {
 
 	shepherd.readDebugLog(_location + '/debug.log', _lastNLines)
 		.then(function(result) {
-			var _obj = { 'msg': 'success', 'result': result };
-			res.send(_obj);
+			var _obj = {
+				'msg': 'success',
+				'result': result
+			};
+			
+			res.end(JSON.stringify(_obj));
 		}, function(result) {
-			var _obj = { 'msg': 'error', 'result': result };
-			res.send(_obj);
+			var _obj = {
+				'msg': 'error',
+				'result': result
+			};
+
+			res.end(JSON.stringify(_obj));			
 		});
 });
 
@@ -116,7 +122,12 @@ shepherd.post('/herd', function(req, res) {
 
 	herder(req.body.herd, req.body.options);
 
-	res.end('{ "msg": "success", "result": "result" }');
+	var obj = {
+		'msg': 'success',
+		'result': 'result'
+	};
+	
+	res.end(JSON.stringify(obj));
 });
 
 shepherd.post('/herdlist', function(req, res) {
@@ -137,7 +148,13 @@ shepherd.post('/herdlist', function(req, res) {
 		  console.log(list[0].pm2_env.status) // print status of IGUANA proc
 			console.log(list[0].pid) // print pid of IGUANA proc
 
-			res.end('{ "herdname": ' + req.body.herdname + ', "status": ' + list[0].pm2_env.status + ', "pid": ' + list[0].pid + '}');
+			var obj = {
+				'herdname': req.body.herdname, 
+				'status': list[0].pm2_env.status,
+				'pid': list[0].pid
+			};
+			
+			res.end(JSON.stringify(obj));
 		 });
 	});
 });
@@ -149,7 +166,12 @@ shepherd.post('/slay', function(req, res) {
 	//console.log(req.body.slay);
 
 	slayer(req.body.slay);
-	res.end('{ "msg": "success", "result": "result" }');
+	var obj = {
+		'msg': 'success',
+		'result': 'result'
+	};
+	
+	res.end(JSON.stringify(obj));
 });
 
 shepherd.post('/setconf', function(req, res) {
@@ -159,7 +181,12 @@ shepherd.post('/setconf', function(req, res) {
 	//console.log(req.body.chain);
 
 	setConf(req.body.chain);
-	res.end('{ "msg": "success", "result": "result" }');
+	var obj = {
+		'msg': 'success',
+		'result': 'result'
+	};
+	
+	res.end(JSON.stringify(obj));
 });
 
 shepherd.post('/getconf', function(req, res) {
@@ -171,7 +198,12 @@ shepherd.post('/getconf', function(req, res) {
 	var confpath = getConf(req.body.chain);
 	console.log('got conf path is:');
 	console.log(confpath);
-	res.end('{ "msg": "success", "result": "' + confpath + '" }');
+	var obj = {
+		'msg': 'success',
+		'result': confpath
+	};
+	
+	res.end(JSON.stringify(obj));
 });
 
 shepherd.loadLocalConfig = function() {
