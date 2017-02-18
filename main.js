@@ -9,14 +9,14 @@ const electron = require('electron'),
       os = require('os'),
       spawn = require('child_process').spawn,
       exec = require('child_process').exec,
-      fixPath = require('fix-path');      
+      fixPath = require('fix-path');
 var express = require('express'),
     bodyParser = require('body-parser'),
     fs = require('fs'),
     fsnode = require('fs'),
     fs = require('fs-extra'),
     mkdirp = require('mkdirp'),
-    pm2 = require('pm2');    
+    pm2 = require('pm2');
 
 Promise = require('bluebird');
 
@@ -63,7 +63,7 @@ guiapp.use('/shepherd', shepherd);
 
 var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
   console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
-})
+});
 
 module.exports = guiapp;
 // END GUI App Settings
