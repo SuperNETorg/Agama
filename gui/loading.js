@@ -108,7 +108,11 @@ function EDEX_DEXnotarychains() {
   });
 }
 
-function EDEX_DEXgetinfoAll() {
+function EDEX_DEXgetinfoAll(skip, minNotaries) {
+  const remote = require('electron').remote;
+  var window = remote.getCurrentWindow();
+
+  if (!skip) {
     var tmpIguanaRPCAuth = 'tmpIgRPCUser@' + sessionStorage.getItem('IguanaRPCAuth'),
         ajax_data = {
           'userpass': tmpIguanaRPCAuth,
@@ -117,9 +121,8 @@ function EDEX_DEXgetinfoAll() {
         },
         tmp_index = 0,
         get_dex_notarychains = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
-          //console.log(get_dex_notarychains.responseText);
           get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText);
-          //console.log(get_dex_notarychains)
+          get_dex_notarychains = get_dex_notarychains.splice(0, minNotaries);
 
           $.each(get_dex_notarychains, function( coin_index, coin_value ) {
             console.log(coin_index + ': ' + coin_value);
@@ -129,8 +132,7 @@ function EDEX_DEXgetinfoAll() {
                   'agent': 'dex',
                   'method': 'getinfo',
                   'symbol': coin_value
-                },
-                basiliskMinNotariesConnected = 10;
+                };
 
             console.log(ajax_data);
 
@@ -148,10 +150,8 @@ function EDEX_DEXgetinfoAll() {
                   $('#loading_sub_status_output_text').text('Output: Connected');
                 }
 
-                if ( tmp_index == 10 ) {
+                if ( tmp_index == minNotaries ) {
                   console.log('min notaries connected');
-                  const remote = require('electron').remote;
-                  var window = remote.getCurrentWindow();
                   window.hide();
                 }
               }).fail(function(xhr, textStatus, error) {
@@ -165,4 +165,7 @@ function EDEX_DEXgetinfoAll() {
             }
           });
         });
+  } else {
+    window.hide();
+  }
 }

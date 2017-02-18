@@ -62,6 +62,7 @@ shepherd.appConfig = {
   "iguanaGuiOnly": false,
   "manualIguanaStart": false,
   "skipBasiliskNetworkCheck": false,
+  "minNotaries": 50,
   "host": "127.0.0.1",
   "iguanaAppPort": 17777,
   "iguanaCorePort": 7778,
@@ -101,7 +102,7 @@ shepherd.post('/debuglog', function(req, res) {
 				'msg': 'success',
 				'result': result
 			};
-			
+
 			res.end(JSON.stringify(_obj));
 		}, function(result) {
 			var _obj = {
@@ -109,7 +110,7 @@ shepherd.post('/debuglog', function(req, res) {
 				'result': result
 			};
 
-			res.end(JSON.stringify(_obj));			
+			res.end(JSON.stringify(_obj));
 		});
 });
 
@@ -126,7 +127,7 @@ shepherd.post('/herd', function(req, res) {
 		'msg': 'success',
 		'result': 'result'
 	};
-	
+
 	res.end(JSON.stringify(obj));
 });
 
@@ -149,11 +150,11 @@ shepherd.post('/herdlist', function(req, res) {
 			console.log(list[0].pid) // print pid of IGUANA proc
 
 			var obj = {
-				'herdname': req.body.herdname, 
+				'herdname': req.body.herdname,
 				'status': list[0].pm2_env.status,
 				'pid': list[0].pid
 			};
-			
+
 			res.end(JSON.stringify(obj));
 		 });
 	});
@@ -170,7 +171,7 @@ shepherd.post('/slay', function(req, res) {
 		'msg': 'success',
 		'result': 'result'
 	};
-	
+
 	res.end(JSON.stringify(obj));
 });
 
@@ -185,7 +186,7 @@ shepherd.post('/setconf', function(req, res) {
 		'msg': 'success',
 		'result': 'result'
 	};
-	
+
 	res.end(JSON.stringify(obj));
 });
 
@@ -202,7 +203,7 @@ shepherd.post('/getconf', function(req, res) {
 		'msg': 'success',
 		'result': confpath
 	};
-	
+
 	res.end(JSON.stringify(obj));
 });
 
