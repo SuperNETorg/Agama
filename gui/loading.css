@@ -1,0 +1,27 @@
+body {
+  overflow: hidden !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.loader-block {
+  /*
+  background-image: url('loading.gif');
+  background-repeat: no-repeat;
+  background-position: center;
+  */
+  height: 240px;
+  width: 400px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+}
+
+.pulse-loader {
+  margin: 80px 50px;
+}
