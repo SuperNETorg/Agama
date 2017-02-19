@@ -122,6 +122,9 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
         tmp_index = 0,
         get_dex_notarychains = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
           get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText);
+          if (minNotaries > get_dex_notarychains.length) { // if config value exceeds total num of notaries
+            minNotaries = get_dex_notarychains.length;
+          }
           get_dex_notarychains = get_dex_notarychains.splice(0, minNotaries);
 
           $.each(get_dex_notarychains, function( coin_index, coin_value ) {
