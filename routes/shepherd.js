@@ -12,7 +12,8 @@ const electron = require('electron'),
 			md5 = require('md5'),
 			pm2 = require('pm2'),
 			readLastLines = require('read-last-lines'),
-			request = require('request');
+			request = require('request'),
+			async = require('async');
 
 Promise = require('bluebird');
 
@@ -86,135 +87,137 @@ shepherd.get('/appconf', function(req, res, next) {
 	res.send(obj);
 });
 
-shepherd.post('/allcoins', function(req, res, next) {
-	var sessionKey = req.body.sessionKey,
-	_obj = {
-		'msg': 'error',
-		'result': 'error'
-	},
-	outObj = {
-		basilisk: {}
-	},
-	pubkey,
-	writeCache = function() {
-		fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
-			if (err) {
-				return console.log(err);
-			}
+var allcoinsInProgress = false;
 
-			console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
-		});
-	};
+shepherd.get('/allcoins', function(req, res, next) {
+	if (!allcoinsInProgress) {
+		allcoinsInProgress = true;
 
-	res.end(JSON.stringify({
-		'msg': 'success',
-		'result': 'call is initiated'
-	}));
+		var sessionKey = req.query.userpass,
+		_obj = {
+			'msg': 'error',
+			'result': 'error'
+		},
+		outObj = {
+			basilisk: {}
+		},
+		pubkey,
+		writeCache = function() {
+			fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+				if (err) {
+					return console.log(err);
+				}
 
-	console.time('allcoins');
-	request({
-	  url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/SuperNET/activehandle?userpass=' + sessionKey,
-	  method: 'GET'
-	}, function (error, response, body) {
-		if (response.statusCode && response.statusCode === 200) {
-			pubkey = JSON.parse(body).pubkey;
+				console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
+			});
+		};
 
-			request({
-			  url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
-			  method: 'GET'
-			}, function (error, response, body) {
-				if (response.statusCode && response.statusCode === 200) {
-					body = JSON.parse(body);
-					// basilisk coins
-					if (body.basilisk.length) {
-						// get coin addresses
-						body.basilisk.forEach(function(coin) {
-							outObj.basilisk[coin] = {};
-							writeCache();
+		res.end(JSON.stringify({
+			'msg': 'success',
+			'result': 'call is initiated'
+		}));
 
-							request({
-		    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
-		    				method: 'GET'
-							}, function (error, response, body) {
-								if (response.statusCode && response.statusCode === 200) {
-									outObj.basilisk[coin].addresses = JSON.parse(body).result;
-									writeCache();
+		/*console.time('allcoins');
+		request({
+		  url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/SuperNET/activehandle?userpass=' + sessionKey,
+		  method: 'GET'
+		}, function (error, response, body) {
+			if (response.statusCode && response.statusCode === 200) {
+				pubkey = JSON.parse(body).pubkey;
 
-									outObj.basilisk[coin].addresses.forEach(function(address) {
-										console.log('KMD address ' + address);
-										outObj.basilisk[coin][address] = {};
+				request({
+				  url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
+				  method: 'GET'
+				}, function (error, response, body) {
+					if (response.statusCode && response.statusCode === 200) {
+						var callStack = [];
+						body = JSON.parse(body);
+						// basilisk coins
+						if (body.basilisk.length) {
+							// get coin addresses
+							async.each(body.basilisk, function(coin) {
+								outObj.basilisk[coin] = {};
+								writeCache();
+
+								request({
+			    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
+			    				method: 'GET'
+								}, function (error, response, body) {
+									if (response.statusCode && response.statusCode === 200) {
+										outObj.basilisk[coin].addresses = JSON.parse(body).result;
 										writeCache();
 
-										// get listunspent
-										request({
-					    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-					    				method: 'GET'
-										}, function (error, response, body) {
-											if (response.statusCode && response.statusCode === 200) {
-												outObj.basilisk[coin][address].listunspent = JSON.parse(body);
-												console.log(body);
+										async.each(outObj.basilisk[coin].addresses, function(address) {
+											console.log('KMD address ' + address);
+											outObj.basilisk[coin][address] = {};
+											writeCache();
 
-												writeCache();
+											// get listunspent
+											console.log('http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address);
+											request({
+						    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+						    				method: 'GET'
+											}, function (error, response, body) {
+												if (response.statusCode && response.statusCode === 200) {
+													outObj.basilisk[coin][address].listunspent = JSON.parse(body);
+													console.log(body);
+
+													writeCache();
+												}
+											});
+
+											// get listtransactions
+											request({
+						    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+						    				method: 'GET'
+											}, function (error, response, body) {
+												if (response.statusCode && response.statusCode === 200) {
+													outObj.basilisk[coin][address].listtransactions = JSON.parse(body);
+													console.log(body);
+
+													writeCache();
+												}
+											});
+
+											if (coin !== 'BTC') {
+												// get refresh
+												request({
+							    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address,
+							    				method: 'GET'
+												}, function (error, response, body) {
+													if (response.statusCode && response.statusCode === 200) {
+														outObj.basilisk[coin][address].refresh = JSON.parse(body);
+														console.log(body);
+
+														writeCache();
+													}
+												});
 											}
 										});
 
-										// get listtransactions
-										request({
-					    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-					    				method: 'GET'
-										}, function (error, response, body) {
-											if (response.statusCode && response.statusCode === 200) {
-												outObj.basilisk[coin][address].listtransactions = JSON.parse(body);
-												console.log(body);
-
-												writeCache();
-											}
-										});
-
-										// get listtransactions2
-										request({
-					    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions2?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-					    				method: 'GET'
-										}, function (error, response, body) {
-											if (response.statusCode && response.statusCode === 200) {
-												outObj.basilisk[coin][address].listtransactions2 = JSON.parse(body);
-												console.log(body);
-
-												writeCache();
-											}
-										});
-
-										// get refresh
-										request({
-					    				url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address,
-					    				method: 'GET'
-										}, function (error, response, body) {
-											if (response.statusCode && response.statusCode === 200) {
-												outObj.basilisk[coin][address].refresh = JSON.parse(body);
-												console.log(body);
-
-												writeCache();
-											}
-										});
-									});
-
-									console.timeEnd('allcoins'); // !not an actual time taken by the call!
-								} else {
-									// TODO: error
-								}
+										console.timeEnd('allcoins'); // !not an actual time taken by the call!
+									} else {
+										// TODO: error
+									}
+								});
 							});
-						});
+						} else {
+							// TODO: error
+						}
 					} else {
 						// TODO: error
 					}
-				} else {
-					// TODO: error
-				}
-			});
-		} else {
-			// TODO: error
-		}
-	});
+				});
+			} else {
+				// TODO: error
+			}
+		});*/
+	} else {
+		res.end(JSON.stringify({
+			'msg': 'error',
+			'result': 'another call is in progress already'
+		}));
+	}
 });
 
 shepherd.post('/debuglog', function(req, res) {
