@@ -110,6 +110,18 @@ shepherd.get('/allcoins', function(req, res, next) {
 
         console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
       });
+    },
+    callStack = {},
+    checkCallStack = function() {
+    	var total = 0;
+
+      for (var coin in callStack) {
+      	total =+ callStack[coin];
+      }
+
+    	if (total / Object.keys(callStack).length === 1) {
+    		allcoinsInProgress = false;
+    	}
     };
 
     res.end(JSON.stringify({
@@ -123,19 +135,22 @@ shepherd.get('/allcoins', function(req, res, next) {
       url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/SuperNET/activehandle?userpass=' + sessionKey,
       method: 'GET'
     }, function (error, response, body) {
-      if (response.statusCode && response.statusCode === 200) {
+      if (response && response.statusCode && response.statusCode === 200) {
         pubkey = JSON.parse(body).pubkey;
 
         request({
           url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
           method: 'GET'
         }, function (error, response, body) {
-          if (response.statusCode && response.statusCode === 200) {
-            var callStack = [];
+          if (response && response.statusCode && response.statusCode === 200) {
             body = JSON.parse(body);
             // basilisk coins
-            if (body.basilisk.length) {
+            if (body.basilisk && body.basilisk.length) {
               // get coin addresses
+              async.each(body.basilisk, function(coin) {
+              	callStack[coin] = 1;
+              });
+
               async.each(body.basilisk, function(coin) {
                 outObj.basilisk[coin] = {};
                 writeCache();
@@ -144,9 +159,11 @@ shepherd.get('/allcoins', function(req, res, next) {
                   url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
                   method: 'GET'
                 }, function (error, response, body) {
-                  if (response.statusCode && response.statusCode === 200) {
+                  if (response && response.statusCode && response.statusCode === 200) {
                     outObj.basilisk[coin].addresses = JSON.parse(body).result;
                     writeCache();
+                    callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? 2 : 3);
+                    console.log(coin + ' stack len ' + callStack[coin]);
 
                     async.each(outObj.basilisk[coin].addresses, function(address) {
                       var dexUrls = {
@@ -166,10 +183,13 @@ shepherd.get('/allcoins', function(req, res, next) {
                           url: dexUrl,
                           method: 'GET'
                         }, function (error, response, body) {
-                          if (response.statusCode && response.statusCode === 200) {
+                          if (response && response.statusCode && response.statusCode === 200) {
                             outObj.basilisk[coin][address][key] = JSON.parse(body);
 			                      console.log(dexUrl);
                             console.log(body);
+                            callStack[coin]--;
+                            console.log(coin + ' _stack len ' + callStack[coin]);
+                            checkCallStack();
 
                             writeCache();
                           }
