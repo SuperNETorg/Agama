@@ -50,12 +50,15 @@ if (os.platform() === 'linux') {
 if (os.platform() === 'win32') {
 	var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe');
 			iguanaBin = path.normalize(iguanaBin);
-	var iguanaDir = process.env.APPDATA + '/iguana';
+			iguanaDir = process.env.APPDATA + '/iguana';
 			iguanaDir = path.normalize(iguanaDir);
-	var iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
+			iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
 			iguanaConfsDir = path.normalize(iguanaConfsDir);
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
+			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+			komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
+			komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
+			komodoDir = process.env.APPDATA + '/Komodo';
 }
 
 shepherd.appConfig = {
@@ -591,6 +594,11 @@ function setConf(flock) {
 	if (os.platform() === 'linux') {
 		var komodoDir = process.env.HOME + '/.komodo',
 				ZcashDir = process.env.HOME + '/.zcash';
+	}
+
+	if (os.platform() === 'win32') {
+		var komodoDir = process.env.APPDATA + '/Komodo',
+				ZcashDir = process.env.APPDATA + '/Zcash';
 	}
 
 	switch (flock) {
