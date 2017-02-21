@@ -87,10 +87,46 @@ shepherd.get('/appconf', function(req, res, next) {
   res.send(obj);
 });
 
+/*
+ *	params: pubkey
+ */
+shepherd.get('/cache', function(req, res, next) {
+	var pubkey = req.query.pubkey;
+
+	if (pubkey) {
+	  if (fs.existsSync(iguanaDir + '/cache-' + pubkey + '.json')) {
+			fs.readFile(iguanaDir + '/cache-' + pubkey + '.json', 'utf8', function (err, data) {
+			  if (err) {
+			    var errorObj = {
+			      'msg': 'error',
+			      'result': err
+			    };
+
+			    res.end(JSON.stringify(errorObj));
+			  } else {
+			    var successObj = {
+			      'msg': 'success',
+			      'result': JSON.parse(data)
+			    };
+
+			  	res.end(JSON.stringify(successObj));
+			  }
+			});
+		} else {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no pubkey provided'
+	    };
+
+	    res.end(JSON.stringify(errorObj));
+		}
+	}
+});
+
 var allcoinsInProgress = false;
 
 /*
- *	params: userpass
+ *	params: userpass, pubkey
  */
 shepherd.get('/allcoins', function(req, res, next) {
   if (!allcoinsInProgress) {
@@ -213,7 +249,7 @@ shepherd.get('/allcoins', function(req, res, next) {
 });
 
 /*
- *	params: userpass, coin, address
+ *	params: userpass, pubkey, coin, address
  */
 shepherd.get('/refresh', function(req, res, next) {
   var sessionKey = req.query.userpass,
