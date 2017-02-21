@@ -89,6 +89,9 @@ shepherd.get('/appconf', function(req, res, next) {
 
 var allcoinsInProgress = false;
 
+/*
+ *	params: userpass
+ */
 shepherd.get('/allcoins', function(req, res, next) {
   if (!allcoinsInProgress) {
     allcoinsInProgress = true;
@@ -220,6 +223,79 @@ shepherd.get('/allcoins', function(req, res, next) {
       'result': 'another call is in progress already'
     }));
   }
+});
+
+/*
+ *	params: userpass, coin, address
+ */
+shepherd.get('/refresh', function(req, res, next) {
+  var sessionKey = req.query.userpass,
+  		coin = req.query.coin,
+  		address = req.query.address,
+  _obj = {
+    'msg': 'error',
+    'result': 'error'
+  },
+  outObj,
+  pubkey,
+  writeCache = function() {
+    fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+      if (err) {
+        return console.log(err);
+      }
+
+      console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
+    });
+  };
+
+  request({
+    url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/SuperNET/activehandle?userpass=' + sessionKey,
+    method: 'GET'
+  }, function (error, response, body) {
+    if (response && response.statusCode && response.statusCode === 200) {
+      pubkey = JSON.parse(body).pubkey;
+
+      if (fs.existsSync(iguanaDir + '/cache-' + pubkey + '.json')) {
+    		outObj = JSON.parse(fs.readFileSync(iguanaDir + '/cache-' + pubkey + '.json', 'utf8'));
+
+    		if (outObj && !outObj.basilisk) {
+    			outObj['basilisk'] = {};
+    			outObj['basilisk'][coin] = {};
+    		} else {
+    			if (!outObj[coin]) {
+    				outObj['basilisk'][coin][address] = {};
+    			}
+    		}
+  		} else {
+  			outObj = {
+  				basilisk: {}
+  			};
+  		}
+
+  		var refreshUrl = 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+
+      request({
+        url: refreshUrl,
+        method: 'GET'
+      }, function (error, response, body) {
+        if (response && response.statusCode && response.statusCode === 200) {
+          outObj.basilisk[coin][address].refresh = JSON.parse(body);
+          console.log(refreshUrl);
+          console.log(body);
+
+					writeCache();
+				  res.end(JSON.stringify({
+				    'msg': 'success',
+				    'result': iguanaDir + '/cache-' + pubkey + '.json updated'
+				  }));
+        }
+      });
+
+
+    } else {
+		  res.end(JSON.stringify(_obj));
+    }
+  });
 });
 
 shepherd.post('/debuglog', function(req, res) {
