@@ -29,34 +29,37 @@ var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
 // SETTING OS DIR TO RUN IGUANA FROM
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'darwin') {
-  fixPath();
-  var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
-      iguanaDir = process.env.HOME + '/Library/Application Support/iguana',
-      iguanaConfsDir = iguanaDir + '/confs',
-      komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
-      komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
-      komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+	fixPath();
+	var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
+			iguanaDir = process.env.HOME + '/Library/Application Support/iguana',
+			iguanaConfsDir = iguanaDir + '/confs',
+			komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
+			komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
+			komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
 }
 
 if (os.platform() === 'linux') {
-  var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
-      iguanaDir = process.env.HOME + '/.iguana',
-      iguanaConfsDir = iguanaDir + '/confs',
-      iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png'),
-      komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
-      komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
-      komodoDir = process.env.HOME + '/.komodo';
+	var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
+			iguanaDir = process.env.HOME + '/.iguana',
+			iguanaConfsDir = iguanaDir + '/confs',
+			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png'),
+			komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
+			komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
+			komodoDir = process.env.HOME + '/.komodo';
 }
 
 if (os.platform() === 'win32') {
-  var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe');
-      iguanaBin = path.normalize(iguanaBin);
-  var iguanaDir = process.env.APPDATA + '/iguana';
-      iguanaDir = path.normalize(iguanaDir);
-  var iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
-      iguanaConfsDir = path.normalize(iguanaConfsDir);
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
-      iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+	var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe');
+			iguanaBin = path.normalize(iguanaBin);
+			iguanaDir = process.env.APPDATA + '/iguana';
+			iguanaDir = path.normalize(iguanaDir);
+			iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
+			iguanaConfsDir = path.normalize(iguanaConfsDir);
+			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
+			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+			komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
+			komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
+			komodoDir = process.env.APPDATA + '/Komodo';
 }
 
 shepherd.appConfig = {
@@ -673,218 +676,223 @@ shepherd.saveLocalAppConf = function(appSettings) {
 }
 
 function setConf(flock) {
-  console.log(flock);
+	console.log(flock);
 
-  if (os.platform() === 'darwin') {
-    var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
-        ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
-  }
+	if (os.platform() === 'darwin') {
+		var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
+				ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+	}
 
-  if (os.platform() === 'linux') {
-    var komodoDir = process.env.HOME + '/.komodo',
-        ZcashDir = process.env.HOME + '/.zcash';
-  }
+	if (os.platform() === 'linux') {
+		var komodoDir = process.env.HOME + '/.komodo',
+				ZcashDir = process.env.HOME + '/.zcash';
+	}
 
-  switch (flock) {
-    case 'komodod':
-      var DaemonConfPath = komodoDir + '/komodo.conf';
-      break;
-    case 'zcashd':
-      var DaemonConfPath = ZcashDir + '/zcash.conf';
-      break;
-    default:
-      var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
-  }
+	if (os.platform() === 'win32') {
+		var komodoDir = process.env.APPDATA + '/Komodo',
+				ZcashDir = process.env.APPDATA + '/Zcash';
+	}
 
-  console.log(DaemonConfPath);
+	switch (flock) {
+		case 'komodod':
+			var DaemonConfPath = komodoDir + '/komodo.conf';
+			break;
+		case 'zcashd':
+			var DaemonConfPath = ZcashDir + '/zcash.conf';
+			break;
+		default:
+			var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
+	}
 
-  var CheckFileExists = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'Check Conf file exists is done'
+	console.log(DaemonConfPath);
 
-      fs.ensureFile(DaemonConfPath, function(err) {
-        console.log(err); // => null
-      });
+	var CheckFileExists = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'Check Conf file exists is done'
 
-      setTimeout(function() {
-        console.log(result);
-        resolve(result);
-      }, 2000);
-    });
-  }
+			fs.ensureFile(DaemonConfPath, function(err) {
+				console.log(err); // => null
+			});
 
-  var FixFilePermissions = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'Conf file permissions updated to Read/Write';
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 2000);
+		});
+	}
 
-      fsnode.chmodSync(DaemonConfPath, '0666');
+	var FixFilePermissions = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'Conf file permissions updated to Read/Write';
 
-      setTimeout(function() {
-        console.log(result);
-        resolve(result);
-      }, 1000);
-    });
-  }
+			fsnode.chmodSync(DaemonConfPath, '0666');
 
-  var RemoveLines = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'RemoveLines is done'
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 1000);
+		});
+	}
 
-      fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
-        if (err) {
-          return console.log(err);
-        }
+	var RemoveLines = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'RemoveLines is done'
 
-        var rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
+			fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
+				if (err) {
+					return console.log(err);
+				}
 
-        fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
-          if (err)
-            return console.log(err);
-        });
-      });
+				var rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
 
-      fsnode.chmodSync(DaemonConfPath, '0666');
-      setTimeout(function() {
-        console.log(result);
-        resolve(result);
-      }, 2000);
-    });
-  }
+				fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
+					if (err)
+						return console.log(err);
+				});
+			});
 
-  var CheckConf = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'CheckConf is done';
+			fsnode.chmodSync(DaemonConfPath, '0666');
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 2000);
+		});
+	}
 
-      setconf.status(DaemonConfPath, function(err, status) {
-        //console.log(status[0]);
-        //console.log(status[0].rpcuser);
-        var rpcuser = function() {
-          return new Promise(function(resolve, reject) {
-            var result = 'checking rpcuser...';
+	var CheckConf = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'CheckConf is done';
 
-            if (status[0].hasOwnProperty('rpcuser')) {
-              console.log('rpcuser: OK');
-            } else {
-              console.log('rpcuser: NOT FOUND');
-              var randomstring = md5(Math.random() * Math.random() * 999);
+			setconf.status(DaemonConfPath, function(err, status) {
+				//console.log(status[0]);
+				//console.log(status[0].rpcuser);
+				var rpcuser = function() {
+					return new Promise(function(resolve, reject) {
+						var result = 'checking rpcuser...';
 
-              fs.appendFile(DaemonConfPath, '\nrpcuser=user' + randomstring.substring(0, 16), (err) => {
-                if (err)
-                  throw err;
-                console.log('rpcuser: ADDED');
-              });
-            }
+						if (status[0].hasOwnProperty('rpcuser')) {
+							console.log('rpcuser: OK');
+						} else {
+							console.log('rpcuser: NOT FOUND');
+							var randomstring = md5(Math.random() * Math.random() * 999);
 
-            //console.log(result)
-            resolve(result);
-          });
-        }
+							fs.appendFile(DaemonConfPath, '\nrpcuser=user' + randomstring.substring(0, 16), (err) => {
+								if (err)
+									throw err;
+								console.log('rpcuser: ADDED');
+							});
+						}
 
-        var rpcpass = function() {
-          return new Promise(function(resolve, reject) {
-            var result = 'checking rpcpass...';
+						//console.log(result)
+						resolve(result);
+					});
+				}
 
-            if (status[0].hasOwnProperty('rpcpass')) {
-              console.log('rpcpass: OK');
-            } else {
-              console.log('rpcpass: NOT FOUND');
-              var randomstring = md5(Math.random() * Math.random() * 999);
+				var rpcpass = function() {
+					return new Promise(function(resolve, reject) {
+						var result = 'checking rpcpass...';
 
-              fs.appendFile(DaemonConfPath, '\nrpcpass=' + randomstring +
-                                            '\nrpcpassword=' + randomstring, (err) => {
-                if (err)
-                  throw err;
-                console.log('rpcpass: ADDED');
-              });
-            }
+						if (status[0].hasOwnProperty('rpcpass')) {
+							console.log('rpcpass: OK');
+						} else {
+							console.log('rpcpass: NOT FOUND');
+							var randomstring = md5(Math.random() * Math.random() * 999);
 
-            //console.log(result)
-            resolve(result);
-          });
-        }
+							fs.appendFile(DaemonConfPath, '\nrpcpass=' + randomstring +
+																						'\nrpcpassword=' + randomstring, (err) => {
+								if (err)
+									throw err;
+								console.log('rpcpass: ADDED');
+							});
+						}
 
-        var server = function() {
-          return new Promise(function(resolve, reject) {
-            var result = 'checking server...';
+						//console.log(result)
+						resolve(result);
+					});
+				}
 
-            if (status[0].hasOwnProperty('server')) {
-              console.log('server: OK');
-            } else {
-              console.log('server: NOT FOUND');
-              fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
-                if (err)
-                  throw err;
-                console.log('server: ADDED');
-              });
-            }
+				var server = function() {
+					return new Promise(function(resolve, reject) {
+						var result = 'checking server...';
 
-            //console.log(result)
-            resolve(result);
-          });
-        }
+						if (status[0].hasOwnProperty('server')) {
+							console.log('server: OK');
+						} else {
+							console.log('server: NOT FOUND');
+							fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
+								if (err)
+									throw err;
+								console.log('server: ADDED');
+							});
+						}
 
-        var addnode = function() {
-          return new Promise(function(resolve, reject) {
-            var result = 'checking addnode...';
+						//console.log(result)
+						resolve(result);
+					});
+				}
 
-            if(status[0].hasOwnProperty('addnode')) {
-              console.log('addnode: OK');
-            } else {
-              console.log('addnode: NOT FOUND')
-              fs.appendFile(DaemonConfPath,
-                            '\naddnode=78.47.196.146' +
-                            '\naddnode=5.9.102.210' +
-                            '\naddnode=178.63.69.164' +
-                            '\naddnode=88.198.65.74' +
-                            '\naddnode=5.9.122.241' +
-                            '\naddnode=144.76.94.3',
-                            (err) => {
-                if (err)
-                  throw err;
-                console.log('addnode: ADDED');
-              });
-            }
+				var addnode = function() {
+					return new Promise(function(resolve, reject) {
+						var result = 'checking addnode...';
 
-            //console.log(result)
-            resolve(result);
-          });
-        }
+						if(status[0].hasOwnProperty('addnode')) {
+							console.log('addnode: OK');
+						} else {
+							console.log('addnode: NOT FOUND')
+							fs.appendFile(DaemonConfPath,
+														'\naddnode=78.47.196.146' +
+														'\naddnode=5.9.102.210' +
+														'\naddnode=178.63.69.164' +
+														'\naddnode=88.198.65.74' +
+														'\naddnode=5.9.122.241' +
+														'\naddnode=144.76.94.3',
+														(err) => {
+								if (err)
+									throw err;
+								console.log('addnode: ADDED');
+							});
+						}
 
-        rpcuser()
-        .then(function(result) {
-          return rpcpass();
-        })
-        .then(server)
-        .then(addnode)
-      });
+						//console.log(result)
+						resolve(result);
+					});
+				}
 
-      setTimeout(function() {
-        console.log(result);
-        resolve(result);
-      }, 2000);
-    });
-  }
+				rpcuser()
+				.then(function(result) {
+					return rpcpass();
+				})
+				.then(server)
+				.then(addnode)
+			});
 
-  var MakeConfReadOnly = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'Conf file permissions updated to Read Only';
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 2000);
+		});
+	}
 
-      fsnode.chmodSync(DaemonConfPath, '0400');
+	var MakeConfReadOnly = function() {
+		return new Promise(function(resolve, reject) {
+			var result = 'Conf file permissions updated to Read Only';
 
-      setTimeout(function() {
-        console.log(result);
-        resolve(result);
-      }, 1000);
-    });
-  }
+			fsnode.chmodSync(DaemonConfPath, '0400');
 
-  CheckFileExists()
-  .then(function(result) {
-    return FixFilePermissions();
-  })
-  .then(RemoveLines)
-  .then(CheckConf)
-  .then(MakeConfReadOnly);
+			setTimeout(function() {
+				console.log(result);
+				resolve(result);
+			}, 1000);
+		});
+	}
+
+	CheckFileExists()
+	.then(function(result) {
+		return FixFilePermissions();
+	})
+	.then(RemoveLines)
+	.then(CheckConf)
+	.then(MakeConfReadOnly);
 }
 
 function getConf(flock) {

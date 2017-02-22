@@ -17,6 +17,8 @@ var express = require('express'),
     fs = require('fs-extra'),
     mkdirp = require('mkdirp'),
     pm2 = require('pm2');
+    cluster = require('cluster');
+    numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
 
@@ -60,6 +62,14 @@ var guipath = path.join(__dirname, '/gui');
 guiapp.use('/gui', express.static(guipath));
 
 guiapp.use('/shepherd', shepherd);
+
+/*if (cluster.isMaster && process.env.NODE_ENV !== "development") {
+  for (var i = 0; i < numCPUs; i++) {
+      cluster.fork();
+  }
+}
+console.log(cluster)
+*/
 
 var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
   console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
