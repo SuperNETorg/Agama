@@ -89,7 +89,16 @@ shepherd.get('/appconf', function(req, res, next) {
 	res.send(obj);
 });
 
+shepherd.post('/getcache', function(req, res, next) {
+	console.log(req.body.pubkey)
+	var obj = shepherd.getCache(req.body.pubkey);
+	console.log('displaying output of request')
+	console.log(obj);
+	res.send(obj);
+});
+
 shepherd.post('/allcoins', function(req, res, next) {
+	console.log(req.body.sessionKey)
 	var sessionKey = req.body.sessionKey,
 	_obj = {
 		'msg': 'error',
@@ -382,6 +391,22 @@ shepherd.loadLocalConfig = function() {
 		return shepherd.appConfig;
 	}
 };
+
+shepherd.getCache = function(_key) {
+	console.log(_key);
+	if (fs.existsSync(iguanaDir + '/cache-'+_key+'.json')) {
+		var WalletCacheFile = fs.readFileSync(iguanaDir + '/cache-'+_key+'.json', 'utf8');
+		console.log(WalletCacheFile)
+		console.log('Cache file found. serving it.');
+		//return JSON.parse(WalletCacheFile);
+		return WalletCacheFile;
+	} else {
+		console.log('Cache file not found. yet.');
+		return {"error":"file not found"};
+	}
+};
+
+
 
 shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
