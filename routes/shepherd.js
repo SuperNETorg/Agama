@@ -557,15 +557,17 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
     function(resolve, reject) {
       if (lastNLines) {
-        if (fs.existsSync(fileLocation)) {
-          console.log('reading ' + fileLocation);
-
-          readLastLines
-            .read(fileLocation, lastNLines)
-            .then((lines) => resolve(lines));
-        } else {
-          reject('file ' + fileLocation + ' doesn\'t exist!');
-        }
+        fs.access(fileLocation, fs.constants.R_OK, function(err) {
+		      if (err) {
+	          console.log('error reading ' + fileLocation);
+		        reject('readDebugLog error: ' + err);
+		      } else {
+          	console.log('reading ' + fileLocation);		      	
+	          readLastLines
+	            .read(fileLocation, lastNLines)
+	            .then((lines) => resolve(lines));
+	        }
+        });
       } else {
         reject('readDebugLog error: lastNLines param is not provided!');
       }
