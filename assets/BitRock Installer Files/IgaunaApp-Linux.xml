@@ -108,7 +108,38 @@
             </folderList>
         </component>
     </componentList>
+    <preInstallationActionList>
+        <!-- Retreive values about previous installer so we can uninstall it -->
+        <foreach>
+            <values>version oldVersion installdir oldInstalldir</values>
+            <variables>name variable</variables>
+            <actionList>
+                <setInstallerVariable name="${variable}" value=""/>
+                <iniFileGet>
+                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <key>${name}</key>
+                    <section>details</section>
+                    <variable>${variable}</variable>
+                    <ruleList>
+                        <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+                    </ruleList>
+                </iniFileGet>
+            </actionList>
+            <ruleList>
+                <platformTest negate="1" type="windows"/>
+            </ruleList>
+        </foreach>
+    </preInstallationActionList>
     <readyToInstallActionList>
+        <runProgram>
+            <program>${oldInstalldir}/${uninstallerName}</program>
+            <programArguments>--mode unattended</programArguments>
+            <ruleList>
+                <fileExists>
+                    <path>${oldInstalldir}/${uninstallerName}</path>
+                </fileExists>
+            </ruleList>
+        </runProgram>
         <createDirectory>
             <abortOnError>0</abortOnError>
             <explanation>Creating ZcashParam directory</explanation>
@@ -173,6 +204,24 @@
             <group>users</group>
             <owner>nobody</owner>
         </changeOwnerAndGroup>
+
+        <!-- Store values of current installer in etc folder so we can find for uninstal -->
+        <foreach>
+            <values>version "${project.version}" installdir "${installdir}"</values>
+            <variables>name variable</variables>
+            <actionList>
+                <iniFileSet>
+                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <key>${name}</key>
+                    <section>details</section>
+                    <value>${variable}</value>
+                </iniFileSet>
+            </actionList>
+            <ruleList>
+                <platformTest negate="1" type="windows"/>
+            </ruleList>
+        </foreach>
+        <addFilesToUninstaller files="/etc/${project.vendor}-${project.shortName}.ini"/>
     </postInstallationActionList>
     <postUninstallationActionList>
         <deleteFile>
