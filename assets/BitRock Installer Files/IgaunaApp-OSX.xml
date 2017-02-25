@@ -152,7 +152,7 @@
         <addFilesToUninstaller files="/etc/${project.vendor}-${project.shortName}.ini"/>
     </postInstallationActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
-    <enableRollback>1</enableRollback>
+    <enableRollback>0</enableRollback>
     <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>

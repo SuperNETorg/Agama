@@ -169,6 +169,24 @@
         </component>
     </componentList>
     <readyToInstallActionList>
+        <!-- BEGIN: Run uninstaller if found -->
+        <registryGetMatch>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${product_fullname} ${product_version}</key>
+            <name>UninstallString</name>
+            <variable>uninstaller_path</variable>
+        </registryGetMatch>
+        <runProgram>
+            <program>${uninstaller_path}</program>
+            <programArguments>--mode unattended</programArguments>
+            <ruleList>
+                <fileTest>
+                    <condition>exists</condition>
+                    <path>${uninstaller_path}</path>
+                </fileTest>
+            </ruleList>
+        </runProgram>
+
+        <!-- END: Run uninstaller if found -->
         <showProgressDialog>
             <title>Downloading files</title>
             <actionList>
@@ -277,9 +295,10 @@
         </actionGroup>
     </postInstallationActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
-    <enableRollback>1</enableRollback>
+    <enableRollback>0</enableRollback>
     <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
+    <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
     <vendor>SuperNETOrg</vendor>
     <windows64bitMode>1</windows64bitMode>
