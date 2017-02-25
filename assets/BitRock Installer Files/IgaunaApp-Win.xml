@@ -2,10 +2,10 @@
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
     <version>0.1.4-beta</version>
-    <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
-    <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
-    <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
-    <splashImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_splash_image.png</splashImage>
+    <licenseFile>../../LICENSE</licenseFile>
+    <leftImage>../installer_imgs/Iguana_installer_wizard_image.png</leftImage>
+    <logoImage>../installer_imgs/supernet-iguana-logo.png</logoImage>
+    <splashImage>../installer_imgs/Iguana_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -66,64 +66,64 @@
                     <platforms>windows</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/locales</origin>
+                            <origin>../../build/Iguana-win32-x64/locales</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/resources</origin>
+                            <origin>../../build/Iguana-win32-x64/resources</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/blink_image_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-win32-x64/blink_image_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/content_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-win32-x64/content_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/content_shell.pak</origin>
+                            <origin>../../build/Iguana-win32-x64/content_shell.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/ui_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-win32-x64/ui_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/views_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-win32-x64/views_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/icudtl.dat</origin>
+                            <origin>../../build/Iguana-win32-x64/icudtl.dat</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/LICENSES.chromium.html</origin>
+                            <origin>../../build/Iguana-win32-x64/LICENSES.chromium.html</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/natives_blob.bin</origin>
+                            <origin>../../build/Iguana-win32-x64/natives_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/snapshot_blob.bin</origin>
+                            <origin>../../build/Iguana-win32-x64/snapshot_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/d3dcompiler_47.dll</origin>
+                            <origin>../../build/Iguana-win32-x64/d3dcompiler_47.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/ffmpeg.dll</origin>
+                            <origin>../../build/Iguana-win32-x64/ffmpeg.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/libEGL.dll</origin>
+                            <origin>../../build/Iguana-win32-x64/libEGL.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/libGLESv2.dll</origin>
+                            <origin>../../build/Iguana-win32-x64/libGLESv2.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/node.dll</origin>
+                            <origin>../../build/Iguana-win32-x64/node.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/xinput1_3.dll</origin>
+                            <origin>../../build/Iguana-win32-x64/xinput1_3.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/LICENSE</origin>
+                            <origin>../../build/Iguana-win32-x64/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/version</origin>
+                            <origin>../../build/Iguana-win32-x64/version</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-win32-x64/Iguana.exe</origin>
+                            <origin>../../build/Iguana-win32-x64/Iguana.exe</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -280,6 +280,7 @@
     <enableRollback>1</enableRollback>
     <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
+    <saveRelativePaths>1</saveRelativePaths>
     <vendor>SuperNETOrg</vendor>
     <windows64bitMode>1</windows64bitMode>
     <finalPageActionList>
