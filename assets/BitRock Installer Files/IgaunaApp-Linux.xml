@@ -2,10 +2,10 @@
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
     <version>0.1.4.1-beta</version>
-    <licenseFile>/Users/satinder/Documents/Github/iguana/LICENSE</licenseFile>
-    <leftImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_wizard_image.png</leftImage>
-    <logoImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/supernet-iguana-logo.png</logoImage>
-    <splashImage>/Users/satinder/Documents/Github/iguana/assets/installer_imgs/Iguana_installer_splash_image.png</splashImage>
+    <licenseFile>../../LICENSE</licenseFile>
+    <leftImage>../installer_imgs/Iguana_installer_wizard_image.png</leftImage>
+    <logoImage>../installer_imgs/supernet-iguana-logo.png</logoImage>
+    <splashImage>../installer_imgs/Iguana_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -38,52 +38,52 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/locales</origin>
+                            <origin>../../build/Iguana-linux-x64/locales</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/resources</origin>
+                            <origin>../../build/Iguana-linux-x64/resources</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/version</origin>
+                            <origin>../../build/Iguana-linux-x64/version</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/content_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-linux-x64/content_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/LICENSE</origin>
+                            <origin>../../build/Iguana-linux-x64/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/blink_image_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-linux-x64/blink_image_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/views_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-linux-x64/views_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/ui_resources_200_percent.pak</origin>
+                            <origin>../../build/Iguana-linux-x64/ui_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/natives_blob.bin</origin>
+                            <origin>../../build/Iguana-linux-x64/natives_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/snapshot_blob.bin</origin>
+                            <origin>../../build/Iguana-linux-x64/snapshot_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/LICENSES.chromium.html</origin>
+                            <origin>../../build/Iguana-linux-x64/LICENSES.chromium.html</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/libffmpeg.so</origin>
+                            <origin>../../build/Iguana-linux-x64/libffmpeg.so</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/content_shell.pak</origin>
+                            <origin>../../build/Iguana-linux-x64/content_shell.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/icudtl.dat</origin>
+                            <origin>../../build/Iguana-linux-x64/icudtl.dat</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/libnode.so</origin>
+                            <origin>../../build/Iguana-linux-x64/libnode.so</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>/Users/satinder/Documents/Github/iguana/build/Iguana-linux-x64/Iguana</origin>
+                            <origin>../../build/Iguana-linux-x64/Iguana</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -108,7 +108,38 @@
             </folderList>
         </component>
     </componentList>
+    <preInstallationActionList>
+        <!-- Retreive values about previous installer so we can uninstall it -->
+        <foreach>
+            <values>version oldVersion installdir oldInstalldir</values>
+            <variables>name variable</variables>
+            <actionList>
+                <setInstallerVariable name="${variable}" value=""/>
+                <iniFileGet>
+                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <key>${name}</key>
+                    <section>details</section>
+                    <variable>${variable}</variable>
+                    <ruleList>
+                        <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+                    </ruleList>
+                </iniFileGet>
+            </actionList>
+            <ruleList>
+                <platformTest negate="1" type="windows"/>
+            </ruleList>
+        </foreach>
+    </preInstallationActionList>
     <readyToInstallActionList>
+        <runProgram>
+            <program>${oldInstalldir}/${uninstallerName}</program>
+            <programArguments>--mode unattended</programArguments>
+            <ruleList>
+                <fileExists>
+                    <path>${oldInstalldir}/${uninstallerName}</path>
+                </fileExists>
+            </ruleList>
+        </runProgram>
         <createDirectory>
             <abortOnError>0</abortOnError>
             <explanation>Creating ZcashParam directory</explanation>
@@ -173,6 +204,24 @@
             <group>users</group>
             <owner>nobody</owner>
         </changeOwnerAndGroup>
+
+        <!-- Store values of current installer in etc folder so we can find for uninstal -->
+        <foreach>
+            <values>version "${project.version}" installdir "${installdir}"</values>
+            <variables>name variable</variables>
+            <actionList>
+                <iniFileSet>
+                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <key>${name}</key>
+                    <section>details</section>
+                    <value>${variable}</value>
+                </iniFileSet>
+            </actionList>
+            <ruleList>
+                <platformTest negate="1" type="windows"/>
+            </ruleList>
+        </foreach>
+        <addFilesToUninstaller files="/etc/${project.vendor}-${project.shortName}.ini"/>
     </postInstallationActionList>
     <postUninstallationActionList>
         <deleteFile>
@@ -182,10 +231,11 @@
     </postUninstallationActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
     <defaultUnixFilePermissions>755</defaultUnixFilePermissions>
-    <enableRollback>1</enableRollback>
+    <enableRollback>0</enableRollback>
     <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
+    <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall-Iguana</uninstallerName>
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
@@ -193,6 +243,7 @@
             <program>/bin/Iguana</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
+            <runAs>$USER</runAs>
         </runProgram>
     </finalPageActionList>
     <parameterList>
