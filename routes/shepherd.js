@@ -294,10 +294,12 @@ shepherd.get('/cache-one', function(req, res, next) {
 			outObj = JSON.parse(fs.readFileSync(iguanaDir + '/cache-' + pubkey + '.json', 'utf8'));
 
 			if (!outObj || !outObj.basilisk) {
+				console.log('no local basilisk info');
 				outObj['basilisk'] = {};
 				outObj['basilisk'][coin] = {};
 			} else {
-				if (!outObj[coin]) {
+				if (!outObj['basilisk'][coin]) {
+					console.log('no local coin info');
 					outObj['basilisk'][coin] = {};
 				}
 			}
@@ -333,7 +335,10 @@ shepherd.get('/cache-one', function(req, res, next) {
             }
             //console.log(JSON.stringify(dexUrls));
             console.log(coin + ' address ' + address);
-            outObj.basilisk[coin][address] = {};
+			      if (!outObj.basilisk[coin][address]) {
+			      	outObj.basilisk[coin][address] = {};
+			      	writeCache();
+			      }
             writeCache();
 
             async.forEachOf(_dexUrls, function(dexUrl, key) {
