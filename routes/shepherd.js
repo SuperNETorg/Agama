@@ -97,8 +97,8 @@ shepherd.get('/cache', function(req, res, next) {
 	var pubkey = req.query.pubkey;
 
 	if (pubkey) {
-	  if (fs.existsSync(iguanaDir + '/cache-' + pubkey + '.json')) {
-			fs.readFile(iguanaDir + '/cache-' + pubkey + '.json', 'utf8', function (err, data) {
+	  if (fs.existsSync(iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
+			fs.readFile(iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8', function (err, data) {
 			  if (err) {
 			    var errorObj = {
 			      'msg': 'error',
@@ -109,7 +109,7 @@ shepherd.get('/cache', function(req, res, next) {
 			  } else {
 			    var successObj = {
 			      'msg': 'success',
-			      'result': JSON.parse(data)
+			      'result': data ? JSON.parse(data) : ''
 			    };
 
 			  	res.end(JSON.stringify(successObj));
@@ -118,22 +118,30 @@ shepherd.get('/cache', function(req, res, next) {
 		} else {
 	    var errorObj = {
 	      'msg': 'error',
-	      'result': 'no pubkey provided'
+	      'result': 'no file with handle ' + pubkey
 	    };
 
 	    res.end(JSON.stringify(errorObj));
 		}
+	} else {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no pubkey provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
 	}
 });
 
-var allcoinsInProgress = false;
+var cacheCallInProgress = false,
+		cacheGlobLifetime = 300; // sec
 
 /*
  *	params: userpass, pubkey
  */
 shepherd.get('/cache-all', function(req, res, next) {
-  if (!allcoinsInProgress) {
-    allcoinsInProgress = true;
+  if (!cacheCallInProgress) {
+    cacheCallInProgress = true;
 
     var sessionKey = req.query.userpass,
 		    pubkey = req.query.pubkey,
@@ -145,12 +153,12 @@ shepherd.get('/cache-all', function(req, res, next) {
 		      basilisk: {}
 		    },
 		    writeCache = function() {
-		      fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+		      fs.writeFile(iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
 		        if (err) {
 		          return console.log(err);
 		        }
 
-		        console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
+		        console.log('file ' + iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
 		      });
 		    },
 		    callStack = {},
@@ -162,7 +170,7 @@ shepherd.get('/cache-all', function(req, res, next) {
 		      }
 
 		    	if (total / Object.keys(callStack).length === 1) {
-		    		allcoinsInProgress = false;
+		    		cacheCallInProgress = false;
 		    	}
 		    };
 
@@ -212,7 +220,7 @@ shepherd.get('/cache-all', function(req, res, next) {
                     delete dexUrls.getbalance;
                   }
                   //console.log(JSON.stringify(dexUrls));
-                  console.log(coin+' address ' + address);
+                  console.log(coin + ' address ' + address);
                   outObj.basilisk[coin][address] = {};
                   writeCache();
 
@@ -258,8 +266,9 @@ shepherd.get('/cache-all', function(req, res, next) {
  *	params: userpass, pubkey, coin, address
  */
 shepherd.get('/cache-one', function(req, res, next) {
-  if (!allcoinsInProgress) {
+  if (!cacheCallInProgress) {
   	// TODO: add check to allow only one cache call/sequence in progress
+  	cacheCallInProgress = true;
 	  var sessionKey = req.query.userpass,
 	  		coin = req.query.coin,
 	  		address = req.query.address,
@@ -269,29 +278,47 @@ shepherd.get('/cache-one', function(req, res, next) {
 			    'msg': 'error',
 			    'result': 'error'
 			  },
-			  outObj,
+			  outObj = {},
 			  pubkey,
-			  writeCache = function() {
-			    fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+			  writeCache = function(timeStamp) {
+			  	if (timeStamp) {
+			  		outObj.timestamp = timeStamp;
+			  	}
+
+			    fs.writeFile(iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
 			      if (err) {
 			        return console.log(err);
 			      }
 
-			      console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
+			      console.log('file ' + iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
+			      if (timeStamp) {
+			      	console.log('file ' + iguanaDir + '/shepherd/cache-' + pubkey + '.json is timestamped');
+			    	}
 			    });
-			  };
+			  },
+		    callStack = {},
+		    checkCallStack = function() {
+		    	var total = 0;
 
+		      for (var coin in callStack) {
+		      	total =+ callStack[coin];
+		      }
+
+		    	if (total / Object.keys(callStack).length === 1) {
+		    		cacheCallInProgress = false;
+		    		// add timestamp to cache file
+		    		writeCache(Date.now());
+		    	}
+		    };
+
+		callStack[coin] = 1;
 		console.log(callsArray);
-
-    res.end(JSON.stringify({
-      'msg': 'success',
-      'result': 'call is initiated'
-    }));
 
     console.log('cache-one call started');
 
-	  if (fs.existsSync(iguanaDir + '/cache-' + pubkey + '.json')) {
-			outObj = JSON.parse(fs.readFileSync(iguanaDir + '/cache-' + pubkey + '.json', 'utf8'));
+	  if (fs.existsSync(iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
+			var _file = fs.readFileSync(iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
+			outObj = _file ? JSON.parse(_file) : {};
 
 			if (!outObj || !outObj.basilisk) {
 				console.log('no local basilisk info');
@@ -303,125 +330,136 @@ shepherd.get('/cache-one', function(req, res, next) {
 					outObj['basilisk'][coin] = {};
 				}
 			}
+		} else {
+			outObj['basilisk'] = {};
+			outObj['basilisk'][coin] = {};
 		}
 
-		// update all available coin addresses
-		if (!address) {
-      request({
-        url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
-        method: 'GET'
-      }, function (error, response, body) {
-        if (response && response.statusCode && response.statusCode === 200) {
-          outObj.basilisk[coin].addresses = JSON.parse(body).result;
-          writeCache();
-          //callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? 2 : 3);
-          //console.log(coin + ' stack len ' + callStack[coin]);
+		console.log(Date.now());
+		// check timestamp
+		var secondsElapsed = cacheGlobLifetime;
 
-          async.each(outObj.basilisk[coin].addresses, function(address) {
-            var dexUrls = {
-              'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-              'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-              'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-              'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-            },
-            _dexUrls = {};
+		if (outObj && outObj.timestamp) {
+	    var currentEpochTime = new Date(Date.now()) / 1000;
 
-            for (var a = 0; a < callsArray.length; a++) {
-            	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
-            }
-            if (coin === 'BTC' || coin === 'SYS') {
-              delete _dexUrls.refresh;
-              delete _dexUrls.getbalance;
-            }
-            //console.log(JSON.stringify(dexUrls));
-            console.log(coin + ' address ' + address);
-			      if (!outObj.basilisk[coin][address]) {
-			      	outObj.basilisk[coin][address] = {};
-			      	writeCache();
-			      }
-            writeCache();
+	    secondsElapsed = Number(currentEpochTime) - Number(outObj.timestamp / 1000);
 
-            async.forEachOf(_dexUrls, function(dexUrl, key) {
-              request({
-                url: dexUrl,
-                method: 'GET'
-              }, function (error, response, body) {
-                if (response && response.statusCode && response.statusCode === 200) {
-                  outObj.basilisk[coin][address][key] = JSON.parse(body);
-                  console.log(dexUrl);
-                  console.log(body);
-                  /*callStack[coin]--;
-                  console.log(coin + ' _stack len ' + callStack[coin]);
-                  checkCallStack();*/
+		  console.log(secondsElapsed + 's elapsed since last cache update');
+		}
+    if (secondsElapsed < cacheGlobLifetime) {
+	    res.end(JSON.stringify({
+	      'msg': 'error',
+	      'result': 'too early, wait ' + (cacheGlobLifetime - secondsElapsed) + 's'
+	    }));
+	    cacheCallInProgress = false;
+	  } else {
+	    res.end(JSON.stringify({
+	      'msg': 'success',
+	      'result': 'call is initiated'
+	    }));
+			// update all available coin addresses
+			if (!address) {
+	      request({
+	        url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
+	        method: 'GET'
+	      }, function (error, response, body) {
+	        if (response && response.statusCode && response.statusCode === 200) {
+	          outObj.basilisk[coin].addresses = JSON.parse(body).result;
+	          console.log(JSON.parse(body).result);
+	          writeCache();
+	          callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? callsArray.length - 2 : callsArray.length);
+	          console.log(coin + ' stack len ' + callStack[coin]);
 
-                  writeCache();
-                }
-              });
-            });
-          });
-        } else {
-          // TODO: error
-        }
-      });
-		} else {
-      var dexUrls = {
-        'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-        'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-        'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-        'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-      },
-      _dexUrls = {};
+	          async.each(outObj.basilisk[coin].addresses, function(address) {
+	            var dexUrls = {
+	              'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	              'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	              'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	              'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+	            },
+	            _dexUrls = {};
 
-      for (var a = 0; a < callsArray.length; a++) {
-      	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
-      }
-      if (coin === 'BTC' || coin === 'SYS') {
-        delete _dexUrls.refresh;
-        delete _dexUrls.getbalance;
-      }
-      //console.log(JSON.stringify(dexUrls));
-      console.log(coin + ' address ' + address);
-      if (!outObj.basilisk[coin][address]) {
-      	outObj.basilisk[coin][address] = {};
-      	writeCache();
-      }
-      console.log(_dexUrls);
+	            for (var a = 0; a < callsArray.length; a++) {
+	            	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
+	            }
+	            if (coin === 'BTC' || coin === 'SYS') {
+	              delete _dexUrls.refresh;
+	              delete _dexUrls.getbalance;
+	            }
+	            //console.log(JSON.stringify(dexUrls));
+	            console.log(coin + ' address ' + address);
+				      if (!outObj.basilisk[coin][address]) {
+				      	outObj.basilisk[coin][address] = {};
+				      	writeCache();
+				      }
 
-      async.forEachOf(_dexUrls, function(dexUrl, key) {
-        request({
-          url: dexUrl,
-          method: 'GET'
-        }, function (error, response, body) {
-          if (response && response.statusCode && response.statusCode === 200) {
-            outObj.basilisk[coin][address][key] = JSON.parse(body);
-            console.log(dexUrl);
-            console.log(body);
-            /*callStack[coin]--;
-            console.log(coin + ' _stack len ' + callStack[coin]);
-            checkCallStack();*/
+	            async.forEachOf(_dexUrls, function(dexUrl, key) {
+	              request({
+	                url: dexUrl,
+	                method: 'GET'
+	              }, function (error, response, body) {
+	                if (response && response.statusCode && response.statusCode === 200) {
+	                  outObj.basilisk[coin][address][key] = JSON.parse(body);
+	                  console.log(dexUrl);
+	                  console.log(body);
+	                  callStack[coin]--;
+	                  console.log(coin + ' _stack len ' + callStack[coin]);
+	                  checkCallStack();
 
-            writeCache();
-          }
-        });
-      });
-			/*var refreshUrl = 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+	                  writeCache();
+	                }
+	              });
+	            });
+	          });
+	        } else {
+	          // TODO: error
+	        }
+	      });
+			} else {
+	      callStack[coin] = callStack[coin] + (coin === 'BTC' ? callsArray.length : callsArray.length - 2);
+	      console.log(coin + ' stack len ' + callStack[coin]);
 
-		  request({
-		    url: refreshUrl,
-		    method: 'GET'
-		  }, function (error, response, body) {
-		    if (response && response.statusCode && response.statusCode === 200) {
-		      outObj.basilisk[coin][address].refresh = JSON.parse(body);
-		      console.log(refreshUrl);
-		      console.log(body);
+	      var dexUrls = {
+	        'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	        'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	        'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	        'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+	      },
+	      _dexUrls = {};
 
-					writeCache();
-				  res.end(JSON.stringify({
-				    'msg': 'success',
-				    'result': iguanaDir + '/cache-' + pubkey + '.json updated'
-				  }));
-		    }
-		  });*/
+	      for (var a = 0; a < callsArray.length; a++) {
+	      	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
+	      }
+	      if (coin === 'BTC' || coin === 'SYS') {
+	        delete _dexUrls.refresh;
+	        delete _dexUrls.getbalance;
+	      }
+	      //console.log(JSON.stringify(dexUrls));
+	      console.log(coin + ' address ' + address);
+	      if (!outObj.basilisk[coin][address]) {
+	      	outObj.basilisk[coin][address] = {};
+	      	writeCache();
+	      }
+	      console.log(_dexUrls);
+
+	      async.forEachOf(_dexUrls, function(dexUrl, key) {
+	        request({
+	          url: dexUrl,
+	          method: 'GET'
+	        }, function (error, response, body) {
+	          if (response && response.statusCode && response.statusCode === 200) {
+	            outObj.basilisk[coin][address][key] = JSON.parse(body);
+	            console.log(dexUrl);
+	            console.log(body);
+	            callStack[coin]--;
+	            console.log(coin + ' _stack len ' + callStack[coin]);
+	            checkCallStack();
+
+	            writeCache();
+	          }
+	        });
+	      });
+			}
 		}
   } else {
     res.end(JSON.stringify({
