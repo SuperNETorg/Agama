@@ -393,8 +393,8 @@ shepherd.get('/cache-one', function(req, res, next) {
 	                method: 'GET'
 	              }, function (error, response, body) {
 	                if (response && response.statusCode && response.statusCode === 200) {
-	                  outObj.basilisk[coin][address][key] = JSON.parse(body);
-				            if (outObj.basilisk[coin][address][key]) outObj.basilisk[coin][address][key] = {};
+	                  outObj.basilisk[coin][address][key] = {};
+	                  outObj.basilisk[coin][address][key].data = JSON.parse(body);
 	                  outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
 	                  console.log(dexUrl);
 	                  console.log(body);
@@ -455,8 +455,8 @@ shepherd.get('/cache-one', function(req, res, next) {
 	          method: 'GET'
 	        }, function (error, response, body) {
 	          if (response && response.statusCode && response.statusCode === 200) {
-	            outObj.basilisk[coin][address][key] = JSON.parse(body);
-	            if (outObj.basilisk[coin][address][key]) outObj.basilisk[coin][address][key] = {};
+              outObj.basilisk[coin][address][key] = {};
+              outObj.basilisk[coin][address][key].data = JSON.parse(body);
 	            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
 	            console.log(dexUrl);
 	            console.log(body);
