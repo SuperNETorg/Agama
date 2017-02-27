@@ -6,6 +6,7 @@ const electron = require('electron'),
       os = require('os'),
       fsnode = require('fs'),
       fs = require('fs-extra'),
+     	_fs = require('graceful-fs'),
       mkdirp = require('mkdirp'),
       express = require('express'),
       exec = require('child_process').exec,
@@ -172,88 +173,133 @@ shepherd.get('/cache-all', function(req, res, next) {
 		    	if (total / Object.keys(callStack).length === 1) {
 		    		cacheCallInProgress = false;
 		    	}
-		    };
+		    },
+		    checkTimestamp = function(dateToCheck) {
+			    var currentEpochTime = new Date(Date.now()) / 1000,
+			    		secondsElapsed = Number(currentEpochTime) - Number(dateToCheck / 1000);
 
-    res.end(JSON.stringify({
-      'msg': 'success',
-      'result': 'call is initiated'
-    }));
+			    return Math.floor(secondsElapsed);
+		    },
+		    internalError = false;		    
 
-    console.log('cache-all call started');
+		if (!sessionKey) {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no session key provided'
+	    };
 
-    request({
-      url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
-      method: 'GET'
-    }, function (error, response, body) {
-      if (response && response.statusCode && response.statusCode === 200) {
-        body = JSON.parse(body);
-        // basilisk coins
-        if (body.basilisk && body.basilisk.length) {
-          // get coin addresses
-          async.each(body.basilisk, function(coin) {
-          	callStack[coin] = 1;
-          });
+	    res.end(JSON.stringify(errorObj));
+	    internalError = true;
+	  }
 
-          async.each(body.basilisk, function(coin) {
-            outObj.basilisk[coin] = {};
-            writeCache();
+		if (!pubkey) {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no pubkey provided'
+	    };
+	    
+	    res.end(JSON.stringify(errorObj));
+	    internalError = true;
+	  }
 
-            request({
-              url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
-              method: 'GET'
-            }, function (error, response, body) {
-              if (response && response.statusCode && response.statusCode === 200) {
-                outObj.basilisk[coin].addresses = JSON.parse(body).result;
-                writeCache();
-                callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? 2 : 3);
-                console.log(coin + ' stack len ' + callStack[coin]);
+    if (!internalError) {
+	    console.log('cache-all call started');
+	    res.end(JSON.stringify({
+	      'msg': 'success',
+	      'result': 'call is initiated'
+	    }));
 
-                async.each(outObj.basilisk[coin].addresses, function(address) {
-                  var dexUrls = {
-                    'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                    'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-                    'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                    'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-                  };
-                  if (coin === 'BTC' || coin === 'SYS') {
-                    delete dexUrls.refresh;
-                    delete dexUrls.getbalance;
-                  }
-                  //console.log(JSON.stringify(dexUrls));
-                  console.log(coin + ' address ' + address);
-                  outObj.basilisk[coin][address] = {};
-                  writeCache();
+	    request({
+	      url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
+	      method: 'GET'
+	    }, function (error, response, body) {
+	      if (response && response.statusCode && response.statusCode === 200) {
+	        body = JSON.parse(body);
+	        // basilisk coins
+	        if (body.basilisk && body.basilisk.length) {
+	          // get coin addresses
+	          async.each(body.basilisk, function(coin) {
+	          	callStack[coin] = 1;
+	          });
 
-                  async.forEachOf(dexUrls, function(dexUrl, key) {
-                    request({
-                      url: dexUrl,
-                      method: 'GET'
-                    }, function (error, response, body) {
-                      if (response && response.statusCode && response.statusCode === 200) {
-                        outObj.basilisk[coin][address][key] = JSON.parse(body);
-	                      console.log(dexUrl);
-                        console.log(body);
-                        callStack[coin]--;
-                        console.log(coin + ' _stack len ' + callStack[coin]);
-                        checkCallStack();
+	          async.each(body.basilisk, function(coin) {
+	            outObj.basilisk[coin] = {};
+	            writeCache();
 
-                        writeCache();
-                      }
-                    });
-                  });
-                });
-              } else {
-                // TODO: error
-              }
-            });
-          });
-        } else {
-          // TODO: error
-        }
-      } else {
-        // TODO: error
-      }
-    });
+	            request({
+	              url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
+	              method: 'GET'
+	            }, function (error, response, body) {
+	              if (response && response.statusCode && response.statusCode === 200) {
+	                outObj.basilisk[coin].addresses = JSON.parse(body).result;
+	                writeCache();
+	                callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? 2 : 3);
+	                console.log(coin + ' stack len ' + callStack[coin]);
+
+	                async.each(outObj.basilisk[coin].addresses, function(address) {
+	                  var dexUrls = {
+	                    'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	                    'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	                    'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	                    'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+	                  };
+	                  if (coin === 'BTC' || coin === 'SYS') {
+	                    delete dexUrls.refresh;
+	                    delete dexUrls.getbalance;
+	                  }
+	                  //console.log(JSON.stringify(dexUrls));
+	                  console.log(coin + ' address ' + address);
+	                  outObj.basilisk[coin][address] = {};
+	                  writeCache();
+
+							      async.forEachOf(dexUrls, function(dexUrl, key) {
+							      	var tooEarly = false;
+							      	if (outObj.basilisk[coin][address][key] &&
+							      			outObj.basilisk[coin][address][key].timestamp &&
+							      			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
+							      		tooEarly = true;
+							      	}
+							        if (!tooEarly) {
+								        request({
+								          url: dexUrl,
+								          method: 'GET'
+								        }, function (error, response, body) {
+								          if (response && response.statusCode && response.statusCode === 200) {
+							              outObj.basilisk[coin][address][key] = {};
+							              outObj.basilisk[coin][address][key].data = JSON.parse(body);
+								            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
+								            console.log(dexUrl);
+								            console.log(body);
+								            callStack[coin]--;
+								            console.log(coin + ' _stack len ' + callStack[coin]);
+								            checkCallStack();
+
+								            writeCache();
+								          }
+								        });
+							        } else {
+							        	console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
+							          callStack[coin]--;
+							          console.log(coin + ' _stack len ' + callStack[coin]);
+							          checkCallStack();
+							        }
+							      });
+	                });
+	              } else {
+	                // TODO: error
+	              }
+	            });
+	          });
+	        } else {
+	          // TODO: error
+	        }
+	      } else {
+	        // TODO: error
+	      }
+	    });
+	  } else {
+	  	cacheCallInProgress = false;
+	  }
   } else {
     res.end(JSON.stringify({
       'msg': 'error',
@@ -315,10 +361,31 @@ shepherd.get('/cache-one', function(req, res, next) {
 			    		secondsElapsed = Number(currentEpochTime) - Number(dateToCheck / 1000);
 
 			    return Math.floor(secondsElapsed);
-		    };
+		    },
+		    internalError = false;
 
 		callStack[coin] = 1;
 		console.log(callsArray);
+
+		if (!sessionKey) {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no session key provided'
+	    };
+
+	    res.end(JSON.stringify(errorObj));
+	    internalError = true;
+	  }
+
+		if (!pubkey) {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no pubkey provided'
+	    };
+	    
+	    res.end(JSON.stringify(errorObj));
+	    internalError = true;
+	  }
 
     console.log('cache-one call started');
 
@@ -346,134 +413,142 @@ shepherd.get('/cache-one', function(req, res, next) {
       'result': 'call is initiated'
     }));
 
-		// update all available coin addresses
-		if (!address) {
-      request({
-        url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
-        method: 'GET'
-      }, function (error, response, body) {
-        if (response && response.statusCode && response.statusCode === 200) {
-          outObj.basilisk[coin].addresses = JSON.parse(body).result;
-          console.log(JSON.parse(body).result);
-          writeCache();
-          callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? callsArray.length - 2 : callsArray.length);
-          console.log(coin + ' stack len ' + callStack[coin]);
+    if (!internalError) {
+			// update all available coin addresses
+			if (!address) {
+	      request({
+	        url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
+	        method: 'GET'
+	      }, function (error, response, body) {
+	        if (response && response.statusCode && response.statusCode === 200) {
+	          outObj.basilisk[coin].addresses = JSON.parse(body).result;
+	          console.log(JSON.parse(body).result);
+	          writeCache();
+	          callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? callsArray.length - 2 : callsArray.length);
+	          console.log(coin + ' stack len ' + callStack[coin]);
 
-          async.each(outObj.basilisk[coin].addresses, function(address) {
-            var dexUrls = {
-              'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-              'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-              'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-              'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-            },
-            _dexUrls = {};
+	          async.each(outObj.basilisk[coin].addresses, function(address) {
+	            var dexUrls = {
+	              'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	              'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	              'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	              'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+	            },
+	            _dexUrls = {};
 
-            for (var a = 0; a < callsArray.length; a++) {
-            	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
-            }
-            if (coin === 'BTC' || coin === 'SYS') {
-              delete _dexUrls.refresh;
-              delete _dexUrls.getbalance;
-            }
-            //console.log(JSON.stringify(dexUrls));
-            console.log(coin + ' address ' + address);
-			      if (!outObj.basilisk[coin][address]) {
-			      	outObj.basilisk[coin][address] = {};
-			      	writeCache();
-			      }
-
-            async.forEachOf(_dexUrls, function(dexUrl, key) {
-            	var tooEarly = false;
-            	if (outObj.basilisk[coin][address][key] && outObj.basilisk[coin][address][key].timestamp && checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
-            		tooEarly = true;
-            	}
-              if (!tooEarly) {
-	              request({
-	                url: dexUrl,
-	                method: 'GET'
-	              }, function (error, response, body) {
-	                if (response && response.statusCode && response.statusCode === 200) {
-	                  outObj.basilisk[coin][address][key] = {};
-	                  outObj.basilisk[coin][address][key].data = JSON.parse(body);
-	                  outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
-	                  console.log(dexUrl);
-	                  console.log(body);
-	                  callStack[coin]--;
-	                  console.log(coin + ' _stack len ' + callStack[coin]);
-	                  checkCallStack();
-
-	                  writeCache();
-	                }
-	              });
-	            } else {
-	            	console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
-                callStack[coin]--;
-                console.log(coin + ' _stack len ' + callStack[coin]);
-                checkCallStack();
+	            for (var a = 0; a < callsArray.length; a++) {
+	            	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
 	            }
-            });
-          });
-        } else {
-          // TODO: error
-        }
-      });
+	            if (coin === 'BTC' || coin === 'SYS') {
+	              delete _dexUrls.refresh;
+	              delete _dexUrls.getbalance;
+	            }
+	            //console.log(JSON.stringify(dexUrls));
+	            console.log(coin + ' address ' + address);
+				      if (!outObj.basilisk[coin][address]) {
+				      	outObj.basilisk[coin][address] = {};
+				      	writeCache();
+				      }
+
+	            async.forEachOf(_dexUrls, function(dexUrl, key) {
+	            	var tooEarly = false;
+	            	if (outObj.basilisk[coin][address][key] &&
+	            			outObj.basilisk[coin][address][key].timestamp &&
+	            			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
+	            		tooEarly = true;
+	            	}
+	              if (!tooEarly) {
+		              request({
+		                url: dexUrl,
+		                method: 'GET'
+		              }, function (error, response, body) {
+		                if (response && response.statusCode && response.statusCode === 200) {
+		                  outObj.basilisk[coin][address][key] = {};
+		                  outObj.basilisk[coin][address][key].data = JSON.parse(body);
+		                  outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
+		                  console.log(dexUrl);
+		                  console.log(body);
+		                  callStack[coin]--;
+		                  console.log(coin + ' _stack len ' + callStack[coin]);
+		                  checkCallStack();
+
+		                  writeCache();
+		                }
+		              });
+		            } else {
+		            	console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
+	                callStack[coin]--;
+	                console.log(coin + ' _stack len ' + callStack[coin]);
+	                checkCallStack();
+		            }
+	            });
+	          });
+	        } else {
+	          // TODO: error
+	        }
+	      });
+			} else {
+	      callStack[coin] = callStack[coin] + (coin === 'BTC' ? callsArray.length : callsArray.length - 2);
+	      console.log(coin + ' stack len ' + callStack[coin]);
+
+	      var dexUrls = {
+	        'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	        'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	        'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	        'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+	      },
+	      _dexUrls = {};
+
+	      for (var a = 0; a < callsArray.length; a++) {
+	      	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
+	      }
+	      if (coin === 'BTC' || coin === 'SYS') {
+	        delete _dexUrls.refresh;
+	        delete _dexUrls.getbalance;
+	      }
+	      //console.log(JSON.stringify(dexUrls));
+	      console.log(coin + ' address ' + address);
+	      if (!outObj.basilisk[coin][address]) {
+	      	outObj.basilisk[coin][address] = {};
+	      	writeCache();
+	      }
+	      console.log(_dexUrls);
+
+	      async.forEachOf(_dexUrls, function(dexUrl, key) {
+	      	var tooEarly = false;
+	      	if (outObj.basilisk[coin][address][key] &&
+	      			outObj.basilisk[coin][address][key].timestamp &&
+	      			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
+	      		tooEarly = true;
+	      	}
+	        if (!tooEarly) {
+		        request({
+		          url: dexUrl,
+		          method: 'GET'
+		        }, function (error, response, body) {
+		          if (response && response.statusCode && response.statusCode === 200) {
+	              outObj.basilisk[coin][address][key] = {};
+	              outObj.basilisk[coin][address][key].data = JSON.parse(body);
+		            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
+		            console.log(dexUrl);
+		            console.log(body);
+		            callStack[coin]--;
+		            console.log(coin + ' _stack len ' + callStack[coin]);
+		            checkCallStack();
+
+		            writeCache();
+		          }
+		        });
+	        } else {
+	        	console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
+	          callStack[coin]--;
+	          console.log(coin + ' _stack len ' + callStack[coin]);
+	          checkCallStack();
+	        }
+	      });
+			}
 		} else {
-      callStack[coin] = callStack[coin] + (coin === 'BTC' ? callsArray.length : callsArray.length - 2);
-      console.log(coin + ' stack len ' + callStack[coin]);
-
-      var dexUrls = {
-        'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-        'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-        'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-        'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-      },
-      _dexUrls = {};
-
-      for (var a = 0; a < callsArray.length; a++) {
-      	_dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
-      }
-      if (coin === 'BTC' || coin === 'SYS') {
-        delete _dexUrls.refresh;
-        delete _dexUrls.getbalance;
-      }
-      //console.log(JSON.stringify(dexUrls));
-      console.log(coin + ' address ' + address);
-      if (!outObj.basilisk[coin][address]) {
-      	outObj.basilisk[coin][address] = {};
-      	writeCache();
-      }
-      console.log(_dexUrls);
-
-      async.forEachOf(_dexUrls, function(dexUrl, key) {
-      	var tooEarly = false;
-      	if (outObj.basilisk[coin][address][key] && outObj.basilisk[coin][address][key].timestamp && checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
-      		tooEarly = true;
-      	}
-        if (!tooEarly) {
-	        request({
-	          url: dexUrl,
-	          method: 'GET'
-	        }, function (error, response, body) {
-	          if (response && response.statusCode && response.statusCode === 200) {
-              outObj.basilisk[coin][address][key] = {};
-              outObj.basilisk[coin][address][key].data = JSON.parse(body);
-	            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
-	            console.log(dexUrl);
-	            console.log(body);
-	            callStack[coin]--;
-	            console.log(coin + ' _stack len ' + callStack[coin]);
-	            checkCallStack();
-
-	            writeCache();
-	          }
-	        });
-        } else {
-        	console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
-          callStack[coin]--;
-          console.log(coin + ' _stack len ' + callStack[coin]);
-          checkCallStack();
-        }
-      });
+			cacheCallInProgress = false;
 		}
   } else {
     res.end(JSON.stringify({
@@ -650,7 +725,7 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
     function(resolve, reject) {
       if (lastNLines) {
-        fs.access(fileLocation, fs.constants.R_OK, function(err) {
+        _fs.access(fileLocation, fs.constants.R_OK, function(err) {
 		      if (err) {
 	          console.log('error reading ' + fileLocation);
 		        reject('readDebugLog error: ' + err);
