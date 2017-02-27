@@ -719,6 +719,18 @@ function herder(flock, data) {
       })
     });
 
+    // ADD SHEPHERD FOLDER
+    mkdirp(iguanaDir + '/shepherd', function(err) {
+    if (err)
+      console.error(err);
+    else
+      fs.readdir(iguanaDir, (err, files) => {
+        files.forEach(file => {
+          //console.log(file);
+        });
+      })
+    });
+
     // COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
     fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
       if (err)
