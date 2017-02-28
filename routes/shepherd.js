@@ -252,14 +252,27 @@ shepherd.get('/cache-all', function(req, res, next) {
 	                  outObj.basilisk[coin][address] = {};
 	                  writeCache();
 
+							      // set current call status
+							      async.forEachOf(dexUrls, function(dexUrl, key) {
+							      	if (!outObj.basilisk[coin][address][key]) {
+							      		outObj.basilisk[coin][address][key] = {};
+							      		outObj.basilisk[coin][address][key].status = 'waiting';
+							      	} else {
+							      		outObj.basilisk[coin][address][key].status = 'waiting';
+							      	}
+							      });
+							      writeCache();
+
 							      async.forEachOf(dexUrls, function(dexUrl, key) {
 							      	var tooEarly = false;
 							      	if (outObj.basilisk[coin][address][key] &&
 							      			outObj.basilisk[coin][address][key].timestamp &&
 							      			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
 							      		tooEarly = true;
+							      		outObj.basilisk[coin][address][key].status = 'done';
 							      	}
 							        if (!tooEarly) {
+				        				outObj.basilisk[coin][address][key].status = 'in progress';
 								        request({
 								          url: dexUrl,
 								          method: 'GET'
@@ -268,6 +281,7 @@ shepherd.get('/cache-all', function(req, res, next) {
 							              outObj.basilisk[coin][address][key] = {};
 							              outObj.basilisk[coin][address][key].data = JSON.parse(body);
 								            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
+								            outObj.basilisk[coin][address][key].status = 'done';
 								            console.log(dexUrl);
 								            console.log(body);
 								            callStack[coin]--;
@@ -450,14 +464,27 @@ shepherd.get('/cache-one', function(req, res, next) {
 				      	writeCache();
 				      }
 
+				      // set current call status
+				      async.forEachOf(_dexUrls, function(dexUrl, key) {
+				      	if (!outObj.basilisk[coin][address][key]) {
+				      		outObj.basilisk[coin][address][key] = {};
+				      		outObj.basilisk[coin][address][key].status = 'waiting';
+				      	} else {
+				      		outObj.basilisk[coin][address][key].status = 'waiting';
+				      	}
+				      });
+				      writeCache();
+
 	            async.forEachOf(_dexUrls, function(dexUrl, key) {
 	            	var tooEarly = false;
 	            	if (outObj.basilisk[coin][address][key] &&
 	            			outObj.basilisk[coin][address][key].timestamp &&
 	            			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
 	            		tooEarly = true;
+				      		outObj.basilisk[coin][address][key].status = 'done';
 	            	}
 	              if (!tooEarly) {
+	        				outObj.basilisk[coin][address][key].status = 'in progress';
 		              request({
 		                url: dexUrl,
 		                method: 'GET'
@@ -466,6 +493,7 @@ shepherd.get('/cache-one', function(req, res, next) {
 		                  outObj.basilisk[coin][address][key] = {};
 		                  outObj.basilisk[coin][address][key].data = JSON.parse(body);
 		                  outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
+					            outObj.basilisk[coin][address][key].status = 'done';
 		                  console.log(dexUrl);
 		                  console.log(body);
 		                  callStack[coin]--;
@@ -514,14 +542,27 @@ shepherd.get('/cache-one', function(req, res, next) {
 	      }
 	      console.log(_dexUrls);
 
+	      // set current call status
+	      async.forEachOf(_dexUrls, function(dexUrl, key) {
+	      	if (!outObj.basilisk[coin][address][key]) {
+	      		outObj.basilisk[coin][address][key] = {};
+	      		outObj.basilisk[coin][address][key].status = 'waiting';
+	      	} else {
+	      		outObj.basilisk[coin][address][key].status = 'waiting';
+	      	}
+	      });
+	      writeCache();
+
 	      async.forEachOf(_dexUrls, function(dexUrl, key) {
 	      	var tooEarly = false;
 	      	if (outObj.basilisk[coin][address][key] &&
 	      			outObj.basilisk[coin][address][key].timestamp &&
 	      			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
 	      		tooEarly = true;
+	      		outObj.basilisk[coin][address][key].status = 'done';
 	      	}
 	        if (!tooEarly) {
+	        	outObj.basilisk[coin][address][key].status = 'in progress';
 		        request({
 		          url: dexUrl,
 		          method: 'GET'
@@ -530,6 +571,7 @@ shepherd.get('/cache-one', function(req, res, next) {
 	              outObj.basilisk[coin][address][key] = {};
 	              outObj.basilisk[coin][address][key].data = JSON.parse(body);
 		            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
+		            outObj.basilisk[coin][address][key].status = 'done';
 		            console.log(dexUrl);
 		            console.log(body);
 		            callStack[coin]--;
