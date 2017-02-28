@@ -33,6 +33,15 @@ if (os.platform() === 'linux') {
 var shepherd = require('./routes/shepherd'),
     guiapp = express();
 
+guiapp.use(function(req, res, next) {
+        res.header("Access-Control-Allow-Origin", "http://127.0.0.1:17777");
+        res.header("Access-Control-Allow-Headers", "X-Requested-With");
+        res.header("Access-Control-Allow-Credentials", "true");
+        res.header("Access-Control-Allow-Headers", "Content-Type");
+        res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
+        next();
+    });
+
 var appConfig = shepherd.loadLocalConfig(); // load app config
 
 // preload.js
@@ -71,9 +80,36 @@ guiapp.use('/shepherd', shepherd);
 console.log(cluster)
 */
 
-var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
+/*var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
   console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
+});*/
+
+var server = require('http').createServer(guiapp);
+var io = require('socket.io').listen(server);
+server.listen(appConfig.iguanaAppPort, function() {
+  console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');  
 });
+
+io.set('origins', 'http://127.0.0.1:17777');
+
+io.on('connection', function(client) {
+  console.log('EDEX GUI is connected...');
+
+  client.on('event', function(data) {
+    console.log(data);
+  });
+  client.on('disconnect', function(data) {
+    console.log('EDEX GUI is disconnected');
+  });
+  client.on('join', function(data) {
+    console.log(data);
+    client.emit('messages', 'Sockets server is listening');
+  });  
+});
+
+shepherd.setIO(io);
+
+//io.emit('an event sent to all connected clients');
 
 module.exports = guiapp;
 // END GUI App Settings

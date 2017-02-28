@@ -18,18 +18,18 @@ function Iguana_activehandle(callback) {
           'method': 'activehandle'
         },
         AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
-      //console.log(AjaxOutputData.responseText);
-      AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
-      //console.log(AjaxOutputData);
-      resolve(AjaxOutputData);
-    }).fail(function(xhr, textStatus, error) {
-      // handle request failures
-      console.log(xhr.statusText);
-      if ( xhr.readyState == 0 ) {
-      }
-      console.log(textStatus);
-      console.log(error);
-    });
+          //console.log(AjaxOutputData.responseText);
+          AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
+          //console.log(AjaxOutputData);
+          resolve(AjaxOutputData);
+        }).fail(function(xhr, textStatus, error) {
+          // handle request failures
+          console.log(xhr.statusText);
+          if ( xhr.readyState == 0 ) {
+          }
+          console.log(textStatus);
+          console.log(error);
+        });
   });
 }
 //Iguana_activehandle().then(function(result){
@@ -70,7 +70,8 @@ function GetAppConf() { // get iguana app conf
     async: false,
     type: 'GET',
     url: 'http://127.0.0.1:17777/shepherd/appconf'
-  }).done(function(_data) {
+  })
+  .done(function(_data) {
     console.log('== App Conf Data OutPut ==');
     console.log(_data);
     data = _data;
