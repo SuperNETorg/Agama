@@ -91,6 +91,16 @@ shepherd.get('/appconf', function(req, res, next) {
   res.send(obj);
 });
 
+shepherd.get('/socket-test', function(req, res, next) {
+	res.send('Sockets test');
+  shepherd.io.emit('messages', { 'message': 'legacy of grewal' });
+});
+
+// expose sockets obj
+shepherd.setIO = function(io) {
+	shepherd.io = io;
+};
+
 /*
  *	params: pubkey
  */

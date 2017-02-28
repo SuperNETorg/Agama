@@ -33,6 +33,7 @@
     "mkdirp": "^0.5.1",
     "pm2": "^2.3.0",
     "ps-node": "^0.1.4",
-    "read-last-lines": "^1.1.0"
+    "read-last-lines": "^1.1.0",
+    "socket.io": "^1.7.3"
   }
 }
