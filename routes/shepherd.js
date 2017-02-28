@@ -12,7 +12,6 @@ const electron = require('electron'),
       exec = require('child_process').exec,
       md5 = require('md5'),
       pm2 = require('pm2'),
-      readLastLines = require('read-last-lines'),
       request = require('request'),
       async = require('async');
 
@@ -783,9 +782,14 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 		        reject('readDebugLog error: ' + err);
 		      } else {
           	console.log('reading ' + fileLocation);
-	          readLastLines
-	            .read(fileLocation, lastNLines)
-	            .then((lines) => resolve(lines));
+						_fs.readFile(fileLocation, 'utf-8', function(err, data) {
+					    if (err) throw err;
+
+					    // TODO: truncate komodod debug.log on app start
+					    var lines = data.trim().split('\n');
+					    var lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
+					    resolve(lastLine);
+						});          	
 	        }
         });
       } else {
