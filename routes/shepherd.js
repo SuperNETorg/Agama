@@ -311,7 +311,8 @@ shepherd.get('/cache-all', function(req, res, next) {
 							    });
 	                outObj.basilisk[coin].addresses = JSON.parse(body).result;
 	                writeCache();
-	                callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' || coin === 'SYS' ? 2 : 4);
+	                var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
+	                callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? 2 : 4);
 	                console.log(coin + ' stack len ' + callStack[coin]);
 
 	                async.each(outObj.basilisk[coin].addresses, function(address) {
@@ -613,7 +614,8 @@ shepherd.get('/cache-one', function(req, res, next) {
 	          outObj.basilisk[coin].addresses = JSON.parse(body).result;
 	          console.log(JSON.parse(body).result);
 	          writeCache();
-	          callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' || coin === 'SYS' ? callsArray.length - 2 : callsArray.length);
+	          var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
+	          callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArray.length - 2 : callsArray.length);
 	          console.log(coin + ' stack len ' + callStack[coin]);
 
 	          async.each(outObj.basilisk[coin].addresses, function(address) {
