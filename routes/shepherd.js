@@ -181,6 +181,15 @@ shepherd.get('/cache-all', function(req, res, next) {
 
 		    	if (total / Object.keys(callStack).length === 1) {
 		    		cacheCallInProgress = false;
+				    shepherd.io.emit('messages', {
+				  		'message': {
+				    		'shepherd': {
+				    			'method': 'cache-all',
+				    			'status': 'done',
+				    			'resp': 'success'
+				    		}
+				    	}
+				    });
 		    	}
 		    },
 		    checkTimestamp = function(dateToCheck) {
@@ -189,7 +198,7 @@ shepherd.get('/cache-all', function(req, res, next) {
 
 			    return Math.floor(secondsElapsed);
 		    },
-		    internalError = false;		    
+		    internalError = false;
 
 		if (!sessionKey) {
 	    var errorObj = {
@@ -206,23 +215,56 @@ shepherd.get('/cache-all', function(req, res, next) {
 	      'msg': 'error',
 	      'result': 'no pubkey provided'
 	    };
-	    
+
 	    res.end(JSON.stringify(errorObj));
 	    internalError = true;
 	  }
 
     if (!internalError) {
 	    console.log('cache-all call started');
+	    shepherd.io.emit('messages', {
+    		'message': {
+	    		'shepherd': {
+	    			'method': 'cache-all',
+	    			'status': 'in progress'
+	    		}
+	    	}
+	    });
 	    res.end(JSON.stringify({
 	      'msg': 'success',
 	      'result': 'call is initiated'
 	    }));
 
+	    shepherd.io.emit('messages', {
+    		'message': {
+	    		'shepherd': {
+	    			'method': 'cache-all',
+	    			'status': 'in progress',
+	    			'iguanaAPI': {
+	    				'method': 'allcoins',
+	    				'status': 'in progress'
+	    			}
+	    		}
+	    	}
+	    });
 	    request({
 	      url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
 	      method: 'GET'
 	    }, function (error, response, body) {
 	      if (response && response.statusCode && response.statusCode === 200) {
+			    shepherd.io.emit('messages', {
+		    		'message': {
+			    		'shepherd': {
+			    			'method': 'cache-all',
+			    			'status': 'in progress',
+			    			'iguanaAPI': {
+			    				'method': 'allcoins',
+			    				'status': 'done',
+			    				'resp': body
+			    			}
+			    		}
+			    	}
+			    });
 	        body = JSON.parse(body);
 	        // basilisk coins
 	        if (body.basilisk && body.basilisk.length) {
@@ -235,11 +277,38 @@ shepherd.get('/cache-all', function(req, res, next) {
 	            outObj.basilisk[coin] = {};
 	            writeCache();
 
+					    shepherd.io.emit('messages', {
+				    		'message': {
+					    		'shepherd': {
+					    			'method': 'cache-all',
+					    			'status': 'in progress',
+					    			'iguanaAPI': {
+					    				'method': 'getaddressesbyaccount',
+					    				'coin': coin,
+					    				'status': 'in progress'
+					    			}
+					    		}
+					    	}
+					    });
 	            request({
 	              url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
 	              method: 'GET'
 	            }, function (error, response, body) {
 	              if (response && response.statusCode && response.statusCode === 200) {
+							    shepherd.io.emit('messages', {
+						    		'message': {
+							    		'shepherd': {
+							    			'method': 'cache-all',
+							    			'status': 'in progress',
+							    			'iguanaAPI': {
+							    				'method': 'getaddressesbyaccount',
+							    				'coin': coin,
+							    				'status': 'done',
+							    				'resp': body
+							    			}
+							    		}
+							    	}
+							    });
 	                outObj.basilisk[coin].addresses = JSON.parse(body).result;
 	                writeCache();
 	                callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' || coin === 'SYS' ? 2 : 4);
@@ -279,14 +348,58 @@ shepherd.get('/cache-all', function(req, res, next) {
 							      			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
 							      		tooEarly = true;
 							      		outObj.basilisk[coin][address][key].status = 'done';
+										    shepherd.io.emit('messages', {
+									    		'message': {
+										    		'shepherd': {
+										    			'method': 'cache-all',
+										    			'status': 'in progress',
+										    			'iguanaAPI': {
+										    				'method': key,
+										    				'coin': coin,
+										    				'address': address,
+										    				'status': 'done',
+										    				'resp': 'too early'
+										    			}
+										    		}
+										    	}
+										    });
 							      	}
 							        if (!tooEarly) {
+										    shepherd.io.emit('messages', {
+									    		'message': {
+										    		'shepherd': {
+										    			'method': 'cache-all',
+										    			'status': 'in progress',
+										    			'iguanaAPI': {
+										    				'method': key,
+										    				'coin': coin,
+										    				'address': address,
+										    				'status': 'in progress'
+										    			}
+										    		}
+										    	}
+										    });
 				        				outObj.basilisk[coin][address][key].status = 'in progress';
 								        request({
 								          url: dexUrl,
 								          method: 'GET'
 								        }, function (error, response, body) {
 								          if (response && response.statusCode && response.statusCode === 200) {
+												    shepherd.io.emit('messages', {
+											    		'message': {
+												    		'shepherd': {
+												    			'method': 'cache-all',
+												    			'status': 'in progress',
+												    			'iguanaAPI': {
+												    				'method': key,
+												    				'coin': coin,
+												    				'address': address,
+												    				'status': 'done',
+												    				'resp': body
+												    			}
+												    		}
+												    	}
+												    });
 							              outObj.basilisk[coin][address][key] = {};
 							              outObj.basilisk[coin][address][key].data = JSON.parse(body);
 								            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
@@ -321,6 +434,15 @@ shepherd.get('/cache-all', function(req, res, next) {
 	      }
 	    });
 	  } else {
+	    shepherd.io.emit('messages', {
+	  		'message': {
+	    		'shepherd': {
+	    			'method': 'cache-all',
+	    			'status': 'done',
+	    			'resp': 'internal error'
+	    		}
+	    	}
+	    });
 	  	cacheCallInProgress = false;
 	  }
   } else {
@@ -375,6 +497,15 @@ shepherd.get('/cache-one', function(req, res, next) {
 
 		    	if (total / Object.keys(callStack).length === 1) {
 		    		cacheCallInProgress = false;
+				    shepherd.io.emit('messages', {
+				  		'message': {
+				    		'shepherd': {
+				    			'method': 'cache-one',
+				    			'status': 'done',
+				    			'resp': 'success'
+				    		}
+				    	}
+				    });
 		    		// add timestamp to cache file
 		    		// writeCache(Date.now());
 		    	}
@@ -405,7 +536,7 @@ shepherd.get('/cache-one', function(req, res, next) {
 	      'msg': 'error',
 	      'result': 'no pubkey provided'
 	    };
-	    
+
 	    res.end(JSON.stringify(errorObj));
 	    internalError = true;
 	  }
@@ -437,13 +568,48 @@ shepherd.get('/cache-one', function(req, res, next) {
     }));
 
     if (!internalError) {
+	    shepherd.io.emit('messages', {
+	  		'message': {
+	    		'shepherd': {
+	    			'method': 'cache-one',
+	    			'status': 'in progress'
+	    		}
+	    	}
+	    });
 			// update all available coin addresses
 			if (!address) {
+		    shepherd.io.emit('messages', {
+	    		'message': {
+		    		'shepherd': {
+		    			'method': 'cache-one',
+		    			'status': 'in progress',
+		    			'iguanaAPI': {
+		    				'method': 'getaddressesbyaccount',
+		    				'coin': coin,
+		    				'status': 'in progress'
+		    			}
+		    		}
+		    	}
+		    });
 	      request({
 	        url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
 	        method: 'GET'
 	      }, function (error, response, body) {
 	        if (response && response.statusCode && response.statusCode === 200) {
+				    shepherd.io.emit('messages', {
+			    		'message': {
+				    		'shepherd': {
+				    			'method': 'cache-one',
+				    			'status': 'in progress',
+				    			'iguanaAPI': {
+				    				'method': 'getaddressesbyaccount',
+				    				'coin': coin,
+				    				'status': 'done',
+				    				'resp': body
+				    			}
+				    		}
+				    	}
+				    });
 	          outObj.basilisk[coin].addresses = JSON.parse(body).result;
 	          console.log(JSON.parse(body).result);
 	          writeCache();
@@ -491,14 +657,58 @@ shepherd.get('/cache-one', function(req, res, next) {
 	            			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
 	            		tooEarly = true;
 				      		outObj.basilisk[coin][address][key].status = 'done';
+							    shepherd.io.emit('messages', {
+						    		'message': {
+							    		'shepherd': {
+							    			'method': 'cache-one',
+							    			'status': 'in progress',
+							    			'iguanaAPI': {
+							    				'method': key,
+							    				'coin': coin,
+							    				'address': address,
+							    				'status': 'done',
+							    				'resp': 'too early'
+							    			}
+							    		}
+							    	}
+							    });
 	            	}
 	              if (!tooEarly) {
+							    shepherd.io.emit('messages', {
+						    		'message': {
+							    		'shepherd': {
+							    			'method': 'cache-one',
+							    			'status': 'in progress',
+							    			'iguanaAPI': {
+							    				'method': key,
+							    				'coin': coin,
+							    				'address': address,
+							    				'status': 'in progress'
+							    			}
+							    		}
+							    	}
+							    });
 	        				outObj.basilisk[coin][address][key].status = 'in progress';
 		              request({
 		                url: dexUrl,
 		                method: 'GET'
 		              }, function (error, response, body) {
 		                if (response && response.statusCode && response.statusCode === 200) {
+									    shepherd.io.emit('messages', {
+								    		'message': {
+									    		'shepherd': {
+									    			'method': 'cache-one',
+									    			'status': 'in progress',
+									    			'iguanaAPI': {
+									    				'method': key,
+									    				'coin': coin,
+									    				'address': address,
+									    				'status': 'done',
+									    				'resp': body
+									    			}
+									    		}
+									    	}
+									    });
 		                  outObj.basilisk[coin][address][key] = {};
 		                  outObj.basilisk[coin][address][key].data = JSON.parse(body);
 		                  outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
@@ -569,14 +779,58 @@ shepherd.get('/cache-one', function(req, res, next) {
 	      			checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
 	      		tooEarly = true;
 	      		outObj.basilisk[coin][address][key].status = 'done';
+				    shepherd.io.emit('messages', {
+			    		'message': {
+				    		'shepherd': {
+				    			'method': 'cache-one',
+				    			'status': 'in progress',
+				    			'iguanaAPI': {
+				    				'method': key,
+				    				'coin': coin,
+				    				'address': address,
+				    				'status': 'done',
+				    				'resp': 'too early'
+				    			}
+				    		}
+				    	}
+				    });
 	      	}
 	        if (!tooEarly) {
+				    shepherd.io.emit('messages', {
+			    		'message': {
+				    		'shepherd': {
+				    			'method': 'cache-one',
+				    			'status': 'in progress',
+				    			'iguanaAPI': {
+				    				'method': key,
+				    				'coin': coin,
+				    				'address': address,
+				    				'status': 'in progress'
+				    			}
+				    		}
+				    	}
+				    });
 	        	outObj.basilisk[coin][address][key].status = 'in progress';
 		        request({
 		          url: dexUrl,
 		          method: 'GET'
 		        }, function (error, response, body) {
 		          if (response && response.statusCode && response.statusCode === 200) {
+						    shepherd.io.emit('messages', {
+					    		'message': {
+						    		'shepherd': {
+						    			'method': 'cache-one',
+						    			'status': 'in progress',
+						    			'iguanaAPI': {
+						    				'method': key,
+						    				'coin': coin,
+						    				'address': address,
+						    				'status': 'done',
+						    				'resp': body
+						    			}
+						    		}
+						    	}
+						    });
 	              outObj.basilisk[coin][address][key] = {};
 	              outObj.basilisk[coin][address][key].data = JSON.parse(body);
 		            outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
@@ -599,6 +853,15 @@ shepherd.get('/cache-one', function(req, res, next) {
 	      });
 			}
 		} else {
+	    shepherd.io.emit('messages', {
+    		'message': {
+	    		'shepherd': {
+	    			'method': 'cache-all',
+	    			'status': 'done',
+	    			'resp': 'internal error'
+	    		}
+	    	}
+	    });
 			cacheCallInProgress = false;
 		}
   } else {
@@ -789,7 +1052,7 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 					    var lines = data.trim().split('\n');
 					    var lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
 					    resolve(lastLine);
-						});          	
+						});
 	        }
         });
       } else {
