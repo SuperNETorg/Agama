@@ -2,112 +2,111 @@
 //this app spawns iguana in background in nontech-mode
 
 const electron = require('electron'),
-      app = electron.app,
-      BrowserWindow = electron.BrowserWindow,
-      path = require('path'),
-      url = require('url'),
-      os = require('os'),
-      spawn = require('child_process').spawn,
-      exec = require('child_process').exec,
-      fixPath = require('fix-path');
+			app = electron.app,
+			BrowserWindow = electron.BrowserWindow,
+			path = require('path'),
+			url = require('url'),
+			os = require('os'),
+			spawn = require('child_process').spawn,
+			exec = require('child_process').exec,
+			fixPath = require('fix-path');
 var express = require('express'),
-    bodyParser = require('body-parser'),
-    fs = require('fs'),
-    fsnode = require('fs'),
-    fs = require('fs-extra'),
-    mkdirp = require('mkdirp'),
-    pm2 = require('pm2');
-    cluster = require('cluster');
-    numCPUs = require('os').cpus().length;
+		bodyParser = require('body-parser'),
+		fs = require('fs'),
+		fsnode = require('fs'),
+		fs = require('fs-extra'),
+		mkdirp = require('mkdirp'),
+		pm2 = require('pm2');
+		cluster = require('cluster');
+		numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
 
 app.setName('Iguana');
 
 if (os.platform() === 'linux') {
-  process.env.ELECTRON_RUN_AS_NODE = true;
-  console.log(process.env);
+	process.env.ELECTRON_RUN_AS_NODE = true;
+	console.log(process.env);
 }
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd'),
-    guiapp = express();
+		guiapp = express(),
+		appConfig = shepherd.loadLocalConfig(); // load app config
 
 guiapp.use(function(req, res, next) {
-        res.header("Access-Control-Allow-Origin", "http://127.0.0.1:17777");
-        res.header("Access-Control-Allow-Headers", "X-Requested-With");
-        res.header("Access-Control-Allow-Credentials", "true");
-        res.header("Access-Control-Allow-Headers", "Content-Type");
-        res.header("Access-Control-Allow-Methods", "PUT, GET, POST, DELETE, OPTIONS");
-        next();
-    });
-
-var appConfig = shepherd.loadLocalConfig(); // load app config
+	res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:' + appConfig.iguanaAppPort);
+	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+	res.header('Access-Control-Allow-Credentials', 'true');
+	res.header('Access-Control-Allow-Headers', 'Content-Type');
+	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS'); // TODO: limit allowed methods
+	next();
+});
 
 // preload.js
 const _setImmediate = setImmediate,
-      _clearImmediate = clearImmediate;
+			_clearImmediate = clearImmediate;
 
 process.once('loaded', () => {
-  global.setImmediate = _setImmediate;
-  global.clearImmediate = _clearImmediate;
+	global.setImmediate = _setImmediate;
+	global.clearImmediate = _clearImmediate;
 
-  if (os.platform() === 'darwin') {
-    process.setFdLimit(appConfig.maxDescriptors.darwin);
-  }
-  if (os.platform() === 'linux') {
-    process.setFdLimit(appConfig.maxDescriptors.linux);
-  }
+	if (os.platform() === 'darwin') {
+		process.setFdLimit(appConfig.maxDescriptors.darwin);
+	}
+	if (os.platform() === 'linux') {
+		process.setFdLimit(appConfig.maxDescriptors.linux);
+	}
 });
 
 guiapp.use(bodyParser.json()); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
-  res.send('Iguana app server');
+	res.send('Iguana app server');
 });
 
 var guipath = path.join(__dirname, '/gui');
 guiapp.use('/gui', express.static(guipath));
-
 guiapp.use('/shepherd', shepherd);
 
 /*if (cluster.isMaster && process.env.NODE_ENV !== "development") {
-  for (var i = 0; i < numCPUs; i++) {
-      cluster.fork();
-  }
+	for (var i = 0; i < numCPUs; i++) {
+			cluster.fork();
+	}
 }
 console.log(cluster)
 */
 
 /*var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
-  console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
+	console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
 });*/
 
-var server = require('http').createServer(guiapp);
-var io = require('socket.io').listen(server);
+var server = require('http').createServer(guiapp),
+		io = require('socket.io').listen(server);
+		
 server.listen(appConfig.iguanaAppPort, function() {
-  console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');  
+	console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');  
 });
 
-io.set('origins', 'http://127.0.0.1:17777');
+io.set('origins', 'http://127.0.0.1:17777'); // set origin
 
 io.on('connection', function(client) {
-  console.log('EDEX GUI is connected...');
+	console.log('EDEX GUI is connected...');
 
-  client.on('event', function(data) {
-    console.log(data);
-  });
-  client.on('disconnect', function(data) {
-    console.log('EDEX GUI is disconnected');
-  });
-  client.on('join', function(data) {
-    console.log(data);
-    client.emit('messages', 'Sockets server is listening');
-  });  
+	client.on('event', function(data) { // listen for client requests
+		console.log(data);
+	});
+	client.on('disconnect', function(data) {
+		console.log('EDEX GUI is disconnected');
+	});
+	client.on('join', function(data) {
+		console.log(data);
+		client.emit('messages', 'Sockets server is listening');
+	});  
 });
 
-shepherd.setIO(io);
+shepherd.setIO(io); // pass sockets object to shepherd router
 
 //io.emit('an event sent to all connected clients');
 
@@ -125,47 +124,47 @@ var iguanaConfsDirSrc = path.join(__dirname, '/assets/deps/confs');
 // SETTING OS DIR TO RUN IGUANA FROM
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'darwin') {
-  var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
-  var iguanaConfsDir = iguanaDir + '/confs';
+	var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
+	var iguanaConfsDir = iguanaDir + '/confs';
 }
 if (os.platform() === 'linux') {
-  var iguanaDir = process.env.HOME + '/.iguana'
-  var iguanaConfsDir = iguanaDir + '/confs';
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
+	var iguanaDir = process.env.HOME + '/.iguana'
+	var iguanaConfsDir = iguanaDir + '/confs';
+	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
 }
 if (os.platform() === 'win32') {
-  var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir)
-  var iguanaConfsDir = process.env.APPDATA + '/iguana/confs'; iguanaConfsDir = path.normalize(iguanaConfsDir)
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
-  iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+	var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir)
+	var iguanaConfsDir = process.env.APPDATA + '/iguana/confs'; iguanaConfsDir = path.normalize(iguanaConfsDir)
+	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
+	iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 }
 */
 
 if (os.platform() === 'linux') {
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png');
+	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png');
 }
 if (os.platform() === 'win32') {
-  var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico');
+	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico');
 }
 
 //console.log(iguanaDir);
 /*
 // MAKE SURE IGUANA DIR IS THERE FOR USER
 mkdirp(iguanaDir, function (err) {
-  if (err)
-    console.error(err)
-  else
-    fs.readdir(iguanaDir, (err, files) => {
-      files.forEach(file => {
-        //console.log(file);
-      });
-    })
+	if (err)
+		console.error(err)
+	else
+		fs.readdir(iguanaDir, (err, files) => {
+			files.forEach(file => {
+				//console.log(file);
+			});
+		})
 });
 
 // COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
 fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
-  if (err) return console.error(err)
-  console.log('confs files copied successfully at: '+ iguanaConfsDir )
+	if (err) return console.error(err)
+	console.log('confs files copied successfully at: '+ iguanaConfsDir )
 })
 */
 
@@ -173,192 +172,192 @@ let mainWindow;
 let loadingWindow;
 
 function createLoadingWindow() {
-  mainWindow = null;
+	mainWindow = null;
 
-  // initialise window
-  loadingWindow = new BrowserWindow({
-    width: 500,
-    height: 300,
-    frame: false,
-    icon: iguanaIcon
-  });
+	// initialise window
+	loadingWindow = new BrowserWindow({
+		width: 500,
+		height: 300,
+		frame: false,
+		icon: iguanaIcon
+	});
 
-  // load our index.html (i.e. easyDEX GUI)
-  loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/');
+	// load our index.html (i.e. easyDEX GUI)
+	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/');
 
-  // DEVTOOLS - only for dev purposes - ca333
-  //loadingWindow.webContents.openDevTools()
+	// DEVTOOLS - only for dev purposes - ca333
+	//loadingWindow.webContents.openDevTools()
 
-  // if window closed we kill iguana proc
-  loadingWindow.on('hide', function () {
-    // our app does not have multiwindow - so we dereference the window object instead of
-    // putting them into an window_arr
-    loadingWindow = null;
-    createWindow('open');
-  })
+	// if window closed we kill iguana proc
+	loadingWindow.on('hide', function () {
+		// our app does not have multiwindow - so we dereference the window object instead of
+		// putting them into an window_arr
+		loadingWindow = null;
+		createWindow('open');
+	})
 
-  //ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
-  /*if (os.platform() === 'win32') {
-    process.chdir(iguanaDir);
-    //exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
-    ig = spawn(iguanaWin);
-  }
-  if (os.platform() === 'linux') {
-    process.chdir(iguanaDir);
-    ig = spawn(iguanaLinux);
-    //corsproxy_process = spawn('corsproxy');
-  }
-  if (os.platform() === 'darwin') {
-    //process.chdir(iguanaDir);
-    //ig = spawn(iguanaOSX);
-    //corsproxy_process = spawn('corsproxy');
-  }*/
+	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
+	/*if (os.platform() === 'win32') {
+		process.chdir(iguanaDir);
+		//exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
+		ig = spawn(iguanaWin);
+	}
+	if (os.platform() === 'linux') {
+		process.chdir(iguanaDir);
+		ig = spawn(iguanaLinux);
+		//corsproxy_process = spawn('corsproxy');
+	}
+	if (os.platform() === 'darwin') {
+		//process.chdir(iguanaDir);
+		//ig = spawn(iguanaOSX);
+		//corsproxy_process = spawn('corsproxy');
+	}*/
 
-  //if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
+	//if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
 }
 
 app.on('ready', createLoadingWindow);
 
 function createWindow (status) {
-  if ( status === 'open') {
+	if ( status === 'open') {
 
-    require(path.join(__dirname, 'private/mainmenu'));
+		require(path.join(__dirname, 'private/mainmenu'));
 
-    // initialise window
-    mainWindow = new BrowserWindow({
-      width: 1280,
-      height: 800,
-      icon: iguanaIcon
-    });
+		// initialise window
+		mainWindow = new BrowserWindow({
+			width: 1280,
+			height: 800,
+			icon: iguanaIcon
+		});
 
-    // load our index.html (i.e. easyDEX GUI)
-    if (appConfig.edexGuiOnly) {
-      mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
-    } else {
-      mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/main.html');
-    }
+		// load our index.html (i.e. easyDEX GUI)
+		if (appConfig.edexGuiOnly) {
+			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
+		} else {
+			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/main.html');
+		}
 
-    // DEVTOOLS - only for dev purposes - ca333
-    //mainWindow.webContents.openDevTools()
+		// DEVTOOLS - only for dev purposes - ca333
+		//mainWindow.webContents.openDevTools()
 
-    // if window closed we kill iguana proc
-    mainWindow.on('closed', function () {
-      var ConnectToPm2 = function() {
-        return new Promise(function(resolve, reject) {
-          console.log('Closing Main Window...');
+		// if window closed we kill iguana proc
+		mainWindow.on('closed', function () {
+			var ConnectToPm2 = function() {
+				return new Promise(function(resolve, reject) {
+					console.log('Closing Main Window...');
 
-          pm2.connect(true, function(err) {
-            console.log('connecting to pm2...');
+					pm2.connect(true, function(err) {
+						console.log('connecting to pm2...');
 
-            if (err) {
-              console.log(err);
-            }
-          });
+						if (err) {
+							console.log(err);
+						}
+					});
 
-          var result = 'Connecting To Pm2: done';
+					var result = 'Connecting To Pm2: done';
 
-          console.log(result);
-          resolve(result);
-        })
-      }
+					console.log(result);
+					resolve(result);
+				})
+			}
 
-      var KillPm2 = function() {
-        return new Promise(function(resolve, reject) {
-          console.log('killing to pm2...');
+			var KillPm2 = function() {
+				return new Promise(function(resolve, reject) {
+					console.log('killing to pm2...');
 
-          pm2.killDaemon(function(err) {
-            pm2.disconnect();
-            console.log('killed to pm2...');
+					pm2.killDaemon(function(err) {
+						pm2.disconnect();
+						console.log('killed to pm2...');
 
-            if (err)
-              throw err;
-          });
+						if (err)
+							throw err;
+					});
 
-          var result = 'Killing Pm2: done';
+					var result = 'Killing Pm2: done';
 
-          setTimeout(function() {
-            console.log(result);
+					setTimeout(function() {
+						console.log(result);
 
-            resolve(result);
-          }, 2000)
-        })
-      }
+						resolve(result);
+					}, 2000)
+				})
+			}
 
-      var HideMainWindow = function() {
-        return new Promise(function(resolve, reject) {
-          console.log('Exiting App...');
-          mainWindow = null;
+			var HideMainWindow = function() {
+				return new Promise(function(resolve, reject) {
+					console.log('Exiting App...');
+					mainWindow = null;
 
-          var result = 'Hiding Main Window: done';
-          console.log(result);
-          resolve(result);
-        });
-      }
+					var result = 'Hiding Main Window: done';
+					console.log(result);
+					resolve(result);
+				});
+			}
 
-      var QuitApp = function() {
-        return new Promise(function(resolve, reject) {
-          app.quit();
-          var result = 'Quiting App: done';
-          console.log(result);
-          resolve(result);
-        });
-      }
+			var QuitApp = function() {
+				return new Promise(function(resolve, reject) {
+					app.quit();
+					var result = 'Quiting App: done';
+					console.log(result);
+					resolve(result);
+				});
+			}
 
-      ConnectToPm2()
-      .then(function(result) {
-        return KillPm2();
-      })
-      .then(HideMainWindow)
-      .then(QuitApp);
-    });
-  }
+			ConnectToPm2()
+			.then(function(result) {
+				return KillPm2();
+			})
+			.then(HideMainWindow)
+			.then(QuitApp);
+		});
+	}
 }
 
 //app.on('ready', function() {
-  //createLoadingWindow
+	//createLoadingWindow
 //})
 
 app.on('window-all-closed', function () {
-    //if (os.platform() !== 'win32') { ig.kill(); }
-  // in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
-  // so we do not kill the app --> for the case user clicks again on the iguana icon
-  // we open just a new window and respawn iguana proc
-  /*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
-    app.quit()
-  }*/
+		//if (os.platform() !== 'win32') { ig.kill(); }
+	// in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
+	// so we do not kill the app --> for the case user clicks again on the iguana icon
+	// we open just a new window and respawn iguana proc
+	/*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
+		app.quit()
+	}*/
 })
 
 //Emitted before the application starts closing its windows.
 //Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function (event) {
-  if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
-    //loading window is still open
-    console.log('before-quit prevented');
-    event.preventDefault();
-  }
+	if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
+		//loading window is still open
+		console.log('before-quit prevented');
+		event.preventDefault();
+	}
 });
 
 //Emitted when all windows have been closed and the application will quit.
 //Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('will-quit', function (event) {
-  if (mainWindow === null && loadingWindow != null) {
-    //loading window is still open
-    console.log('will-quit while loading window active');
-    event.preventDefault();
-  }
+	if (mainWindow === null && loadingWindow != null) {
+		//loading window is still open
+		console.log('will-quit while loading window active');
+		event.preventDefault();
+	}
 });
 
 //Emitted when the application is quitting.
 //Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', function (event) {
-  if (mainWindow === null && loadingWindow != null) {
-    console.log('quit while loading window active');
-    event.preventDefault();
-  }
+	if (mainWindow === null && loadingWindow != null) {
+		console.log('quit while loading window active');
+		event.preventDefault();
+	}
 })
 
 app.on('activate', function () {
-  if (mainWindow === null) {
-    //createWindow('open');
-  }
+	if (mainWindow === null) {
+		//createWindow('open');
+	}
 });

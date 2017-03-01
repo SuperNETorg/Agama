@@ -311,7 +311,8 @@ shepherd.get('/cache-all', function(req, res, next) {
 							    });
 	                outObj.basilisk[coin].addresses = JSON.parse(body).result;
 	                writeCache();
-	                callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' || coin === 'SYS' ? 2 : 4);
+	                var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
+	                callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? 2 : 4);
 	                console.log(coin + ' stack len ' + callStack[coin]);
 
 	                async.each(outObj.basilisk[coin].addresses, function(address) {
@@ -613,7 +614,8 @@ shepherd.get('/cache-one', function(req, res, next) {
 	          outObj.basilisk[coin].addresses = JSON.parse(body).result;
 	          console.log(JSON.parse(body).result);
 	          writeCache();
-	          callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' || coin === 'SYS' ? callsArray.length - 2 : callsArray.length);
+	          var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
+	          callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArray.length - 2 : callsArray.length);
 	          console.log(coin + ' stack len ' + callStack[coin]);
 
 	          async.each(outObj.basilisk[coin].addresses, function(address) {
@@ -1048,9 +1050,8 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 						_fs.readFile(fileLocation, 'utf-8', function(err, data) {
 					    if (err) throw err;
 
-					    // TODO: truncate komodod debug.log on app start
-					    var lines = data.trim().split('\n');
-					    var lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
+					    var lines = data.trim().split('\n'),
+					    		lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
 					    resolve(lastLine);
 						});
 	        }
@@ -1155,6 +1156,9 @@ function herder(flock, data) {
   if (flock === 'komodod') {
     console.log('komodod flock selected...');
     console.log('selected data: ' + data);
+
+    // truncate debug.log
+    fs.unlink(komodoDir + '/debug.log');
 
     pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
