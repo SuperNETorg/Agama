@@ -146,6 +146,7 @@ shepherd.get('/cache', function(req, res, next) {
 var cacheCallInProgress = false,
 		cacheGlobLifetime = 300; // sec
 
+// TODO: reset calls' states on new /cache call start
 /*
  *	params: userpass, pubkey
  */
@@ -317,8 +318,8 @@ shepherd.get('/cache-all', function(req, res, next) {
 
 	                async.each(outObj.basilisk[coin].addresses, function(address) {
 	                  var dexUrls = {
-	                    'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-	                    'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	                    'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	                    'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
 	                    'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
 	                    'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
 	                  };
@@ -620,8 +621,8 @@ shepherd.get('/cache-one', function(req, res, next) {
 
 	          async.each(outObj.basilisk[coin].addresses, function(address) {
 	            var dexUrls = {
-	              'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-	              'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	              'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	              'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
 	              'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
 	              'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
 	            },
@@ -741,8 +742,8 @@ shepherd.get('/cache-one', function(req, res, next) {
 	      console.log(coin + ' stack len ' + callStack[coin]);
 
 	      var dexUrls = {
-	        'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-	        'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+	        'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+	        'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
 	        'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
 	        'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
 	      },
