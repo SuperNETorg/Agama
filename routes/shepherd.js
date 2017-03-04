@@ -143,6 +143,93 @@ shepherd.get('/cache', function(req, res, next) {
 	}
 });
 
+/*
+ *	params: filename
+ */
+shepherd.get('/groom', function(req, res, next) {
+	var _filename = req.query.filename;
+
+	if (_filename) {
+	  if (fs.existsSync(iguanaDir + '/shepherd/data-' + _filename + '.json')) {
+			fs.readFile(iguanaDir + '/shepherd/data-' + _filename + '.json', 'utf8', function (err, data) {
+			  if (err) {
+			    var errorObj = {
+			      'msg': 'error',
+			      'result': err
+			    };
+
+			    res.end(JSON.stringify(errorObj));
+			  } else {
+			    var successObj = {
+			      'msg': 'success',
+			      'result': data ? JSON.parse(data) : ''
+			    };
+
+			  	res.end(JSON.stringify(successObj));
+			  }
+			});
+		} else {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no file with name ' + _filename
+	    };
+
+	    res.end(JSON.stringify(errorObj));
+		}
+	} else {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no file name provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+	}
+});
+
+/*
+ *	params: filename, payload
+ */
+shepherd.post('/groom', function(req, res) {
+  var _filename = req.body.filename,
+      _payload = req.body.payload;
+
+	if (_filename) {
+		if (!_payload) {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no payload provided'
+	    };
+
+	    res.end(JSON.stringify(errorObj));
+		} else {
+			fs.writeFile(iguanaDir + '/shepherd/data-' + _filename + '.json', _payload, function (err) {
+			  if (err) {
+			    var errorObj = {
+			      'msg': 'error',
+			      'result': err
+			    };
+
+			    res.end(JSON.stringify(errorObj));
+			  } else {
+			    var successObj = {
+			      'msg': 'success',
+			      'result': 'done'
+			    };
+
+			  	res.end(JSON.stringify(successObj));
+			  }
+			});
+		}
+	} else {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no file name provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+	}
+});
+
 var cacheCallInProgress = false,
 		cacheGlobLifetime = 300; // sec
 
