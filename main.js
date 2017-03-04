@@ -59,8 +59,8 @@ process.once('loaded', () => {
 	}
 });
 
-guiapp.use(bodyParser.json({limit: '15mb'})); // support json encoded bodies
-guiapp.use(bodyParser.urlencoded({ extended: true, limit: '15mb' })); // support encoded bodies
+guiapp.use(bodyParser.json({limit: '50mb'})); // support json encoded bodies
+guiapp.use(bodyParser.urlencoded({limit: '50mb', extended: true})); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
 	res.send('Iguana app server');
