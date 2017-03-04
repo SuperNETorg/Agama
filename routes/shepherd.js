@@ -150,8 +150,8 @@ shepherd.get('/groom', function(req, res, next) {
 	var _filename = req.query.filename;
 
 	if (_filename) {
-	  if (fs.existsSync(iguanaDir + '/shepherd/data-' + _filename + '.json')) {
-			fs.readFile(iguanaDir + '/shepherd/data-' + _filename + '.json', 'utf8', function (err, data) {
+	  if (fs.existsSync(iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
+			fs.readFile(iguanaDir + '/shepherd/cache-' + _filename + '.json', 'utf8', function (err, data) {
 			  if (err) {
 			    var errorObj = {
 			      'msg': 'error',
@@ -202,7 +202,7 @@ shepherd.post('/groom', function(req, res) {
 
 	    res.end(JSON.stringify(errorObj));
 		} else {
-			fs.writeFile(iguanaDir + '/shepherd/data-' + _filename + '.json', _payload, function (err) {
+			fs.writeFile(iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
 			  if (err) {
 			    var errorObj = {
 			      'msg': 'error',
