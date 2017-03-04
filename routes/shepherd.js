@@ -117,9 +117,17 @@ shepherd.get('/cache', function(req, res, next) {
 
 			    res.end(JSON.stringify(errorObj));
 			  } else {
+			  	var parsedJSON = 'JSON parse error';
+			  	
+			  	try {
+			  		parsedJSON = JSON.parse(data);
+			  	} catch (e) {
+			  		console.log('JSON parse error');
+			  	}
+
 			    var successObj = {
 			      'msg': 'success',
-			      'result': data ? JSON.parse(data) : ''
+			      'result': parsedJSON
 			    };
 
 			  	res.end(JSON.stringify(successObj));
