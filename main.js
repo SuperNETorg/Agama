@@ -9,15 +9,17 @@ const electron = require('electron'),
 			os = require('os'),
 			spawn = require('child_process').spawn,
 			exec = require('child_process').exec,
+			{Menu} = require("electron"),
 			fixPath = require('fix-path');
+
 var express = require('express'),
 		bodyParser = require('body-parser'),
 		fs = require('fs'),
 		fsnode = require('fs'),
 		fs = require('fs-extra'),
 		mkdirp = require('mkdirp'),
-		pm2 = require('pm2');
-		cluster = require('cluster');
+		pm2 = require('pm2'),
+		cluster = require('cluster'),
 		numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
@@ -84,9 +86,9 @@ console.log(cluster)
 
 var server = require('http').createServer(guiapp),
 		io = require('socket.io').listen(server);
-		
+
 server.listen(appConfig.iguanaAppPort, function() {
-	console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');  
+	console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');
 });
 
 io.set('origins', 'http://127.0.0.1:17777'); // set origin
@@ -103,7 +105,7 @@ io.on('connection', function(client) {
 	client.on('join', function(data) {
 		console.log(data);
 		client.emit('messages', 'Sockets server is listening');
-	});  
+	});
 });
 
 shepherd.setIO(io); // pass sockets object to shepherd router
@@ -218,6 +220,7 @@ function createLoadingWindow() {
 
 app.on('ready', createLoadingWindow);
 
+
 function createWindow (status) {
 	if ( status === 'open') {
 
@@ -230,12 +233,38 @@ function createWindow (status) {
 			icon: iguanaIcon
 		});
 
+		const staticMenu = Menu.buildFromTemplate([ //if static
+			{role: 'copy'},
+			{type: 'separator'},
+			{role: 'selectall'},
+		])
+
+		const editMenu = Menu.buildFromTemplate([ //if editable
+			{role: 'undo'},
+			{role: 'redo'},
+			{type: 'separator'},
+			{role: 'cut'},
+			{role: 'copy'},
+			{role: 'paste'},
+			{type: 'separator'},
+			{role: 'selectall'},
+		])
+
 		// load our index.html (i.e. easyDEX GUI)
 		if (appConfig.edexGuiOnly) {
 			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
 		} else {
 			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/main.html');
 		}
+
+		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params
+			const { selectionText, isEditable } = params; //params obj
+			if (isEditable) {
+				editMenu.popup(mainWindow);
+			} else if (selectionText && selectionText.trim() !== '') {
+				staticMenu.popup(mainWindow);
+			}
+		})
 
 		// DEVTOOLS - only for dev purposes - ca333
 		//mainWindow.webContents.openDevTools()
