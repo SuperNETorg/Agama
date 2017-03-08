@@ -1250,11 +1250,19 @@ function herder(flock, data) {
   }
 
   if (flock === 'komodod') {
+  	var kmdDebugLogLocation = komodoDir + '/debug.log';
     console.log('komodod flock selected...');
     console.log('selected data: ' + data);
 
     // truncate debug.log
-    fs.unlink(komodoDir + '/debug.log');
+		_fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
+      if (err) {
+        console.log('error accessing ' + kmdDebugLogLocation);
+      } else {
+      	console.log('truncate ' + kmdDebugLogLocation);
+		    fs.unlink(kmdDebugLogLocation);
+			}
+	  });
 
     pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
