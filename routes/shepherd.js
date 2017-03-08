@@ -119,7 +119,7 @@ shepherd.get('/cache', function(req, res, next) {
 			    res.end(JSON.stringify(errorObj));
 			  } else {
 			  	var parsedJSON = 'JSON parse error';
-			  	
+
 			  	try {
 			  		parsedJSON = JSON.parse(data);
 			  	} catch (e) {
@@ -201,11 +201,11 @@ shepherd.get('/groom', function(req, res, next) {
  *	params: filename
  */
 shepherd.delete('/groom', function(req, res, next) {
-	var _filename = req.query.filename;
+	var _filename = req.body.filename;
 
 	if (_filename) {
 	  if (fs.existsSync(iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
-	  	fs.unlink(kmdDebugLogLocation, function(err) {
+	  	fs.unlink(iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
 			  if (err) {
 			    var errorObj = {
 			      'msg': 'error',
