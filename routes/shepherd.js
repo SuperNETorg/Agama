@@ -101,6 +101,7 @@ shepherd.setIO = function(io) {
 };
 
 /*
+ *	type: GET
  *	params: pubkey
  */
 shepherd.get('/cache', function(req, res, next) {
@@ -118,7 +119,7 @@ shepherd.get('/cache', function(req, res, next) {
 			    res.end(JSON.stringify(errorObj));
 			  } else {
 			  	var parsedJSON = 'JSON parse error';
-			  	
+
 			  	try {
 			  		parsedJSON = JSON.parse(data);
 			  	} catch (e) {
@@ -152,6 +153,7 @@ shepherd.get('/cache', function(req, res, next) {
 });
 
 /*
+ *	type: GET
  *	params: filename
  */
 shepherd.get('/groom', function(req, res, next) {
@@ -195,6 +197,51 @@ shepherd.get('/groom', function(req, res, next) {
 });
 
 /*
+ *	type: DELETE
+ *	params: filename
+ */
+shepherd.delete('/groom', function(req, res, next) {
+	var _filename = req.body.filename;
+
+	if (_filename) {
+	  if (fs.existsSync(iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
+	  	fs.unlink(iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
+			  if (err) {
+			    var errorObj = {
+			      'msg': 'error',
+			      'result': err
+			    };
+
+			    res.end(JSON.stringify(errorObj));
+			  } else {
+			    var successObj = {
+			      'msg': 'success',
+			      'result': 'deleted'
+			    };
+
+			  	res.end(JSON.stringify(successObj));
+			  }
+	  	});
+		} else {
+	    var errorObj = {
+	      'msg': 'error',
+	      'result': 'no file with name ' + _filename
+	    };
+
+	    res.end(JSON.stringify(errorObj));
+		}
+	} else {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no file name provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+	}
+});
+
+/*
+ *	type: POST
  *	params: filename, payload
  */
 shepherd.post('/groom', function(req, res) {
@@ -243,6 +290,7 @@ var cacheCallInProgress = false,
 
 // TODO: reset calls' states on new /cache call start
 /*
+ *	type: GET
  *	params: userpass, pubkey
  */
 shepherd.get('/cache-all', function(req, res, next) {
@@ -551,6 +599,7 @@ shepherd.get('/cache-all', function(req, res, next) {
 });
 
 /*
+ *	type: GET
  *	params: userpass, pubkey, coin, address
  */
 shepherd.get('/cache-one', function(req, res, next) {
@@ -970,6 +1019,10 @@ shepherd.get('/cache-one', function(req, res, next) {
   }
 });
 
+/*
+ *	type: GET
+ *	params: herd, lastLines
+ */
 shepherd.post('/debuglog', function(req, res) {
   var _herd = req.body.herdname,
       _lastNLines = req.body.lastLines,
@@ -999,6 +1052,10 @@ shepherd.post('/debuglog', function(req, res) {
     });
 });
 
+/*
+ *	type: POST
+ *	params: herd
+ */
 shepherd.post('/herd', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
@@ -1016,6 +1073,10 @@ shepherd.post('/herd', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: POST
+ *	params: herdname
+ */
 shepherd.post('/herdlist', function(req, res) {
   //console.log('======= req.body =======');
   //console.log(req);
@@ -1045,6 +1106,9 @@ shepherd.post('/herdlist', function(req, res) {
   });
 });
 
+/*
+ *	type: POST
+ */
 shepherd.post('/slay', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
@@ -1060,6 +1124,9 @@ shepherd.post('/slay', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: POST
+ */
 shepherd.post('/setconf', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
@@ -1075,6 +1142,9 @@ shepherd.post('/setconf', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: POST
+ */
 shepherd.post('/getconf', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
