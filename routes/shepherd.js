@@ -291,14 +291,19 @@ var cacheCallInProgress = false,
 // TODO: reset calls' states on new /cache call start
 /*
  *	type: GET
- *	params: userpass, pubkey
+ *	params: userpass, pubkey, skip
  */
 shepherd.get('/cache-all', function(req, res, next) {
+	if (req.query.pubkey && !fs.existsSync(iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+		cacheCallInProgress = false;
+	}
+
   if (!cacheCallInProgress) {
     cacheCallInProgress = true;
 
     var sessionKey = req.query.userpass,
 		    pubkey = req.query.pubkey,
+		    skipTimeout = req.query.skip,
 		    _obj = {
 		      'msg': 'error',
 		      'result': 'error'
@@ -509,6 +514,7 @@ shepherd.get('/cache-all', function(req, res, next) {
 										    	}
 										    });
 							      	}
+							      	tooEarly = skipTimeout ? false : tooEarly;
 							        if (!tooEarly) {
 										    shepherd.io.emit('messages', {
 									    		'message': {
@@ -600,9 +606,13 @@ shepherd.get('/cache-all', function(req, res, next) {
 
 /*
  *	type: GET
- *	params: userpass, pubkey, coin, address
+ *	params: userpass, pubkey, coin, address, skip
  */
 shepherd.get('/cache-one', function(req, res, next) {
+	if (req.query.pubkey && !fs.existsSync(iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+		cacheCallInProgress = false;
+	}
+
   if (!cacheCallInProgress) {
   	// TODO: add check to allow only one cache call/sequence in progress
   	cacheCallInProgress = true;
@@ -610,6 +620,7 @@ shepherd.get('/cache-one', function(req, res, next) {
 	  		coin = req.query.coin,
 	  		address = req.query.address,
 	  		pubkey = req.query.pubkey,
+	  		skipTimeout = req.query.skip,
 	  		callsArray = req.query.calls.split(':'),
 			  errorObj = {
 			    'msg': 'error',
@@ -820,6 +831,7 @@ shepherd.get('/cache-one', function(req, res, next) {
 							    	}
 							    });
 	            	}
+	            	tooEarly = skipTimeout ? false : tooEarly;
 	              if (!tooEarly) {
 							    shepherd.io.emit('messages', {
 						    		'message': {
