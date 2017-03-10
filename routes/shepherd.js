@@ -36,6 +36,10 @@ if (os.platform() === 'darwin') {
 			komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
 			komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
 			komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+
+			zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
+			zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
+			zcashDir = process.env.HOME + '/Library/Application Support/Zcash';
 }
 
 if (os.platform() === 'linux') {
@@ -1357,6 +1361,32 @@ function herder(flock, data) {
         name: data.ac_name, // REVS, USD, EUR etc.
         exec_mode : 'fork',
         cwd: komodoDir,
+        args: data.ac_options
+        //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+      }, function(err, apps) {
+        pm2.disconnect();   // Disconnect from PM2
+          if (err)
+            throw err;
+      });
+    });
+  }
+
+  if (flock === 'zcashd') {
+  	var kmdDebugLogLocation = zcashDir + '/debug.log';
+    console.log('zcashd flock selected...');
+    console.log('selected data: ' + data);
+
+    pm2.connect(true, function(err) { // start up pm2 god
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      pm2.start({
+        script: zcashdBin, // path to binary
+        name: data.ac_name, // REVS, USD, EUR etc.
+        exec_mode : 'fork',
+        cwd: zcashDir,
         args: data.ac_options
         //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
       }, function(err, apps) {
