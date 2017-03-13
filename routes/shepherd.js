@@ -61,9 +61,13 @@ if (os.platform() === 'win32') {
 			iguanaConfsDir = path.normalize(iguanaConfsDir);
 			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+
 			komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
+			komododBin = path.normalize(komododBin),
 			komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
-			komodoDir = process.env.APPDATA + '/Komodo';
+			komodocliBin = path.normalize(komodocliBin),
+			komodoDir = process.env.APPDATA + '/Komodo',
+			komodoDir = path.normalize(komodoDir);
 }
 
 shepherd.appConfig = {
@@ -83,6 +87,9 @@ shepherd.appConfig = {
 
 console.log('iguana dir: ' + iguanaDir);
 console.log('iguana bin: ' + iguanaBin);
+console.log('--------------------------')
+console.log('iguana dir: ' + komododBin);
+console.log('iguana bin: ' + komodoDir);
 
 // END IGUANA FILES AND CONFIG SETTINGS
 shepherd.get('/', function(req, res, next) {
@@ -1597,8 +1604,7 @@ function setConf(flock) {
 							console.log('rpcpass: NOT FOUND');
 							var randomstring = md5(Math.random() * Math.random() * 999);
 
-							fs.appendFile(DaemonConfPath, '\nrpcpass=' + randomstring +
-																						'\nrpcpassword=' + randomstring, (err) => {
+							fs.appendFile(DaemonConfPath, '\nrpcpassword=' + randomstring, (err) => {
 								if (err)
 									throw err;
 								console.log('rpcpass: ADDED');
