@@ -101,6 +101,11 @@ shepherd.get('/appconf', function(req, res, next) {
   res.send(obj);
 });
 
+shepherd.get('/sysinfo', function(req, res, next) {
+  var obj = shepherd.SystemInfo();
+  res.send(obj);
+});
+
 shepherd.get('/socket-test', function(req, res, next) {
 	res.send('Sockets test');
   shepherd.io.emit('messages', { 'message': 'legacy of grewal' });
@@ -1727,5 +1732,30 @@ function getConf(flock) {
   console.log(DaemonConfPath);
   return DaemonConfPath;
 }
+
+function formatBytes(bytes,decimals) {
+   if(bytes == 0) return '0 Bytes';
+   var k = 1000,
+       dm = decimals + 1 || 3,
+       sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+       i = Math.floor(Math.log(bytes) / Math.log(k));
+   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+shepherd.SystemInfo = function() {
+	os_data = {
+		'totalmem_bytes': os.totalmem(),
+		'totalmem_readble': formatBytes(os.totalmem()),
+		'arch': os.arch(),
+		'cpu': os.cpus()[0].model,
+		'cpu_cors': os.cpus().length,
+		'platform': os.platform(),
+		'os_release': os.release(),
+		'os_type': os.type()
+	}
+	return os_data
+}
+
+
 
 module.exports = shepherd;
