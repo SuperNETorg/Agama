@@ -1706,54 +1706,72 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
+	const komodoDir,
+				ZcashDir,
+				DaemonConfPath;
+
   console.log(flock);
 
   if (os.platform() === 'darwin') {
-    var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
-        ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+    komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
+    ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
   }
 
   if (os.platform() === 'linux') {
-    var komodoDir = process.env.HOME + '/.komodo',
-        ZcashDir = process.env.HOME + '/.zcash';
+    komodoDir = process.env.HOME + '/.komodo',
+    ZcashDir = process.env.HOME + '/.zcash';
   }
 
   switch (flock) {
     case 'komodod':
-      var DaemonConfPath = komodoDir;
+      DaemonConfPath = komodoDir;
     break;
     case 'zcashd':
-      var DaemonConfPath = ZcashDir;
+      DaemonConfPath = ZcashDir;
     break;
     default:
-      var DaemonConfPath = komodoDir + '/' + flock;
+      DaemonConfPath = komodoDir + '/' + flock;
   }
 
   console.log(DaemonConfPath);
   return DaemonConfPath;
 }
 
-function formatBytes(bytes,decimals) {
-   if(bytes == 0) return '0 Bytes';
-   var k = 1000,
-       dm = decimals + 1 || 3,
-       sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
-       i = Math.floor(Math.log(bytes) / Math.log(k));
-   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+function formatBytes(bytes, decimals) {
+  if (bytes == 0)
+   	return '0 Bytes';
+   
+  var k = 1000,
+      dm = decimals + 1 || 3,
+      sizes = [
+       	'Bytes',
+       	'KB',
+       	'MB',
+       	'GB',
+       	'TB',
+       	'PB',
+       	'EB',
+       	'ZB',
+       	'YB'
+      ],
+      i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 shepherd.SystemInfo = function() {
-	os_data = {
-		'totalmem_bytes': os.totalmem(),
-		'totalmem_readble': formatBytes(os.totalmem()),
-		'arch': os.arch(),
-		'cpu': os.cpus()[0].model,
-		'cpu_cors': os.cpus().length,
-		'platform': os.platform(),
-		'os_release': os.release(),
-		'os_type': os.type()
-	}
-	return os_data
+	const os_data = {
+					'totalmem_bytes': os.totalmem(),
+					'totalmem_readble': formatBytes(os.totalmem()),
+					'arch': os.arch(),
+					'cpu': os.cpus()[0].model,
+					'cpu_cores': os.cpus().length,
+					'platform': os.platform(),
+					'os_release': os.release(),
+					'os_type': os.type()
+				};
+
+	return os_data;
 }
 
 
