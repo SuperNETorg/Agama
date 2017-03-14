@@ -13,7 +13,8 @@ const electron = require('electron'),
       md5 = require('md5'),
       pm2 = require('pm2'),
       request = require('request'),
-      async = require('async');
+      async = require('async'),
+      rimraf = require('rimraf');
 
 Promise = require('bluebird');
 
@@ -1190,6 +1191,117 @@ shepherd.post('/getconf', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: GET
+ *	params: coin, type
+ */
+shepherd.get('/kick', function(req, res, next) {
+	var _coin = req.query.coin,
+			_type = req.query.type;
+
+	if (!_coin) {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no coin name provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+
+	if (!_type) {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no type provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+
+	//rimraf('/some/directory', function () { console.log('done'); });
+
+  var kickStartDirs = {
+  	'soft': [
+  		{
+  			'name': 'DB/[coin]/balancecrc.*',
+  			'type': 'pattern'
+  		},
+  		{
+  			'name': 'DB/[coin]/utxoaddrs',
+  			'type': 'file'
+  		},
+  		{
+  			'name': 'DB/[coin]/accounts',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/[coin]/fastfind',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'tmp/[coin]',
+  			'type': 'folder'
+  		}
+  	],
+  	'hard': [
+  		{
+  			'name': 'DB/[coin]/balancecrc.*',
+  			'type': 'pattern'
+  		},
+  		{
+  			'name': 'DB/[coin]/utxoaddrs',
+  			'type': 'file'
+  		},
+  		{
+  			'name': 'DB/[coin]/utxoaddrs.*',
+  			'type': 'pattern'
+  		},
+  		{
+  			'name': 'DB/[coin]/accounts',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/[coin]/fastfind',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/[coin]/spends',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'tmp/[coin]',
+  			'type': 'folder'
+  		}
+  	],
+  	'brutal': [
+  		{ // delete all coin data
+				'name': 'DB/[coin]',
+				'type': 'folder'
+  		},
+  		{
+  			'name': 'tmp/[coin]',
+  			'type': 'folder'
+  		}  		
+  	]
+  };
+
+  if (_coin && _type) {
+  	if (_type === 'brutal') {
+  		for (var i = 0; i < kickStartDirs.brutal.length; i++) {
+  			console.log(kickStartDirs.brutal[i].name);
+		    var successObj = {
+		      'msg': 'success',
+		      'result': 'kickstart: brutal is executed'
+		    };
+
+		    res.end(JSON.stringify(successObj));  			
+  		}
+  	}
+  }
+
+	if (fs.existsSync(iguanaDir + '/config.json')) {
+	}  
+});
+
 shepherd.loadLocalConfig = function() {
   if (fs.existsSync(iguanaDir + '/config.json')) {
     var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
@@ -1706,9 +1818,9 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
-	const komodoDir,
-				ZcashDir,
-				DaemonConfPath;
+	const komodoDir = '',
+				ZcashDir = '',
+				DaemonConfPath = '';
 
   console.log(flock);
 
