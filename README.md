@@ -58,6 +58,12 @@ Change directory to iguana and execute the following command to build the Window
 ```shell
 dir iguana
 electron-packager . --platform=win32 --arch=x64 --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
+
+# If generating 32bit desktop package
+electron-packager . --platform=win32 --arch=ia32 --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
+
+# To build both x64 and x86 desktop package
+electron-packager . --platform=win32 --arch=all --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
 ```
 change architecture build parameter to ```--arch=x64``` for 64 bit build
 
