@@ -1161,7 +1161,13 @@ shepherd.post('/setconf', function(req, res) {
   console.log(req.body);
   //console.log(req.body.chain);
 
-  setConf(req.body.chain);
+  if (os.platform() === 'win32' && req.body.chain == 'komodod') {
+  	setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+  } else {
+  	setConf(req.body.chain);
+  }
+
+
   var obj = {
     'msg': 'success',
     'result': 'result'
@@ -1507,12 +1513,15 @@ function setConf(flock) {
 	switch (flock) {
 		case 'komodod':
 			var DaemonConfPath = komodoDir + '/komodo.conf';
+			DaemonConfPath = path.normalize(DaemonConfPath);
 			break;
 		case 'zcashd':
 			var DaemonConfPath = ZcashDir + '/zcash.conf';
+			DaemonConfPath = path.normalize(DaemonConfPath);
 			break;
 		default:
 			var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
+			DaemonConfPath = path.normalize(DaemonConfPath);
 	}
 
 	console.log(DaemonConfPath);
