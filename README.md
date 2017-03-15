@@ -4,15 +4,9 @@ Desktop App for SuperNET DAPPs
 #### For Developers
 You must have `node.js` and `npm` installed on your machine.
 
-Clone Iguana Desktop App
+Clone Iguana Desktop App with EasyDEX-GUI submodule
 ```shell
-git clone https://github.com/SuperNETorg/iguana.git
-```
-
-Please clone EasyDEX-GUI from github repo here.
-```shell
-cd gui
-git clone https://github.com/SuperNETorg/EasyDEX-GUI.git
+git clone --recursive https://github.com/SuperNETorg/iguana.git
 ```
 
 Install Iguana App
