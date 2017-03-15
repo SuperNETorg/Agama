@@ -9,12 +9,6 @@ Clone Iguana Desktop App
 git clone https://github.com/SuperNETorg/iguana.git
 ```
 
-Please clone EasyDEX-GUI from github repo here.
-```shell
-cd gui
-git clone https://github.com/SuperNETorg/EasyDEX-GUI.git
-```
-
 Install Iguana App
 ```shell
 cd iguana
