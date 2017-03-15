@@ -1514,15 +1514,21 @@ function setConf(flock) {
 	switch (flock) {
 		case 'komodod':
 			var DaemonConfPath = komodoDir + '/komodo.conf';
-			DaemonConfPath = path.normalize(DaemonConfPath);
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 			break;
 		case 'zcashd':
 			var DaemonConfPath = ZcashDir + '/zcash.conf';
-			DaemonConfPath = path.normalize(DaemonConfPath);
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 			break;
 		default:
 			var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
-			DaemonConfPath = path.normalize(DaemonConfPath);
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 	}
 
 	console.log(DaemonConfPath);
@@ -1718,26 +1724,40 @@ function setConf(flock) {
 function getConf(flock) {
   console.log(flock);
 
-  if (os.platform() === 'darwin') {
-    var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
-        ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
-  }
+	if (os.platform() === 'darwin') {
+		var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
+			ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+	}
 
-  if (os.platform() === 'linux') {
-    var komodoDir = process.env.HOME + '/.komodo',
-        ZcashDir = process.env.HOME + '/.zcash';
-  }
+	if (os.platform() === 'linux') {
+		var komodoDir = process.env.HOME + '/.komodo',
+			ZcashDir = process.env.HOME + '/.zcash';
+	}
 
-  switch (flock) {
-    case 'komodod':
-      var DaemonConfPath = komodoDir;
-    break;
-    case 'zcashd':
-      var DaemonConfPath = ZcashDir;
-    break;
-    default:
-      var DaemonConfPath = komodoDir + '/' + flock;
-  }
+  	if (os.platform() === 'win32') {
+		var komodoDir = process.env.APPDATA + '/Komodo',
+			ZcashDir = process.env.APPDATA + '/Zcash';
+	}
+
+	switch (flock) {
+		case 'komodod':
+			var DaemonConfPath = komodoDir;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+			break;
+		case 'zcashd':
+			var DaemonConfPath = ZcashDir;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+			break;
+		default:
+			var DaemonConfPath = komodoDir + '/' + flock;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+	}
 
   console.log(DaemonConfPath);
   return DaemonConfPath;
