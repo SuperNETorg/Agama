@@ -10,6 +10,7 @@ const electron = require('electron'),
       mkdirp = require('mkdirp'),
       express = require('express'),
       exec = require('child_process').exec,
+      spawn = require('child_process').spawn,
       md5 = require('md5'),
       pm2 = require('pm2'),
       request = require('request'),
@@ -1162,7 +1163,13 @@ shepherd.post('/setconf', function(req, res) {
   console.log(req.body);
   //console.log(req.body.chain);
 
-  setConf(req.body.chain);
+  if (os.platform() === 'win32' && req.body.chain == 'komodod') {
+  	setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+  } else {
+  	setConf(req.body.chain);
+  }
+
+
   var obj = {
     'msg': 'success',
     'result': 'result'
@@ -1280,7 +1287,7 @@ shepherd.get('/kick', function(req, res, next) {
   		{
   			'name': 'tmp/[coin]',
   			'type': 'folder'
-  		}  		
+  		}
   	]
   };
 
@@ -1293,13 +1300,13 @@ shepherd.get('/kick', function(req, res, next) {
 		      'result': 'kickstart: brutal is executed'
 		    };
 
-		    res.end(JSON.stringify(successObj));  			
+		    res.end(JSON.stringify(successObj));
   		}
   	}
   }
 
 	if (fs.existsSync(iguanaDir + '/config.json')) {
-	}  
+	}
 });
 
 shepherd.loadLocalConfig = function() {
@@ -1619,12 +1626,21 @@ function setConf(flock) {
 	switch (flock) {
 		case 'komodod':
 			var DaemonConfPath = komodoDir + '/komodo.conf';
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 			break;
 		case 'zcashd':
 			var DaemonConfPath = ZcashDir + '/zcash.conf';
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 			break;
 		default:
 			var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 	}
 
 	console.log(DaemonConfPath);
@@ -1824,26 +1840,42 @@ function getConf(flock) {
 
   console.log(flock);
 
-  if (os.platform() === 'darwin') {
-    komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
-    ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
-  }
+	if (os.platform() === 'darwin') {
+		komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+		ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+	}
 
-  if (os.platform() === 'linux') {
-    komodoDir = process.env.HOME + '/.komodo',
-    ZcashDir = process.env.HOME + '/.zcash';
-  }
+	if (os.platform() === 'linux') {
+		komodoDir = process.env.HOME + '/.komodo';
+		ZcashDir = process.env.HOME + '/.zcash';
+	}
 
-  switch (flock) {
-    case 'komodod':
-      DaemonConfPath = komodoDir;
-    break;
-    case 'zcashd':
-      DaemonConfPath = ZcashDir;
-    break;
-    default:
-      DaemonConfPath = komodoDir + '/' + flock;
-  }
+  if (os.platform() === 'win32') {
+		komodoDir = process.env.APPDATA + '/Komodo';
+		ZcashDir = process.env.APPDATA + '/Zcash';
+	}
+
+	switch (flock) {
+		case 'komodod':
+			DaemonConfPath = komodoDir;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+				console.log('===>>> SHEPHERD API OUTPUT ===>>>');
+				console.log(DaemonConfPath);
+			}
+			break;
+		case 'zcashd':
+			DaemonConfPath = ZcashDir;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+			break;
+		default:
+			DaemonConfPath = komodoDir + '/' + flock;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+	}
 
   console.log(DaemonConfPath);
   return DaemonConfPath;
@@ -1852,7 +1884,7 @@ function getConf(flock) {
 function formatBytes(bytes, decimals) {
   if (bytes == 0)
    	return '0 Bytes';
-   
+
   var k = 1000,
       dm = decimals + 1 || 3,
       sizes = [
@@ -1867,7 +1899,7 @@ function formatBytes(bytes, decimals) {
        	'YB'
       ],
       i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
