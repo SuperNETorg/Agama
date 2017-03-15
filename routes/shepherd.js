@@ -1744,6 +1744,8 @@ function getConf(flock) {
 			var DaemonConfPath = komodoDir;
 			if (os.platform() === 'win32') {
 				DaemonConfPath = path.normalize(DaemonConfPath);
+				console.log('===>>> SHEPHERD API OUTPUT ===>>>');
+				console.log(DaemonConfPath);
 			}
 			break;
 		case 'zcashd':
