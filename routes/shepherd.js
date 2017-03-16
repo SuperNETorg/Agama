@@ -1224,12 +1224,10 @@ shepherd.get('/kick', function(req, res, next) {
     res.end(JSON.stringify(errorObj));
   }
 
-	//rimraf('/some/directory', function () { console.log('done'); });
-
   var kickStartDirs = {
   	'soft': [
   		{
-  			'name': 'DB/[coin]/balancecrc.*',
+  			'name': 'DB/[coin]/balancecrc.',
   			'type': 'pattern'
   		},
   		{
@@ -1251,16 +1249,18 @@ shepherd.get('/kick', function(req, res, next) {
   	],
   	'hard': [
   		{
-  			'name': 'DB/[coin]/balancecrc.*',
-  			'type': 'pattern'
+  			'name': 'DB/[coin]',
+  			'type': 'pattern',
+  			'match': 'balancecrc.'
   		},
   		{
   			'name': 'DB/[coin]/utxoaddrs',
   			'type': 'file'
   		},
   		{
-  			'name': 'DB/[coin]/utxoaddrs.*',
-  			'type': 'pattern'
+  			'name': 'DB/[coin]',
+  			'type': 'pattern',
+  			'match': 'utxoaddrs.'
   		},
   		{
   			'name': 'DB/[coin]/accounts',
@@ -1279,10 +1279,18 @@ shepherd.get('/kick', function(req, res, next) {
   			'type': 'folder'
   		}
   	],
-  	'brutal': [
-  		{ // delete all coin data
+  	'brutal': [ // delete coin related data
+  		{
 				'name': 'DB/[coin]',
 				'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/purgeable/[coin]',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/ro/[coin]',
+  			'type': 'folder'
   		},
   		{
   			'name': 'tmp/[coin]',
@@ -1292,21 +1300,38 @@ shepherd.get('/kick', function(req, res, next) {
   };
 
   if (_coin && _type) {
-  	if (_type === 'brutal') {
-  		for (var i = 0; i < kickStartDirs.brutal.length; i++) {
-  			console.log(kickStartDirs.brutal[i].name);
-		    var successObj = {
-		      'msg': 'success',
-		      'result': 'kickstart: brutal is executed'
-		    };
-
-		    res.end(JSON.stringify(successObj));
-  		}
+		for (var i = 0; i < kickStartDirs[_type].length; i++) {
+			console.log('deleting ' + kickStartDirs[_type][i].type + (kickStartDirs[_type][i].match ? ' ' + kickStartDirs[_type][i].match : '') + ' ' + iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin));
+			if (kickStartDirs[_type][i].type === 'folder' || kickStartDirs[_type][i].type === 'file') {
+				rimraf(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin), function(err) {
+					if (err) {
+						throw err;
+					}
+				});
+			} else if (kickStartDirs[_type][i].type === 'pattern') {
+				var dirItems = fs.readdirSync(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin));
+				if (dirItems && dirItems.length) {
+			    for (var j = 0; j < dirItems.length; j++) {
+			      if (dirItems[j].indexOf(kickStartDirs[_type][i].match) > -1) {
+							rimraf(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin) + '/' + dirItems[j], function(err) {
+								if (err) {
+									throw err;
+								}
+							});
+				      console.log('deleting ' + dirItems[j]);
+			      }
+			    }
+			  }
+			}
   	}
-  }
 
-	if (fs.existsSync(iguanaDir + '/config.json')) {
-	}
+    var successObj = {
+      'msg': 'success',
+      'result': 'kickstart: brutal is executed'
+    };
+
+    res.end(JSON.stringify(successObj));
+  }
 });
 
 shepherd.loadLocalConfig = function() {
@@ -1861,7 +1886,6 @@ function getConf(flock) {
 			if (os.platform() === 'win32') {
 				DaemonConfPath = path.normalize(DaemonConfPath);
 				console.log('===>>> SHEPHERD API OUTPUT ===>>>');
-				console.log(DaemonConfPath);
 			}
 			break;
 		case 'zcashd':
