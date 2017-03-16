@@ -145,7 +145,7 @@
     <readyToInstallActionList>
         <runProgram>
             <program>${oldInstalldir}/${uninstallerName}</program>
-            <programArguments>--mode unattended</programArguments>
+            <programArguments></programArguments>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>
@@ -158,6 +158,28 @@
             <explanation>Deleting user data</explanation>
             <path>${user_home_directory}/.iguana</path>
             <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${keep_settings_and_userdata}</value1>
+                    <value2>0</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting zcache-params</explanation>
+            <path>${user_home_directory}/.zcache-params</path>
+            <progressText>Deleting zcache-params</progressText>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>
@@ -198,23 +220,6 @@
                 </compareValues>
             </ruleList>
         </deleteFile>
-        <showText>
-            <height>100</height>
-            <text>Uninstallation completed</text>
-            <title>Uninstalled</title>
-            <ruleList>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${previous_installation_exists}</value1>
-                    <value2>1</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${installation_type}</value1>
-                    <value2>uninstall</value2>
-                </compareValues>
-            </ruleList>
-        </showText>
         <exit>
             <explanation>Uninstalled</explanation>
             <progressText>Uninstalled</progressText>
