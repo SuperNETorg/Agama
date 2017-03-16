@@ -7,6 +7,10 @@ You must have `node.js` and `npm` installed on your machine.
 Clone Iguana Desktop App with EasyDEX-GUI submodule
 ```shell
 git clone --recursive https://github.com/SuperNETorg/iguana.git
+cd gui/EasyDEX-GUI/
+git checkout master
+git pull
+cd ../../
 ```
 
 Install Iguana App
@@ -36,7 +40,7 @@ Refer to the original [electron-packager](https://github.com/electron-userland/e
 Change directory to iguana and execute the following command to build the Linux app
 ```shell
 cd iguana
-electron-packager . --platform=linux --arch=x64 --icon=assets/icons/iguana_app_icon_png/128x128.png --out=build/ --overwrite
+electron-packager . --platform=linux --arch=x64 --icon=assets/icons/iguana_app_icon_png/128x128.png --out=build/ --buildVersion=VERSION_NUMBER_HERE --ignore=assets/bin/win64 --ignore=assets/bin/osx --overwrite
 ```
 change architecture build parameter to ```--arch=x32``` for 32 bit build
 
@@ -44,20 +48,20 @@ change architecture build parameter to ```--arch=x32``` for 32 bit build
 Change directory to iguana and execute the following command to build the OSX app
 ```shell
 cd iguana
-electron-packager . --platform=darwin --arch=x64 --icon=assets/icons/iguana_app_icon.icns --out=build/ --overwrite
+electron-packager . --platform=darwin --arch=x64 --icon=assets/icons/iguana_app_icon.icns --out=build/ --buildVersion=VERSION_NUMBER_HERE --ignore=assets/bin/win64 --ignore=assets/bin/linux64 --overwrite
 ```
 
 ##### Windows
 Change directory to iguana and execute the following command to build the Windows app
 ```shell
 dir iguana
-electron-packager . --platform=win32 --arch=x64 --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
+electron-packager . --platform=win32 --arch=x64 --icon=assets/icons/iguana_app_icon.ico --out=build/ --buildVersion=VERSION_NUMBER_HERE --ignore=assets/bin/osx --ignore=assets/bin/linux64 --overwrite
 
 # If generating 32bit desktop package
-electron-packager . --platform=win32 --arch=ia32 --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
+electron-packager . --platform=win32 --arch=ia32 --icon=assets/icons/iguana_app_icon.ico --out=build/ --buildVersion=VERSION_NUMBER_HERE --ignore=assets/bin/osx --ignore=assets/bin/linux64 --overwrite
 
 # To build both x64 and x86 desktop package
-electron-packager . --platform=win32 --arch=all --icon=assets/icons/iguana_app_icon.ico --out=build/ --overwrite
+electron-packager . --platform=win32 --arch=all --icon=assets/icons/iguana_app_icon.ico --out=build/ --buildVersion=VERSION_NUMBER_HERE --ignore=assets/bin/osx --ignore=assets/bin/linux64 --overwrite
 ```
 change architecture build parameter to ```--arch=x64``` for 64 bit build
 
