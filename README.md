@@ -7,6 +7,10 @@ You must have `node.js` and `npm` installed on your machine.
 Clone Iguana Desktop App with EasyDEX-GUI submodule
 ```shell
 git clone --recursive https://github.com/SuperNETorg/iguana.git
+cd gui/EasyDEX-GUI/
+git checkout master
+git pull
+cd ../../
 ```
 
 Install Iguana App
