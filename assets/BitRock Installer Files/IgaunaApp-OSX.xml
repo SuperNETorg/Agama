@@ -48,6 +48,14 @@
         </component>
     </componentList>
     <preInstallationActionList>
+        <setInstallerVariable>
+            <name>previous_installation_exists</name>
+            <value>1</value>
+            <ruleList>
+                <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+            </ruleList>
+        </setInstallerVariable>
+
         <!-- Retreive values about previous installer so we can uninstall it -->
         <foreach>
             <values>version oldVersion installdir oldInstalldir</values>
@@ -60,7 +68,11 @@
                     <section>details</section>
                     <variable>${variable}</variable>
                     <ruleList>
-                        <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+                        <compareValues>
+                            <logic>equals</logic>
+                            <value1>${previous_installation_exists}</value1>
+                            <value2>1</value2>
+                        </compareValues>
                     </ruleList>
                 </iniFileGet>
             </actionList>
@@ -74,11 +86,90 @@
             <program>${oldInstalldir}/${uninstallerName}</program>
             <programArguments>--mode unattended</programArguments>
             <ruleList>
-                <fileExists>
-                    <path>${oldInstalldir}/${uninstallerName}</path>
-                </fileExists>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
             </ruleList>
         </runProgram>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.iguana</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${keep_settings_and_userdata}</value1>
+                    <value2>0</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting user settngs</explanation>
+            <path>${user_home_directory}/.config/Iguana</path>
+            <progressText>Deleting user settngs</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${keep_settings_and_userdata}</value1>
+                    <value2>0</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <showText>
+            <height>100</height>
+            <text>Uninstallation completed</text>
+            <title>Uninstalled</title>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+            </ruleList>
+        </showText>
+        <exit>
+            <explanation>Uninstalled</explanation>
+            <progressText>Uninstalled</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+            </ruleList>
+        </exit>
         <createDirectory>
             <abortOnError>0</abortOnError>
             <explanation>Creating ZcashParam directory</explanation>
@@ -180,6 +271,42 @@
             <mustExist>0</mustExist>
             <width>30</width>
         </directoryParameter>
+        <choiceParameterGroup>
+            <name>installation_type</name>
+            <title>Instalation type</title>
+            <description>Existing instalation is detected</description>
+            <explanation>Existing instalation is detected</explanation>
+            <value>reinstall</value>
+            <default>reinstall</default>
+            <parameterList>
+                <parameterGroup>
+                    <name>uninstall</name>
+                    <title>Uninstall</title>
+                    <explanation>Uninstall</explanation>
+                    <value></value>
+                    <default></default>
+                    <parameterList>
+                        <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
+                            <explanation></explanation>
+                            <value>1</value>
+                            <default>1</default>
+                        </booleanParameter>
+                    </parameterList>
+                </parameterGroup>
+                <labelParameter name="reinstall" description="Re-install current version">
+                    <title>Re-install</title>
+                    <explanation></explanation>
+                    <image></image>
+                </labelParameter>
+            </parameterList>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </choiceParameterGroup>
     </parameterList>
 </project>
 
