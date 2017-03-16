@@ -260,6 +260,35 @@
             <mustExist>0</mustExist>
             <width>30</width>
         </directoryParameter>
+        <choiceParameterGroup>
+            <name>installation_type</name>
+            <title>Instalation type</title>
+            <description>Existing instalation is detected</description>
+            <explanation>Existing instalation is detected</explanation>
+            <value>reinstall</value>
+            <default>reinstall</default>
+            <parameterList>
+                <parameterGroup>
+                    <name>uninstall</name>
+                    <title>Uninstall</title>
+                    <explanation>Uninstall</explanation>
+                    <value></value>
+                    <default></default>
+                    <parameterList>
+                        <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
+                            <explanation></explanation>
+                            <value>1</value>
+                            <default>1</default>
+                        </booleanParameter>
+                    </parameterList>
+                </parameterGroup>
+                <labelParameter name="reinstall" description="Re-install current version">
+                    <title>Re-install</title>
+                    <explanation></explanation>
+                    <image></image>
+                </labelParameter>
+            </parameterList>
+        </choiceParameterGroup>
     </parameterList>
 </project>
 
