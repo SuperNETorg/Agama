@@ -288,6 +288,11 @@
                     <image></image>
                 </labelParameter>
             </parameterList>
+            <ruleList>
+                <fileExists>
+                    <path>${oldInstalldir}/${uninstallerName}</path>
+                </fileExists>
+            </ruleList>
         </choiceParameterGroup>
     </parameterList>
 </project>
