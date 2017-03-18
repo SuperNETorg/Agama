@@ -61,8 +61,11 @@ process.once('loaded', () => {
 	}
 });
 
-guiapp.use(bodyParser.json({limit: '50mb'})); // support json encoded bodies
-guiapp.use(bodyParser.urlencoded({limit: '50mb', extended: true})); // support encoded bodies
+guiapp.use(bodyParser.json({ limit: '50mb' })); // support json encoded bodies
+guiapp.use(bodyParser.urlencoded({
+	limit: '50mb',
+	extended: true
+})); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
 	res.send('Iguana app server');
@@ -196,7 +199,7 @@ function createLoadingWindow() {
 		// putting them into an window_arr
 		loadingWindow = null;
 		createWindow('open');
-	})
+	});
 
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
 	/*if (os.platform() === 'win32') {
@@ -234,20 +237,20 @@ function createWindow (status) {
 		});
 
 		const staticMenu = Menu.buildFromTemplate([ //if static
-			{role: 'copy'},
-			{type: 'separator'},
-			{role: 'selectall'},
+			{ role: 'copy' },
+			{ type: 'separator' },
+			{ role: 'selectall' },
 		])
 
 		const editMenu = Menu.buildFromTemplate([ //if editable
-			{role: 'undo'},
-			{role: 'redo'},
-			{type: 'separator'},
-			{role: 'cut'},
-			{role: 'copy'},
-			{role: 'paste'},
-			{type: 'separator'},
-			{role: 'selectall'},
+			{ role: 'undo' },
+			{ role: 'redo' },
+			{ type: 'separator' },
+			{ role: 'cut' },
+			{ role: 'copy' },
+			{ role: 'paste' },
+			{ type: 'separator' },
+			{ role: 'selectall' },
 		])
 
 		// load our index.html (i.e. easyDEX GUI)
