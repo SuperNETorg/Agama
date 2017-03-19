@@ -14,8 +14,7 @@ const electron = require('electron'),
       md5 = require('md5'),
       pm2 = require('pm2'),
       request = require('request'),
-      async = require('async'),
-      rimraf = require('rimraf');
+      async = require('async');
 
 Promise = require('bluebird');
 
@@ -1198,142 +1197,6 @@ shepherd.post('/getconf', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
-/*
- *	type: GET
- *	params: coin, type
- */
-shepherd.get('/kick', function(req, res, next) {
-	var _coin = req.query.coin,
-			_type = req.query.type;
-
-	if (!_coin) {
-    var errorObj = {
-      'msg': 'error',
-      'result': 'no coin name provided'
-    };
-
-    res.end(JSON.stringify(errorObj));
-  }
-
-	if (!_type) {
-    var errorObj = {
-      'msg': 'error',
-      'result': 'no type provided'
-    };
-
-    res.end(JSON.stringify(errorObj));
-  }
-
-  var kickStartDirs = {
-  	'soft': [
-  		{
-  			'name': 'DB/[coin]/balancecrc.',
-  			'type': 'pattern'
-  		},
-  		{
-  			'name': 'DB/[coin]/utxoaddrs',
-  			'type': 'file'
-  		},
-  		{
-  			'name': 'DB/[coin]/accounts',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'DB/[coin]/fastfind',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'tmp/[coin]',
-  			'type': 'folder'
-  		}
-  	],
-  	'hard': [
-  		{
-  			'name': 'DB/[coin]',
-  			'type': 'pattern',
-  			'match': 'balancecrc.'
-  		},
-  		{
-  			'name': 'DB/[coin]/utxoaddrs',
-  			'type': 'file'
-  		},
-  		{
-  			'name': 'DB/[coin]',
-  			'type': 'pattern',
-  			'match': 'utxoaddrs.'
-  		},
-  		{
-  			'name': 'DB/[coin]/accounts',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'DB/[coin]/fastfind',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'DB/[coin]/spends',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'tmp/[coin]',
-  			'type': 'folder'
-  		}
-  	],
-  	'brutal': [ // delete coin related data
-  		{
-				'name': 'DB/[coin]',
-				'type': 'folder'
-  		},
-  		{
-  			'name': 'DB/purgeable/[coin]',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'DB/ro/[coin]',
-  			'type': 'folder'
-  		},
-  		{
-  			'name': 'tmp/[coin]',
-  			'type': 'folder'
-  		}
-  	]
-  };
-
-  if (_coin && _type) {
-		for (var i = 0; i < kickStartDirs[_type].length; i++) {
-			console.log('deleting ' + kickStartDirs[_type][i].type + (kickStartDirs[_type][i].match ? ' ' + kickStartDirs[_type][i].match : '') + ' ' + iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin));
-			if (kickStartDirs[_type][i].type === 'folder' || kickStartDirs[_type][i].type === 'file') {
-				rimraf(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin), function(err) {
-					if (err) {
-						throw err;
-					}
-				});
-			} else if (kickStartDirs[_type][i].type === 'pattern') {
-				var dirItems = fs.readdirSync(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin));
-				if (dirItems && dirItems.length) {
-			    for (var j = 0; j < dirItems.length; j++) {
-			      if (dirItems[j].indexOf(kickStartDirs[_type][i].match) > -1) {
-							rimraf(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin) + '/' + dirItems[j], function(err) {
-								if (err) {
-									throw err;
-								}
-							});
-				      console.log('deleting ' + dirItems[j]);
-			      }
-			    }
-			  }
-			}
-  	}
-
-    var successObj = {
-      'msg': 'success',
-      'result': 'kickstart: brutal is executed'
-    };
-
-    res.end(JSON.stringify(successObj));
-  }
-});
-
 shepherd.loadLocalConfig = function() {
   if (fs.existsSync(iguanaDir + '/config.json')) {
     var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
@@ -1859,43 +1722,40 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
-	const komodoDir = '',
-				ZcashDir = '',
-				DaemonConfPath = '';
-
   console.log(flock);
 
 	if (os.platform() === 'darwin') {
-		komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
-		ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+		var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
+			ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
 	}
 
 	if (os.platform() === 'linux') {
-		komodoDir = process.env.HOME + '/.komodo';
-		ZcashDir = process.env.HOME + '/.zcash';
+		var komodoDir = process.env.HOME + '/.komodo',
+			ZcashDir = process.env.HOME + '/.zcash';
 	}
 
-  if (os.platform() === 'win32') {
-		komodoDir = process.env.APPDATA + '/Komodo';
-		ZcashDir = process.env.APPDATA + '/Zcash';
+  	if (os.platform() === 'win32') {
+		var komodoDir = process.env.APPDATA + '/Komodo',
+			ZcashDir = process.env.APPDATA + '/Zcash';
 	}
 
 	switch (flock) {
 		case 'komodod':
-			DaemonConfPath = komodoDir;
+			var DaemonConfPath = komodoDir;
 			if (os.platform() === 'win32') {
 				DaemonConfPath = path.normalize(DaemonConfPath);
 				console.log('===>>> SHEPHERD API OUTPUT ===>>>');
+				console.log(DaemonConfPath);
 			}
 			break;
 		case 'zcashd':
-			DaemonConfPath = ZcashDir;
+			var DaemonConfPath = ZcashDir;
 			if (os.platform() === 'win32') {
 				DaemonConfPath = path.normalize(DaemonConfPath);
 			}
 			break;
 		default:
-			DaemonConfPath = komodoDir + '/' + flock;
+			var DaemonConfPath = komodoDir + '/' + flock;
 			if (os.platform() === 'win32') {
 				DaemonConfPath = path.normalize(DaemonConfPath);
 			}
@@ -1905,41 +1765,27 @@ function getConf(flock) {
   return DaemonConfPath;
 }
 
-function formatBytes(bytes, decimals) {
-  if (bytes == 0)
-   	return '0 Bytes';
-
-  var k = 1000,
-      dm = decimals + 1 || 3,
-      sizes = [
-       	'Bytes',
-       	'KB',
-       	'MB',
-       	'GB',
-       	'TB',
-       	'PB',
-       	'EB',
-       	'ZB',
-       	'YB'
-      ],
-      i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+function formatBytes(bytes,decimals) {
+   if(bytes == 0) return '0 Bytes';
+   var k = 1000,
+       dm = decimals + 1 || 3,
+       sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+       i = Math.floor(Math.log(bytes) / Math.log(k));
+   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
 shepherd.SystemInfo = function() {
-	const os_data = {
-					'totalmem_bytes': os.totalmem(),
-					'totalmem_readble': formatBytes(os.totalmem()),
-					'arch': os.arch(),
-					'cpu': os.cpus()[0].model,
-					'cpu_cores': os.cpus().length,
-					'platform': os.platform(),
-					'os_release': os.release(),
-					'os_type': os.type()
-				};
-
-	return os_data;
+	os_data = {
+		'totalmem_bytes': os.totalmem(),
+		'totalmem_readble': formatBytes(os.totalmem()),
+		'arch': os.arch(),
+		'cpu': os.cpus()[0].model,
+		'cpu_cors': os.cpus().length,
+		'platform': os.platform(),
+		'os_release': os.release(),
+		'os_type': os.type()
+	}
+	return os_data
 }
 
 
