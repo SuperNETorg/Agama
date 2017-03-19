@@ -24,10 +24,10 @@
                     <platforms>all</platforms>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${WinInstallDir}/Iguana.exe</windowsExec>
+                    <windowsExec>${installdir}/Iguana.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${WinInstallDir}/</windowsPath>
+                    <windowsPath>${installdir}/</windowsPath>
                 </shortcut>
             </desktopShortcutList>
             <folderList>
@@ -46,10 +46,10 @@
                             <platforms>all</platforms>
                             <runAsAdmin>0</runAsAdmin>
                             <runInTerminal>0</runInTerminal>
-                            <windowsExec>${WinInstallDir}/${uninstallerName}.exe</windowsExec>
+                            <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
                             <windowsExecArgs></windowsExecArgs>
                             <windowsIcon></windowsIcon>
-                            <windowsPath>${WinInstallDir}</windowsPath>
+                            <windowsPath>${installdir}</windowsPath>
                         </shortcut>
                     </shortcutList>
                 </folder>
@@ -61,7 +61,7 @@
                 </folder>
                 <folder>
                     <description>Program Files</description>
-                    <destination>${WinInstallDir}</destination>
+                    <destination>${installdir}</destination>
                     <name>programfileswindows</name>
                     <platforms>windows</platforms>
                     <distributionFileList>
@@ -150,20 +150,20 @@
                     <name>Iguana App</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${WinInstallDir}/Iguana.exe</windowsExec>
+                    <windowsExec>${installdir}/Iguana.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${WinInstallDir}/</windowsPath>
+                    <windowsPath>${installdir}/</windowsPath>
                 </startMenuShortcut>
                 <startMenuShortcut>
                     <comment>Right Click and Run As Administrator</comment>
                     <name>DLL Fix (Run As Administrator)</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${windows_folder_profile}/${product_shortname}/resources/app/windeps/CopyWinDepsFiles.bat</windowsExec>
+                    <windowsExec>${installdir}/resources/app/windeps/CopyWinDepsFiles.bat</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${windows_folder_profile}/${product_shortname}/resources/app/windeps/</windowsPath>
+                    <windowsPath>${installdir}/resources/app/windeps/</windowsPath>
                 </startMenuShortcut>
             </startMenuShortcutList>
         </component>
@@ -293,13 +293,13 @@
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/ucrtbased.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/ucrtbased.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/vcruntime140d.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/vcruntime140d.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
             </actionList>
@@ -312,25 +312,25 @@
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x64/ucrtbased.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x64/ucrtbased.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x64/vcruntime140d.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x64/vcruntime140d.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\SysWOW64\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/ucrtbased.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/ucrtbased.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\SysWOW64\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/vcruntime140d.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/vcruntime140d.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
             </actionList>
@@ -349,7 +349,7 @@
     <windows64bitMode>1</windows64bitMode>
     <finalPageActionList>
         <runProgram>
-            <program>${windows_folder_profile}/${product_shortname}/Iguana.exe</program>
+            <program>${installdir}/Iguana.exe</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
         </runProgram>
@@ -362,21 +362,8 @@
             <value></value>
             <default>${platform_install_prefix}/${product_shortname}</default>
             <allowEmptyValue>0</allowEmptyValue>
-            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
-            <mustExist>0</mustExist>
-            <width>30</width>
-        </directoryParameter>
-        <directoryParameter>
-            <name>WinInstallDir</name>
-            <description>Installer.Parameter.installdir.description</description>
-            <explanation>Installer.Parameter.installdir.explanation</explanation>
-            <value></value>
-            <default>${windows_folder_profile}/${product_shortname}</default>
-            <allowEmptyValue>0</allowEmptyValue>
-            <ask>0</ask>
-            <mustBeWritable>0</mustBeWritable>
             <mustExist>0</mustExist>
             <width>30</width>
         </directoryParameter>

@@ -350,7 +350,6 @@
             <value></value>
             <default>/opt/IguanaApp</default>
             <allowEmptyValue>0</allowEmptyValue>
-            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>
