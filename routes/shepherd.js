@@ -1227,8 +1227,9 @@ shepherd.get('/kick', function(req, res, next) {
   var kickStartDirs = {
   	'soft': [
   		{
-  			'name': 'DB/[coin]/balancecrc.',
-  			'type': 'pattern'
+  			'name': 'DB/[coin]',
+  			'type': 'pattern',
+  			'match': 'balancecrc.'
   		},
   		{
   			'name': 'DB/[coin]/utxoaddrs',
@@ -1301,23 +1302,27 @@ shepherd.get('/kick', function(req, res, next) {
 
   if (_coin && _type) {
 		for (var i = 0; i < kickStartDirs[_type].length; i++) {
-			console.log('deleting ' + kickStartDirs[_type][i].type + (kickStartDirs[_type][i].match ? ' ' + kickStartDirs[_type][i].match : '') + ' ' + iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin));
-			if (kickStartDirs[_type][i].type === 'folder' || kickStartDirs[_type][i].type === 'file') {
-				rimraf(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin), function(err) {
+			var currentKickItem = kickStartDirs[_type][i];
+
+			console.log('deleting ' + currentKickItem.type + (currentKickItem.match ? ' ' + currentKickItem.match : '') + ' ' + iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
+			if (currentKickItem.type === 'folder' || currentKickItem.type === 'file') {
+				rimraf(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin), function(err) {
 					if (err) {
 						throw err;
 					}
 				});
-			} else if (kickStartDirs[_type][i].type === 'pattern') {
-				var dirItems = fs.readdirSync(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin));
+			} else if (currentKickItem.type === 'pattern') {
+				var dirItems = fs.readdirSync(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
+
 				if (dirItems && dirItems.length) {
 			    for (var j = 0; j < dirItems.length; j++) {
-			      if (dirItems[j].indexOf(kickStartDirs[_type][i].match) > -1) {
-							rimraf(iguanaDir + '/' + kickStartDirs[_type][i].name.replace('[coin]', _coin) + '/' + dirItems[j], function(err) {
+			      if (dirItems[j].indexOf(currentKickItem.match) > -1) {
+							rimraf(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin) + '/' + dirItems[j], function(err) {
 								if (err) {
 									throw err;
 								}
 							});
+
 				      console.log('deleting ' + dirItems[j]);
 			      }
 			    }
@@ -1859,7 +1864,7 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
-	const komodoDir = '',
+	var komodoDir = '',
 				ZcashDir = '',
 				DaemonConfPath = '';
 
