@@ -1,3 +1,7 @@
+#!/bin/bash
+### Build script for Iguana application for Linux x32 and x64 platform.
+### Created by mmaxian, 3/2017
+
 echo "Build script for Iguana application for Linux x32 and x64 platform."
 echo "Preparing electron package $IGUANA_VERSION" && \ 
 electron-packager . --platform=linux --arch=x32 \

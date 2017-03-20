@@ -1,3 +1,7 @@
+#!/bin/bash
+### Build script for Iguana application for MacOS platform.
+### Created by mmaxian, 3/2017
+
 echo "Build script for Iguana application for MacOS platform."
 echo "Preparing electron package $IGUANA_VERSION" && \
 electron-packager . --platform=darwin --arch=x64 \
