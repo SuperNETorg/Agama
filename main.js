@@ -62,14 +62,10 @@ process.once('loaded', () => {
 });
 
 guiapp.use(bodyParser.json({ limit: '50mb' })); // support json encoded bodies
-<<<<<<< HEAD
-guiapp.use(bodyParser.urlencoded({ limit: '50mb', extended: true })); // support encoded bodies
-=======
 guiapp.use(bodyParser.urlencoded({
 	limit: '50mb',
 	extended: true
 })); // support encoded bodies
->>>>>>> 7486433f111614db47f4d49f4a2a77ecd5bfcd68
 
 guiapp.get('/', function (req, res) {
 	res.send('Iguana app server');
@@ -179,7 +175,6 @@ fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 
 let mainWindow;
 let loadingWindow;
-var isMainWindowExist;
 
 function createLoadingWindow() {
 	mainWindow = null;
@@ -192,6 +187,8 @@ function createLoadingWindow() {
 		icon: iguanaIcon
 	});
 
+	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
+
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/');
 
@@ -203,8 +200,6 @@ function createLoadingWindow() {
 		// our app does not have multiwindow - so we dereference the window object instead of
 		// putting them into an window_arr
 		loadingWindow = null;
-		createWindow('open');
-		isMainWindowExist = true;
 	});
 
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
@@ -230,7 +225,7 @@ function createLoadingWindow() {
 app.on('ready', createLoadingWindow);
 
 function createWindow (status) {
-	if ( status === 'open' && !isMainWindowExist) {
+	if ( status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
 		// initialise window

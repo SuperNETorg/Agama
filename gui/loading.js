@@ -156,6 +156,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
 
                 if ( tmp_index == minNotaries ) {
                   console.log('min notaries connected');
+                  window.createWindow('open');
                   window.hide();
                 }
               }).fail(function(xhr, textStatus, error) {
@@ -170,6 +171,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
           });
         });
   } else {
+    window.createWindow('open');
     window.hide();
   }
 }
