@@ -10,8 +10,9 @@
     <componentList>
         <component>
             <name>default</name>
-            <description>Default Component</description>
-            <canBeEdited>1</canBeEdited>
+            <description>${project.shortName}</description>
+            <canBeEdited>0</canBeEdited>
+            <detailedDescription>All application files. Required size: ${project.component(default).requiredSize} bytes</detailedDescription>
             <selected>1</selected>
             <show>1</show>
             <desktopShortcutList>
@@ -325,6 +326,7 @@
             <path>/bin/Iguana</path>
         </deleteFile>
     </postUninstallationActionList>
+    <allowComponentSelection>1</allowComponentSelection>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
     <defaultUnixFilePermissions>755</defaultUnixFilePermissions>
     <enableRollback>0</enableRollback>
@@ -354,6 +356,19 @@
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>
             <width>30</width>
+            <validationActionList>
+                <throwError>
+                    <text>You don't have enough disk space to install the application,
+      please select another installation directory</text>
+                    <ruleList>
+                        <checkFreeDiskSpace>
+                            <logic>less</logic>
+                            <path>${installdir}</path>
+                            <size>${required_diskspace}</size>
+                        </checkFreeDiskSpace>
+                    </ruleList>
+                </throwError>
+            </validationActionList>
         </directoryParameter>
         <choiceParameterGroup>
             <name>installation_type</name>
