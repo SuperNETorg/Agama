@@ -32,7 +32,6 @@ To build the production ready app, install `electron-packager` and `electron-pre
 npm install electron-packager -g
 npm install electron-prebuilt -g
 ```
-If you got `ERR! code EASCCESS` try to run commands under `root/Administrator` account.
 
 #### **Build the Wallet-App**
 Refer to the original [electron-packager](https://github.com/electron-userland/electron-packager) repository for more detailed information.
