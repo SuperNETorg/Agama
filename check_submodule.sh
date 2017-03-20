@@ -7,7 +7,7 @@ SIZE=`du -sk gui/EasyDEX-GUI`
 
 echo "Checking EasyDEX-GUI folder."
 cd gui/EasyDEX-GUI && \
-git submodule update --init --recursive && \
+git submodule update --recursive && \
 cd ../.. && \
 echo "Folder looks fine." || \
 echo "Some problem with cloning submodule EasyDEX-GUI." 
