@@ -30,7 +30,7 @@ function Iguana_activehandle(callback) {
           console.log(textStatus);
           console.log(error);
         });
-  });
+  });  
 }
 //Iguana_activehandle().then(function(result){
     //console.log(result)
@@ -156,6 +156,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
 
                 if ( tmp_index == minNotaries ) {
                   console.log('min notaries connected');
+                  window.createWindow('open');
                   window.hide();
                 }
               }).fail(function(xhr, textStatus, error) {
@@ -170,6 +171,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
           });
         });
   } else {
+    window.createWindow('open');
     window.hide();
   }
 }
