@@ -171,8 +171,8 @@
     </componentList>
     <preInstallationActionList>
         <registryGetMatch>
-            <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${product_fullname} ${product_version}</key>
-            <name>UninstallString</name>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\${project.shortname}</key>
+            <name>uninstaller_path</name>
             <variable>uninstaller_path</variable>
         </registryGetMatch>
         <setInstallerVariable>
@@ -289,6 +289,12 @@
         </runProgram>
     </readyToInstallActionList>
     <postInstallationActionList>
+        <registrySet>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\${project.shortname}</key>
+            <name>uninstaller_path</name>
+            <type>REG_SZ</type>
+            <value>${installdir}/${uninstallerName}.exe</value>
+        </registrySet>
         <actionGroup>
             <actionList>
                 <copyFile>
@@ -340,6 +346,12 @@
             </ruleList>
         </actionGroup>
     </postInstallationActionList>
+    <postUninstallationActionList>
+        <registryDelete>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\${project.shortname}</key>
+            <name>uninstaller_path</name>
+        </registryDelete>
+    </postUninstallationActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
     <enableRollback>0</enableRollback>
     <enableSslSupport>1</enableSslSupport>
