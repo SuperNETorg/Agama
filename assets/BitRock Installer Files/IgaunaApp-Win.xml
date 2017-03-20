@@ -1,7 +1,7 @@
 <project>
     <shortName>IguanaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.4-beta</version>
+    <version>0.1.5.5e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Iguana_installer_wizard_image.png</leftImage>
     <logoImage>../installer_imgs/supernet-iguana-logo.png</logoImage>
@@ -24,10 +24,10 @@
                     <platforms>all</platforms>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${WinInstallDir}/Iguana.exe</windowsExec>
+                    <windowsExec>${installdir}/Iguana.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${WinInstallDir}/</windowsPath>
+                    <windowsPath>${installdir}/</windowsPath>
                 </shortcut>
             </desktopShortcutList>
             <folderList>
@@ -46,10 +46,10 @@
                             <platforms>all</platforms>
                             <runAsAdmin>0</runAsAdmin>
                             <runInTerminal>0</runInTerminal>
-                            <windowsExec>${WinInstallDir}/${uninstallerName}.exe</windowsExec>
+                            <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
                             <windowsExecArgs></windowsExecArgs>
                             <windowsIcon></windowsIcon>
-                            <windowsPath>${WinInstallDir}</windowsPath>
+                            <windowsPath>${installdir}</windowsPath>
                         </shortcut>
                     </shortcutList>
                 </folder>
@@ -61,7 +61,7 @@
                 </folder>
                 <folder>
                     <description>Program Files</description>
-                    <destination>${WinInstallDir}</destination>
+                    <destination>${installdir}</destination>
                     <name>programfileswindows</name>
                     <platforms>windows</platforms>
                     <distributionFileList>
@@ -150,43 +150,88 @@
                     <name>Iguana App</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${WinInstallDir}/Iguana.exe</windowsExec>
+                    <windowsExec>${installdir}/Iguana.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${WinInstallDir}/</windowsPath>
+                    <windowsPath>${installdir}/</windowsPath>
                 </startMenuShortcut>
                 <startMenuShortcut>
                     <comment>Right Click and Run As Administrator</comment>
                     <name>DLL Fix (Run As Administrator)</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${windows_folder_profile}/${product_shortname}/resources/app/windeps/CopyWinDepsFiles.bat</windowsExec>
+                    <windowsExec>${installdir}/resources/app/windeps/CopyWinDepsFiles.bat</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
-                    <windowsPath>${windows_folder_profile}/${product_shortname}/resources/app/windeps/</windowsPath>
+                    <windowsPath>${installdir}/resources/app/windeps/</windowsPath>
                 </startMenuShortcut>
             </startMenuShortcutList>
         </component>
     </componentList>
-    <readyToInstallActionList>
-        <!-- BEGIN: Run uninstaller if found -->
+    <preInstallationActionList>
         <registryGetMatch>
             <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${product_fullname} ${product_version}</key>
             <name>UninstallString</name>
             <variable>uninstaller_path</variable>
         </registryGetMatch>
+        <setInstallerVariable>
+            <name>previous_installation_exists</name>
+            <value>1</value>
+            <ruleList>
+                <fileTest condition="exists" path="${uninstaller_path}"/>
+            </ruleList>
+        </setInstallerVariable>
+    </preInstallationActionList>
+    <readyToInstallActionList>
         <runProgram>
             <program>${uninstaller_path}</program>
-            <programArguments>--mode unattended</programArguments>
+            <programArguments></programArguments>
             <ruleList>
-                <fileTest>
-                    <condition>exists</condition>
-                    <path>${uninstaller_path}</path>
-                </fileTest>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
             </ruleList>
         </runProgram>
-
-        <!-- END: Run uninstaller if found -->
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${windows_folder_appdata}/Iguana</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${keep_settings_and_userdata}</value1>
+                    <value2>0</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <exit>
+            <explanation>Uninstalled</explanation>
+            <progressText>Uninstalled</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+            </ruleList>
+        </exit>
         <showProgressDialog>
             <title>Downloading files</title>
             <actionList>
@@ -248,13 +293,13 @@
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/ucrtbased.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/ucrtbased.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/vcruntime140d.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/vcruntime140d.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
             </actionList>
@@ -267,25 +312,25 @@
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x64/ucrtbased.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x64/ucrtbased.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\System32\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x64/vcruntime140d.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x64/vcruntime140d.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\SysWOW64\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/ucrtbased.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/ucrtbased.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
                 <copyFile>
                     <destination>C:\Windows\SysWOW64\</destination>
                     <explanation>Copying ReqCopying Required DLL filesuired DLL files</explanation>
-                    <origin>${windows_folder_profile}/${product_shortname}/resources/app/windeps/x86/vcruntime140d.dll</origin>
+                    <origin>${installdir}/resources/app/windeps/x86/vcruntime140d.dll</origin>
                     <progressText>Copying ReqCopying Required DLL filesuired DLL files</progressText>
                 </copyFile>
             </actionList>
@@ -304,7 +349,7 @@
     <windows64bitMode>1</windows64bitMode>
     <finalPageActionList>
         <runProgram>
-            <program>${windows_folder_profile}/${product_shortname}/Iguana.exe</program>
+            <program>${installdir}/Iguana.exe</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
         </runProgram>
@@ -317,24 +362,47 @@
             <value></value>
             <default>${platform_install_prefix}/${product_shortname}</default>
             <allowEmptyValue>0</allowEmptyValue>
-            <ask>0</ask>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
             <mustExist>0</mustExist>
             <width>30</width>
         </directoryParameter>
-        <directoryParameter>
-            <name>WinInstallDir</name>
-            <description>Installer.Parameter.installdir.description</description>
-            <explanation>Installer.Parameter.installdir.explanation</explanation>
-            <value></value>
-            <default>${windows_folder_profile}/${product_shortname}</default>
-            <allowEmptyValue>0</allowEmptyValue>
-            <ask>0</ask>
-            <mustBeWritable>0</mustBeWritable>
-            <mustExist>0</mustExist>
-            <width>30</width>
-        </directoryParameter>
+        <choiceParameterGroup>
+            <name>installation_type</name>
+            <title>Instalation type</title>
+            <description>Existing instalation is detected</description>
+            <explanation>Existing instalation is detected</explanation>
+            <value>reinstall</value>
+            <default>reinstall</default>
+            <parameterList>
+                <parameterGroup>
+                    <name>uninstall</name>
+                    <title>Uninstall</title>
+                    <explanation>Uninstall</explanation>
+                    <value></value>
+                    <default></default>
+                    <parameterList>
+                        <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
+                            <explanation></explanation>
+                            <value>1</value>
+                            <default>1</default>
+                        </booleanParameter>
+                    </parameterList>
+                </parameterGroup>
+                <labelParameter name="reinstall" description="Re-install current version">
+                    <title>Re-install</title>
+                    <explanation></explanation>
+                    <image></image>
+                </labelParameter>
+            </parameterList>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </choiceParameterGroup>
     </parameterList>
     <platformOptionsList>
         <platformOptions>
