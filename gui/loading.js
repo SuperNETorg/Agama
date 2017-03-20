@@ -22,7 +22,8 @@ function Iguana_activehandle(callback) {
           AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
           //console.log(AjaxOutputData);
           resolve(AjaxOutputData);
-        }).fail(function(xhr, textStatus, error) {
+        })
+        .fail(function(xhr, textStatus, error) {
           // handle request failures
           console.log(xhr.statusText);
           if ( xhr.readyState == 0 ) {
@@ -75,7 +76,8 @@ function GetAppConf() { // get iguana app conf
     console.log('== App Conf Data OutPut ==');
     console.log(_data);
     data = _data;
-  }).fail(function(xhr, textStatus, error) {
+  })
+  .fail(function(xhr, textStatus, error) {
     // handle request failures
     console.log(xhr.statusText);
     if ( xhr.readyState == 0 ) {
@@ -98,7 +100,8 @@ function EDEX_DEXnotarychains() {
       AjaxOutputData = JSON.parse(AjaxOutputData.responseText);
       //console.log(AjaxOutputData);
       resolve(AjaxOutputData);
-    }).fail(function(xhr, textStatus, error) {
+    })
+    .fail(function(xhr, textStatus, error) {
       // handle request failures
       console.log(xhr.statusText);
       if ( xhr.readyState == 0 ) {
@@ -159,7 +162,8 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
                   window.createWindow('open');
                   window.hide();
                 }
-              }).fail(function(xhr, textStatus, error) {
+              })
+              .fail(function(xhr, textStatus, error) {
                 // handle request failures
                 console.log(xhr.statusText);
                 if ( xhr.readyState == 0 ) {
