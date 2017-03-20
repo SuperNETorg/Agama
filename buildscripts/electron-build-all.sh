@@ -4,14 +4,14 @@
 
 [ -z $IGUANA_VERSION ] && echo "IGUANA_VERSION variable is not set." && exit 0
 
-echo "Build script for Iguana application for Linux x32 and x64 platform."
-echo "Preparing electron package $IGUANA_VERSION" && \ 
-source ./electron-build-linux.sh && echo "done."
+echo "Preparing electron package $IGUANA_VERSION for Linux." 
+./buildscripts/electron-build-linux.sh
+echo
 
-echo "Build script for Iguana application for Windows ia32 and x64 platform."
-echo "Preparing electron package $IGUANA_VERSION" && \ 
-source ./electron-build-win.sh && echo "done."
+echo "Preparing electron package $IGUANA_VERSION for Windows."  
+./buildscripts/electron-build-win.sh 
+echo
 
-echo "Build script for Iguana application for MacOS platform."
-echo "Preparing electron package $IGUANA_VERSION" && \ 
-source ./electron-build-osx.sh && echo "done."
+echo "Preparing electron package $IGUANA_VERSION for MacOS." 
+./buildscripts/electron-build-osx.sh 
+echo
