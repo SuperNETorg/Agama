@@ -1864,7 +1864,7 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
-	const komodoDir = '',
+	var komodoDir = '',
 				ZcashDir = '',
 				DaemonConfPath = '';
 
