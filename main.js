@@ -1,5 +1,5 @@
-//main proc for EasyDEX GUI
-//this app spawns iguana in background in nontech-mode
+// main proc for EasyDEX GUI
+// this app spawns iguana in background in nontech-mode
 
 const electron = require('electron'),
 			app = electron.app,
