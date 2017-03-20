@@ -9,7 +9,7 @@ const electron = require('electron'),
 			os = require('os'),
 			spawn = require('child_process').spawn,
 			exec = require('child_process').exec,
-			{Menu} = require("electron"),
+			{ Menu } = require("electron"),
 			fixPath = require('fix-path');
 
 var express = require('express'),
@@ -175,6 +175,7 @@ fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 
 let mainWindow;
 let loadingWindow;
+var isMainWindowExist;
 
 function createLoadingWindow() {
 	mainWindow = null;
@@ -199,6 +200,7 @@ function createLoadingWindow() {
 		// putting them into an window_arr
 		loadingWindow = null;
 		createWindow('open');
+		isMainWindowExist = true;
 	});
 
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
@@ -223,10 +225,8 @@ function createLoadingWindow() {
 
 app.on('ready', createLoadingWindow);
 
-
 function createWindow (status) {
-	if ( status === 'open') {
-
+	if ( status === 'open' && !isMainWindowExist) {
 		require(path.join(__dirname, 'private/mainmenu'));
 
 		// initialise window
@@ -262,6 +262,7 @@ function createWindow (status) {
 
 		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params
 			const { selectionText, isEditable } = params; //params obj
+			
 			if (isEditable) {
 				editMenu.popup(mainWindow);
 			} else if (selectionText && selectionText.trim() !== '') {
