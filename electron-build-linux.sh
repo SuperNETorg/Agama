@@ -1,7 +1,11 @@
-echo "Build script for Iguana application for Linux platform."
-echo "Preparing electron package $VERSION" && \
+echo "Build script for Iguana application for Linux x32 and x64 platform."
+echo "Preparing electron package $IGUANA_VERSION" && \ 
+electron-packager . --platform=linux --arch=x32 \
+  --icon=assets/icons/iguana_app_icon_png/128x128.png \
+  --out=build/ --buildVersion=$IGUANA_VERSION \
+  --ignore=assets/bin/win64 --ignore=assets/bin/osx --overwrite && \
 electron-packager . --platform=linux --arch=x64 \
   --icon=assets/icons/iguana_app_icon_png/128x128.png \
-  --out=build/ --buildVersion=$VERSION \
+  --out=build/ --buildVersion=$IGUANA_VERSION \
   --ignore=assets/bin/win64 --ignore=assets/bin/osx --overwrite || \
-echo "Did you call script with VERSION variable?"
+echo "PROBLEM: Did you call script with IGUANA_VERSION variable?"
