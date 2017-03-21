@@ -296,11 +296,21 @@
             <linkName>/bin/Iguana</linkName>
             <target>${installdir}/Iguana</target>
         </createSymLink>
+        <iniFileSet>
+            <file>/root/Desktop/Iguana Desktop.desktop</file>
+            <key>Categories</key>
+            <section>Desktop Entry</section>
+            <value>Office;</value>
+        </iniFileSet>
         <changeOwnerAndGroup>
             <files>${user_home_directory}/Desktop/Iguana Desktop.desktop</files>
             <group>users</group>
             <owner>nobody</owner>
         </changeOwnerAndGroup>
+        <copyFile>
+            <destination>/usr/share/applications/Iguana Desktop.desktop</destination>
+            <origin>/root/Desktop/Iguana Desktop.desktop</origin>
+        </copyFile>
 
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
         <foreach>
