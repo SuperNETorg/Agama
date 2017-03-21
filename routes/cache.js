@@ -1,21 +1,20 @@
-const fs = require('fs-extra');
+const fs = require('fs-extra'),
+      request = require('request'),
+      async = require('async'),
+      rimraf = require('rimraf');
 
 var cache = {};
 
-cache.setVars = function(variable, value) {
+cache.setVar = function(variable, value) {
   cache[variable] = value;
 }
 
-/*
- *  type: GET
- *  params: pubkey
- */
 cache.get = function(req, res, next) {
   var pubkey = req.query.pubkey;
 
   if (pubkey) {
-    if (fs.existsSync(iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
-      fs.readFile(iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8', function (err, data) {
+    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
+      fs.readFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8', function (err, data) {
         if (err) {
           var errorObj = {
             'msg': 'error',
@@ -58,16 +57,12 @@ cache.get = function(req, res, next) {
   }
 }
 
-/*
- *  type: GET
- *  params: filename
- */
-/*cache.get('/groom', function(req, res, next) {
+cache.groomGet = function(req, res, next) {
   var _filename = req.query.filename;
 
   if (_filename) {
-    if (fs.existsSync(iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
-      fs.readFile(iguanaDir + '/shepherd/cache-' + _filename + '.json', 'utf8', function (err, data) {
+    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
+      fs.readFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', 'utf8', function (err, data) {
         if (err) {
           var errorObj = {
             'msg': 'error',
@@ -100,18 +95,14 @@ cache.get = function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   }
-});
+}
 
-/*
- *  type: DELETE
- *  params: filename
- */
-/*shepherd.delete('/groom', function(req, res, next) {
+cache.groomDelete = function(req, res, next) {
   var _filename = req.body.filename;
 
   if (_filename) {
-    if (fs.existsSync(iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
-      fs.unlink(iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
+    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
+      fs.unlink(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
         if (err) {
           var errorObj = {
             'msg': 'error',
@@ -144,13 +135,9 @@ cache.get = function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   }
-});
+}
 
-/*
- *  type: POST
- *  params: filename, payload
- */
-/*shepherd.post('/groom', function(req, res) {
+cache.groomPost = function(req, res) {
   var _filename = req.body.filename,
       _payload = req.body.payload;
 
@@ -163,7 +150,7 @@ cache.get = function(req, res, next) {
 
       res.end(JSON.stringify(errorObj));
     } else {
-      fs.writeFile(iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
+      fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
         if (err) {
           var errorObj = {
             'msg': 'error',
@@ -189,18 +176,14 @@ cache.get = function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   }
-});
+}
 
 var cacheCallInProgress = false,
     cacheGlobLifetime = 300; // sec
 
 // TODO: reset calls' states on new /cache call start
-/*
- *  type: GET
- *  params: userpass, pubkey, skip
- */
-/*shepherd.get('/cache-all', function(req, res, next) {
-  if (req.query.pubkey && !fs.existsSync(iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+cache.all = function(req, res, next) {
+  if (req.query.pubkey && !fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
     cacheCallInProgress = false;
   }
 
@@ -218,12 +201,12 @@ var cacheCallInProgress = false,
           basilisk: {}
         },
         writeCache = function() {
-          fs.writeFile(iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+          fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
             if (err) {
               return console.log(err);
             }
 
-            console.log('file ' + iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
+            console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
           });
         },
         callStack = {},
@@ -236,7 +219,7 @@ var cacheCallInProgress = false,
 
           if (total / Object.keys(callStack).length === 1) {
             cacheCallInProgress = false;
-            shepherd.io.emit('messages', {
+            cache.io.emit('messages', {
               'message': {
                 'shepherd': {
                   'method': 'cache-all',
@@ -277,7 +260,7 @@ var cacheCallInProgress = false,
 
     if (!internalError) {
       console.log('cache-all call started');
-      shepherd.io.emit('messages', {
+      cache.io.emit('messages', {
         'message': {
           'shepherd': {
             'method': 'cache-all',
@@ -290,7 +273,7 @@ var cacheCallInProgress = false,
         'result': 'call is initiated'
       }));
 
-      shepherd.io.emit('messages', {
+      cache.io.emit('messages', {
         'message': {
           'shepherd': {
             'method': 'cache-all',
@@ -303,11 +286,11 @@ var cacheCallInProgress = false,
         }
       });
       request({
-        url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
+        url: 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
         method: 'GET'
       }, function (error, response, body) {
         if (response && response.statusCode && response.statusCode === 200) {
-          shepherd.io.emit('messages', {
+          cache.io.emit('messages', {
             'message': {
               'shepherd': {
                 'method': 'cache-all',
@@ -332,7 +315,7 @@ var cacheCallInProgress = false,
               outObj.basilisk[coin] = {};
               writeCache();
 
-              shepherd.io.emit('messages', {
+              cache.io.emit('messages', {
                 'message': {
                   'shepherd': {
                     'method': 'cache-all',
@@ -346,11 +329,11 @@ var cacheCallInProgress = false,
                 }
               });
               request({
-                url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
+                url: 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
                 method: 'GET'
               }, function (error, response, body) {
                 if (response && response.statusCode && response.statusCode === 200) {
-                  shepherd.io.emit('messages', {
+                  cache.io.emit('messages', {
                     'message': {
                       'shepherd': {
                         'method': 'cache-all',
@@ -372,10 +355,10 @@ var cacheCallInProgress = false,
 
                   async.each(outObj.basilisk[coin].addresses, function(address) {
                     var dexUrls = {
-                      'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                      'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-                      'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                      'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+                      'listunspent': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+                      'listtransactions': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+                      'getbalance': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+                      'refresh': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
                     };
                     if (coin === 'BTC' || coin === 'SYS') {
                       delete dexUrls.refresh;
@@ -404,7 +387,7 @@ var cacheCallInProgress = false,
                           checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
                         tooEarly = true;
                         outObj.basilisk[coin][address][key].status = 'done';
-                        shepherd.io.emit('messages', {
+                        cache.io.emit('messages', {
                           'message': {
                             'shepherd': {
                               'method': 'cache-all',
@@ -422,7 +405,7 @@ var cacheCallInProgress = false,
                       }
                       tooEarly = skipTimeout ? false : tooEarly;
                       if (!tooEarly) {
-                        shepherd.io.emit('messages', {
+                        cache.io.emit('messages', {
                           'message': {
                             'shepherd': {
                               'method': 'cache-all',
@@ -442,7 +425,7 @@ var cacheCallInProgress = false,
                           method: 'GET'
                         }, function (error, response, body) {
                           if (response && response.statusCode && response.statusCode === 200) {
-                            shepherd.io.emit('messages', {
+                            cache.io.emit('messages', {
                               'message': {
                                 'shepherd': {
                                   'method': 'cache-all',
@@ -491,7 +474,7 @@ var cacheCallInProgress = false,
         }
       });
     } else {
-      shepherd.io.emit('messages', {
+      cache.io.emit('messages', {
         'message': {
           'shepherd': {
             'method': 'cache-all',
@@ -508,14 +491,14 @@ var cacheCallInProgress = false,
       'result': 'another call is in progress already'
     }));
   }
-});
+}
 
 /*
  *  type: GET
  *  params: userpass, pubkey, coin, address, skip
  */
-/*shepherd.get('/cache-one', function(req, res, next) {
-  if (req.query.pubkey && !fs.existsSync(iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+cache.one = function(req, res, next) {
+  if (req.query.pubkey && !fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
     cacheCallInProgress = false;
   }
 
@@ -539,14 +522,14 @@ var cacheCallInProgress = false,
             outObj.timestamp = timeStamp;
           }
 
-          fs.writeFile(iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+          fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
             if (err) {
               return console.log(err);
             }
 
-            console.log('file ' + iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
+            console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
             if (timeStamp) {
-              console.log('file ' + iguanaDir + '/shepherd/cache-' + pubkey + '.json is timestamped');
+              console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is timestamped');
             }
           });
         },
@@ -560,7 +543,7 @@ var cacheCallInProgress = false,
 
           if (total / Object.keys(callStack).length === 1) {
             cacheCallInProgress = false;
-            shepherd.io.emit('messages', {
+            cache.io.emit('messages', {
               'message': {
                 'shepherd': {
                   'method': 'cache-one',
@@ -606,8 +589,8 @@ var cacheCallInProgress = false,
 
     console.log('cache-one call started');
 
-    if (fs.existsSync(iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
-      var _file = fs.readFileSync(iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
+    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
+      var _file = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
       outObj = _file ? JSON.parse(_file) : {};
 
       if (!outObj || !outObj.basilisk) {
@@ -631,7 +614,7 @@ var cacheCallInProgress = false,
     }));
 
     if (!internalError) {
-      shepherd.io.emit('messages', {
+      cache.io.emit('messages', {
         'message': {
           'shepherd': {
             'method': 'cache-one',
@@ -641,7 +624,7 @@ var cacheCallInProgress = false,
       });
       // update all available coin addresses
       if (!address) {
-        shepherd.io.emit('messages', {
+        cache.io.emit('messages', {
           'message': {
             'shepherd': {
               'method': 'cache-one',
@@ -655,11 +638,11 @@ var cacheCallInProgress = false,
           }
         });
         request({
-          url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
+          url: 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
           method: 'GET'
         }, function (error, response, body) {
           if (response && response.statusCode && response.statusCode === 200) {
-            shepherd.io.emit('messages', {
+            cache.io.emit('messages', {
               'message': {
                 'shepherd': {
                   'method': 'cache-one',
@@ -682,10 +665,10 @@ var cacheCallInProgress = false,
 
             async.each(outObj.basilisk[coin].addresses, function(address) {
               var dexUrls = {
-                'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-                'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+                'listunspent': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+                'listtransactions': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+                'getbalance': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+                'refresh': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
               },
               _dexUrls = {};
 
@@ -721,7 +704,7 @@ var cacheCallInProgress = false,
                     checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
                   tooEarly = true;
                   outObj.basilisk[coin][address][key].status = 'done';
-                  shepherd.io.emit('messages', {
+                  cache.io.emit('messages', {
                     'message': {
                       'shepherd': {
                         'method': 'cache-one',
@@ -739,7 +722,7 @@ var cacheCallInProgress = false,
                 }
                 tooEarly = skipTimeout ? false : tooEarly;
                 if (!tooEarly) {
-                  shepherd.io.emit('messages', {
+                  cache.io.emit('messages', {
                     'message': {
                       'shepherd': {
                         'method': 'cache-one',
@@ -759,7 +742,7 @@ var cacheCallInProgress = false,
                     method: 'GET'
                   }, function (error, response, body) {
                     if (response && response.statusCode && response.statusCode === 200) {
-                      shepherd.io.emit('messages', {
+                      cache.io.emit('messages', {
                         'message': {
                           'shepherd': {
                             'method': 'cache-one',
@@ -804,10 +787,10 @@ var cacheCallInProgress = false,
         console.log(coin + ' stack len ' + callStack[coin]);
 
         var dexUrls = {
-          'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-          'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+          'listunspent': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+          'listtransactions': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+          'getbalance': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+          'refresh': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
         },
         _dexUrls = {};
 
@@ -844,7 +827,7 @@ var cacheCallInProgress = false,
               checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
             tooEarly = true;
             outObj.basilisk[coin][address][key].status = 'done';
-            shepherd.io.emit('messages', {
+            cache.io.emit('messages', {
               'message': {
                 'shepherd': {
                   'method': 'cache-one',
@@ -861,7 +844,7 @@ var cacheCallInProgress = false,
             });
           }
           if (!tooEarly) {
-            shepherd.io.emit('messages', {
+            cache.io.emit('messages', {
               'message': {
                 'shepherd': {
                   'method': 'cache-one',
@@ -881,7 +864,7 @@ var cacheCallInProgress = false,
               method: 'GET'
             }, function (error, response, body) {
               if (response && response.statusCode && response.statusCode === 200) {
-                shepherd.io.emit('messages', {
+                cache.io.emit('messages', {
                   'message': {
                     'shepherd': {
                       'method': 'cache-one',
@@ -918,7 +901,7 @@ var cacheCallInProgress = false,
         });
       }
     } else {
-      shepherd.io.emit('messages', {
+      cache.io.emit('messages', {
         'message': {
           'shepherd': {
             'method': 'cache-all',
@@ -935,6 +918,6 @@ var cacheCallInProgress = false,
       'result': 'another call is in progress already'
     }));
   }
-});*/
+};
 
 module.exports = cache;

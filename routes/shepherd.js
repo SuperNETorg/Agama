@@ -72,8 +72,6 @@ if (os.platform() === 'win32') {
 			komodoDir = path.normalize(komodoDir);
 }
 
-shepherd.iguanaDir = iguanaDir;
-
 shepherd.appConfig = {
   "edexGuiOnly": true,
   "iguanaGuiOnly": false,
@@ -110,16 +108,63 @@ shepherd.get('/sysinfo', function(req, res, next) {
   res.send(obj);
 });
 
+var cache = require('./cache');
+
 // expose sockets obj
 shepherd.setIO = function(io) {
 	shepherd.io = io;
+	cache.setVar('io', io);	
 };
 
-var cache = require('./cache');
 cache.setVar('iguanaDir', iguanaDir);
-cache.setVar('appConfig', appConfig);
+cache.setVar('appConfig', shepherd.appConfig);
+
+/*
+ *  type: GET
+ *  params: pubkey
+ */
 shepherd.get('/cache', function(req, res, next) {
 	cache.get(req, res, next);
+});
+
+/*
+ *  type: GET
+ *  params: filename
+ */
+shepherd.get('/groom', function(req, res, next) {
+	cache.groomGet(req, res, next);
+})
+
+/*
+ *  type: DELETE
+ *  params: filename
+ */
+shepherd.delete('/groom', function(req, res, next) {
+	cache.groomDelete(req, res, next);
+});
+
+/*
+ *  type: POST
+ *  params: filename, payload
+ */
+shepherd.post('/groom', function(req, res) {
+	cache.groomPost(req, res, next);	
+});
+
+/*
+ *  type: GET
+ *  params: userpass, pubkey, skip
+ */
+shepherd.get('/cache-all', function(req, res, next) {
+	cache.all(req, res, next);
+});
+
+/*
+ *  type: GET
+ *  params: userpass, pubkey, coin, address, skip
+ */
+shepherd.get('/cache-one', function(req, res, next) {
+	cache.one(req, res, next);
 });
 
 /*
