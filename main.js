@@ -113,8 +113,6 @@ io.on('connection', function(client) {
 
 shepherd.setIO(io); // pass sockets object to shepherd router
 
-//io.emit('an event sent to all connected clients');
-
 module.exports = guiapp;
 // END GUI App Settings
 
@@ -239,7 +237,7 @@ function createWindow (status) {
 			{ role: 'copy' },
 			{ type: 'separator' },
 			{ role: 'selectall' },
-		])
+		]);
 
 		const editMenu = Menu.buildFromTemplate([ //if editable
 			{ role: 'undo' },
@@ -250,7 +248,7 @@ function createWindow (status) {
 			{ role: 'paste' },
 			{ type: 'separator' },
 			{ role: 'selectall' },
-		])
+		]);
 
 		// load our index.html (i.e. easyDEX GUI)
 		if (appConfig.edexGuiOnly) {
@@ -261,13 +259,13 @@ function createWindow (status) {
 
 		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params
 			const { selectionText, isEditable } = params; //params obj
-			
+
 			if (isEditable) {
 				editMenu.popup(mainWindow);
 			} else if (selectionText && selectionText.trim() !== '') {
 				staticMenu.popup(mainWindow);
 			}
-		})
+		});
 
 		// DEVTOOLS - only for dev purposes - ca333
 		//mainWindow.webContents.openDevTools()
