@@ -12,7 +12,7 @@
             <name>default</name>
             <description>${project.shortName}</description>
             <canBeEdited>0</canBeEdited>
-            <detailedDescription>All application files. Required size: ${project.component(default).requiredSize} bytes</detailedDescription>
+            <detailedDescription>All application files. Required size: ${project.component(default).requiredSize} KB</detailedDescription>
             <selected>1</selected>
             <show>1</show>
             <folderList>
