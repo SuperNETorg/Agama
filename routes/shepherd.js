@@ -109,6 +109,7 @@ shepherd.get('/sysinfo', function(req, res, next) {
 });
 
 var cache = require('./cache');
+var mock = require('./mock');
 
 // expose sockets obj
 shepherd.setIO = function(io) {
@@ -165,6 +166,13 @@ shepherd.get('/cache-all', function(req, res, next) {
  */
 shepherd.get('/cache-one', function(req, res, next) {
 	cache.one(req, res, next);
+});
+
+/*
+ *  type: GET
+ */
+shepherd.get('/mock', function(req, res, next) {
+	mock.get(req, res, next);
 });
 
 /*

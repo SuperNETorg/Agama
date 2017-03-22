@@ -9,7 +9,7 @@ const electron = require('electron'),
 			os = require('os'),
 			spawn = require('child_process').spawn,
 			exec = require('child_process').exec,
-			{ Menu } = require("electron"),
+			{ Menu } = require('electron'),
 			fixPath = require('fix-path');
 
 var express = require('express'),
