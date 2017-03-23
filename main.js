@@ -24,7 +24,8 @@ var express = require('express'),
 
 Promise = require('bluebird');
 
-app.setName('Iguana');
+app.setName('Agama');
+app.setVersion('0.1.5.6e-beta');
 
 if (os.platform() === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
@@ -55,6 +56,12 @@ process.once('loaded', () => {
 
 	if (os.platform() === 'darwin') {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
+		app.setAboutPanelOptions({
+			applicationName: app.getName(),
+			applicationVersion: app.getVersion(),
+			copyright: "Released under the MIT license",
+			credits: "jl777, satindergrewal, ca333, pbca26, pedjaman, mmaxian, fadedreamz"
+		})
 	}
 	if (os.platform() === 'linux') {
 		process.setFdLimit(appConfig.maxDescriptors.linux);

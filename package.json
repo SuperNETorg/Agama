@@ -1,7 +1,7 @@
 {
   "name": "iguana_app",
   "productName": "Agama",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "iguana Desktop App",
   "main": "main.js",
   "scripts": {
