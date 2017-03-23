@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron ."
   },
-  "repository": "https://github.com/SuperNETorg/iguana/",
+  "repository": "https://github.com/SuperNETorg/Agama/",
   "keywords": [
     "iguana",
     "superNET",
