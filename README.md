@@ -1,10 +1,10 @@
-# Iguana Desktop App
+# Agama Desktop App
 Desktop App for SuperNET DAPPs
 
 #### For Developers
 You must have `node.js` and `npm` installed on your machine.
 
-Clone Iguana Desktop App with EasyDEX-GUI submodule
+Clone Agama Desktop App with EasyDEX-GUI submodule
 ```shell
 git clone --recursive https://github.com/SuperNETorg/iguana.git
 cd gui/EasyDEX-GUI/
@@ -13,19 +13,19 @@ git pull
 cd ../../
 ```
 
-Install Iguana App
+Install Agama App
 ```shell
 cd iguana
 npm install
 ```
 
-Then start Iguana App
+Then start Agama App
 ```shell
 npm start
 ```
 
 #### For end users
-The instructions to make production build of Iguana App will be updated soon.
+The instructions to make production build of Agama App will be updated soon.
 
 To build the production ready app, install `electron-packager` and `electron-prebuilt` packages from npm
 ```shell
@@ -71,4 +71,4 @@ change architecture build parameter to ```--arch=x64``` for 64 bit build
 ### Windows DLL issues
 On Windows it's noticed iguana.exe complains about `VCRUNTIME140D.DLL` and `ucrtbased.dll` file.
 
-Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running Iguana App.
+Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running Agama App.
