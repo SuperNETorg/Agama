@@ -316,7 +316,7 @@ cache.one = function(req, res, next) {
       });
 
       function execDEXRequests(address, coin) {
-        var dexUrls = {
+        let dexUrls = {
           'listunspent': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
           'listtransactions': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
           'getbalance': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
@@ -327,17 +327,17 @@ cache.one = function(req, res, next) {
         for (var a = 0; a < callsArray.length; a++) {
           _dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
         }
+
         if (coin === 'BTC' || coin === 'SYS') {
           delete _dexUrls.refresh;
           delete _dexUrls.getbalance;
         }
-        //console.log(JSON.stringify(dexUrls));
+
         console.log(coin + ' address ' + address);
         if (!outObj.basilisk[coin][address]) {
           outObj.basilisk[coin][address] = {};
           writeCache();
         }
-        console.log(_dexUrls);
 
         // set current call status
         async.forEachOf(_dexUrls, function(dexUrl, key) {
@@ -421,7 +421,7 @@ cache.one = function(req, res, next) {
 
                 writeCache();
               }
-              if (error) {
+              if (error || !body || !response) {
                 outObj.basilisk[coin][address][key] = {};
                 outObj.basilisk[coin][address][key].data = { 'error': 'request failed' };
                 outObj.basilisk[coin][address][key].timestamp = 1471620867 // add timestamp

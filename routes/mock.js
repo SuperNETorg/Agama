@@ -28,8 +28,8 @@ mock.get = function(req, res, next) {
 	}
 	if (_url.indexOf('/api/dex/listunspent') > -1 ||
 			_url.indexOf('/api/dex/listtransactions') > -1 ||
-			_url.indexOf('/api/basilisk/getbalance') > -1 ||
-			_url.indexOf('/api/dex/refresh') > -1) {
+			_url.indexOf('/api/ss/getbalance') > -1 ||
+			_url.indexOf('/api/ww/refresh') > -1) {
 		res.end(JSON.stringify({
 			'some key': 'some value'
 		}));
