@@ -60,7 +60,7 @@ process.once('loaded', () => {
 			applicationName: app.getName(),
 			applicationVersion: app.getVersion(),
 			copyright: "Released under the MIT license",
-			credits: "jl777, satindergrewal, ca333, pbca26, pedjaman, mmaxian, fadedreamz"
+			credits: "jl777, satindergrewal, ca333, pbca26, pedjaman, mmaxian, fadedreamz, rnr"
 		})
 	}
 	if (os.platform() === 'linux') {
