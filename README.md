@@ -6,7 +6,7 @@ You must have `node.js` and `npm` installed on your machine.
 
 Clone Agama Desktop App with EasyDEX-GUI submodule
 ```shell
-git clone --recursive https://github.com/SuperNETorg/iguana.git
+git clone --recursive https://github.com/SuperNETorg/agama.git
 cd gui/EasyDEX-GUI/
 git checkout master
 git pull
