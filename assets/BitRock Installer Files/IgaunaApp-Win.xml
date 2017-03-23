@@ -67,64 +67,64 @@
                     <platforms>windows</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>../../build/Iguana-win32-x64/locales</origin>
+                            <origin>../../build/Agama-win32-x64/locales</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>../../build/Iguana-win32-x64/resources</origin>
+                            <origin>../../build/Agama-win32-x64/resources</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/blink_image_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/blink_image_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/content_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/content_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/content_shell.pak</origin>
+                            <origin>../../build/Agama-win32-x64/content_shell.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/ui_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/ui_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/views_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/views_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/icudtl.dat</origin>
+                            <origin>../../build/Agama-win32-x64/icudtl.dat</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/LICENSES.chromium.html</origin>
+                            <origin>../../build/Agama-win32-x64/LICENSES.chromium.html</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/natives_blob.bin</origin>
+                            <origin>../../build/Agama-win32-x64/natives_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/snapshot_blob.bin</origin>
+                            <origin>../../build/Agama-win32-x64/snapshot_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/d3dcompiler_47.dll</origin>
+                            <origin>../../build/Agama-win32-x64/d3dcompiler_47.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/ffmpeg.dll</origin>
+                            <origin>../../build/Agama-win32-x64/ffmpeg.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/libEGL.dll</origin>
+                            <origin>../../build/Agama-win32-x64/libEGL.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/libGLESv2.dll</origin>
+                            <origin>../../build/Agama-win32-x64/libGLESv2.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/node.dll</origin>
+                            <origin>../../build/Agama-win32-x64/node.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/xinput1_3.dll</origin>
+                            <origin>../../build/Agama-win32-x64/xinput1_3.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/LICENSE</origin>
+                            <origin>../../build/Agama-win32-x64/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/version</origin>
+                            <origin>../../build/Agama-win32-x64/version</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/Iguana.exe</origin>
+                            <origin>../../build/Agama-win32-x64/Iguana.exe</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>

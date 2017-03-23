@@ -24,7 +24,8 @@ var express = require('express'),
 
 Promise = require('bluebird');
 
-app.setName('Iguana');
+app.setName('Agama');
+app.setVersion('0.1.5.6e-beta');
 
 if (os.platform() === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
@@ -55,6 +56,12 @@ process.once('loaded', () => {
 
 	if (os.platform() === 'darwin') {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
+		app.setAboutPanelOptions({
+			applicationName: app.getName(),
+			applicationVersion: app.getVersion(),
+			copyright: "Released under the MIT license",
+			credits: "SuperNET Team"
+		})
 	}
 	if (os.platform() === 'linux') {
 		process.setFdLimit(appConfig.maxDescriptors.linux);
@@ -144,10 +151,10 @@ if (os.platform() === 'win32') {
 */
 
 if (os.platform() === 'linux') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png');
+	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
 }
 if (os.platform() === 'win32') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico');
+	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
 
 //console.log(iguanaDir);
