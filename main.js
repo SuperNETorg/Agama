@@ -151,10 +151,10 @@ if (os.platform() === 'win32') {
 */
 
 if (os.platform() === 'linux') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png');
+	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
 }
 if (os.platform() === 'win32') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico');
+	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
 
 //console.log(iguanaDir);
