@@ -1,7 +1,7 @@
 {
   "name": "iguana_app",
   "productName": "Agama",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "description": "iguana Desktop App",
   "main": "main.js",
   "scripts": {
@@ -25,7 +25,7 @@
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
     "corsproxy": "^1.5.0",
-    "electron": "^1.4.15",
+    "electron": "^1.6.4",
     "express": "^4.14.0",
     "fix-path": "^2.1.0",
     "fs-extra": "^1.0.0",

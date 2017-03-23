@@ -48,7 +48,7 @@ if (os.platform() === 'linux') {
 	var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
 			iguanaDir = process.env.HOME + '/.iguana',
 			iguanaConfsDir = iguanaDir + '/confs',
-			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png'),
+			iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
 			komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
 			komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
 			komodoDir = process.env.HOME + '/.komodo';
@@ -61,7 +61,7 @@ if (os.platform() === 'win32') {
 			iguanaDir = path.normalize(iguanaDir);
 			iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
 			iguanaConfsDir = path.normalize(iguanaConfsDir);
-			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
+			iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
 
 			komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
