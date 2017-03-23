@@ -464,6 +464,16 @@ cache.one = function(req, res, next) {
 
                         writeCache();
                       }
+                      if (error) {
+                        outObj.basilisk[coin][address][key] = {};
+                        outObj.basilisk[coin][address][key].data = { 'error': 'request failed' };
+                        outObj.basilisk[coin][address][key].timestamp = 1471620867 // add timestamp
+                        outObj.basilisk[coin][address][key].status = 'done';
+                        callStack[coin]--;
+                        console.log(coin + ' _stack len ' + callStack[coin]);
+                        checkCallStack();
+                        writeCache();
+                      }
                     });
                   } else {
                     console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
@@ -529,6 +539,10 @@ cache.one = function(req, res, next) {
                   getAddresses(coin);
                 });
               }
+            }
+            if (error) { // stop further requests on failure, exit
+              callStack[coin] = 1;
+              checkCallStack();
             }
           });
         } else {
@@ -641,6 +655,16 @@ cache.one = function(req, res, next) {
                 console.log(coin + ' _stack len ' + callStack[coin]);
                 checkCallStack();
 
+                writeCache();
+              }
+              if (error) {
+                outObj.basilisk[coin][address][key] = {};
+                outObj.basilisk[coin][address][key].data = { 'error': 'request failed' };
+                outObj.basilisk[coin][address][key].timestamp = 1471620867 // add timestamp
+                outObj.basilisk[coin][address][key].status = 'done';
+                callStack[coin]--;
+                console.log(coin + ' _stack len ' + callStack[coin]);
+                checkCallStack();
                 writeCache();
               }
             });
