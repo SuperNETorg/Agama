@@ -1,10 +1,10 @@
 #!/bin/bash
-### Build script for Iguana application for Linux x32 and x64 platform.
+### Build script for Iguana application for Linux x64 platform.
 ### Created by mmaxian, 3/2017
 
 [ -z $AGAMA_VERSION ] && echo "AGAMA_VERSION variable is not set." && exit 0
 
-echo "Build script for Iguana application for Linux x32 and x64 platform."
+echo "Build script for Iguana application for Linux x64 platform."
 echo "Preparing electron package $AGAMA_VERSION" 
 
 electron-packager . --platform=linux --arch=x64 \
