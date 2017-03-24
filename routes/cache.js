@@ -233,8 +233,6 @@ cache.one = function(req, res, next) {
             total =+ callStack[coin];
           }
 
-          delete callStack.all;
-
           if (total / Object.keys(callStack).length === 1) {
             cacheCallInProgress = false;
             cache.io.emit('messages', {
@@ -468,7 +466,7 @@ cache.one = function(req, res, next) {
             console.log(JSON.parse(body).result);
             writeCache();
             var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
-            var callsArrayBTC = callsArray.length; // restrict BTC and SYS only to listunspent and listtransactions calls
+            var callsArrayBTC = callsArray.length;
             if (callsArray.indexOf('getbalance') > - 1) {
               callsArrayBTC--;
             }
@@ -478,19 +476,11 @@ cache.one = function(req, res, next) {
             callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
             console.log(coin + ' stack len ' + callStack[coin]);
 
-            if (body.indexOf('need to unlock wallet') > -1) {
-              callStack[coin] = 1;
-              checkCallStack();
-              console.log('error wallet is locked');
-            } else {
-              async.each(outObj.basilisk[coin].addresses, function(address) {
-                execDEXRequests(address, coin);
-              });
-            }
+            async.each(outObj.basilisk[coin].addresses, function(address) {
+              execDEXRequests(address, coin);
+            });
           } else {
-            callStack[coin] = 1;
-            checkCallStack();
-            console.log('error getting ' + coin + ' addrs');
+            // TODO: error
           }
         });
       }
@@ -513,7 +503,6 @@ cache.one = function(req, res, next) {
 
         if (coin === 'all') {
           var tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
-          console.log(tempUrl);
           request({
             url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
             method: 'GET'
@@ -561,16 +550,11 @@ cache.one = function(req, res, next) {
 
                   getAddresses(coin);
                 });
-              } else {
-                console.log('no coin is running in basilisk');
-                callStack[coin] = 1;
-                checkCallStack();                
               }
             }
             if (error) { // stop further requests on failure, exit
               callStack[coin] = 1;
               checkCallStack();
-              console.log('error getting allcoins');
             }
           });
         } else {

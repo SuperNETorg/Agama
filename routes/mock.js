@@ -12,7 +12,7 @@ mock.setVar = function(variable, value) {
 mock.get = function(req, res, next) {
 	var _url = req.query.url;
 
-	if (_url.indexOf('/api/InstantDEX/allcoins') > -1) {
+	if (_url.indexOf('/InstantDEX/allcoins') > -1) {
 	  res.end(JSON.stringify({
 	  	'native': [],
 	  	'basilisk': [ 'KMD', 'BTC'],
@@ -28,8 +28,8 @@ mock.get = function(req, res, next) {
 	}
 	if (_url.indexOf('/api/dex/listunspent') > -1 ||
 			_url.indexOf('/api/dex/listtransactions') > -1 ||
-			_url.indexOf('/api/dex/getbalance') > -1 ||
-			_url.indexOf('/api/basilisk/refresh') > -1) {
+			_url.indexOf('/api/ss/getbalance') > -1 ||
+			_url.indexOf('/api/ww/refresh') > -1) {
 		res.end(JSON.stringify({
 			'some key': 'some value'
 		}));
