@@ -1,6 +1,6 @@
 <project>
     <shortName>AgamaApp</shortName>
-    <fullName>iguana</fullName>
+    <fullName>Agama</fullName>
     <version>0.1.6.1e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
@@ -157,7 +157,7 @@
         </runProgram>
         <deleteFile>
             <explanation>Deleting user data</explanation>
-            <path>${user_home_directory}/.iguana</path>
+            <path>${user_home_directory}/.Agama</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
@@ -201,7 +201,7 @@
         </deleteFile>
         <deleteFile>
             <explanation>Deleting user settngs</explanation>
-            <path>${user_home_directory}/.config/Iguana</path>
+            <path>${user_home_directory}/.config/Agama</path>
             <progressText>Deleting user settngs</progressText>
             <ruleList>
                 <compareValues>
