@@ -1,6 +1,6 @@
 <project>
     <shortName>IguanaApp</shortName>
-    <fullName>iguana</fullName>
+    <fullName>Iguana</fullName>
     <version>0.1.4-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
