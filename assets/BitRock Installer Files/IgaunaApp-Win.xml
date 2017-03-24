@@ -450,8 +450,8 @@
             <title>Instalation type</title>
             <description>Existing instalation is detected</description>
             <explanation>Existing instalation is detected</explanation>
-            <value>reinstall</value>
-            <default>reinstall</default>
+            <value>uninstall</value>
+            <default>uninstall</default>
             <parameterList>
                 <parameterGroup>
                     <name>uninstall</name>
@@ -462,8 +462,8 @@
                     <parameterList>
                         <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
                             <explanation></explanation>
-                            <value>1</value>
-                            <default>1</default>
+                            <value>0</value>
+                            <default>0</default>
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
