@@ -1,11 +1,11 @@
 <project>
-    <shortName>IguanaApp</shortName>
+    <shortName>AgamaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.5.5e-beta</version>
+    <version>0.1.6.1e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
-    <leftImage>../installer_imgs/Iguana_installer_wizard_image.png</leftImage>
-    <logoImage>../installer_imgs/supernet-iguana-logo.png</logoImage>
-    <splashImage>../installer_imgs/Iguana_installer_splash_image.png</splashImage>
+    <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>../installer_imgs/Agama_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -17,15 +17,15 @@
             <show>1</show>
             <desktopShortcutList>
                 <shortcut>
-                    <comment>Start Iguana App</comment>
+                    <comment>Start Agama App</comment>
                     <exec></exec>
                     <icon></icon>
-                    <name>Iguana App</name>
+                    <name>Agama App</name>
                     <path></path>
                     <platforms>all</platforms>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${installdir}/Iguana.exe</windowsExec>
+                    <windowsExec>${installdir}/Agama.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
                     <windowsPath>${installdir}/</windowsPath>
@@ -67,64 +67,64 @@
                     <platforms>windows</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>../../build/Iguana-win32-x64/locales</origin>
+                            <origin>../../build/Agama-win32-x64/locales</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>../../build/Iguana-win32-x64/resources</origin>
+                            <origin>../../build/Agama-win32-x64/resources</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/blink_image_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/blink_image_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/content_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/content_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/content_shell.pak</origin>
+                            <origin>../../build/Agama-win32-x64/content_shell.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/ui_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/ui_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/views_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-win32-x64/views_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/icudtl.dat</origin>
+                            <origin>../../build/Agama-win32-x64/icudtl.dat</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/LICENSES.chromium.html</origin>
+                            <origin>../../build/Agama-win32-x64/LICENSES.chromium.html</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/natives_blob.bin</origin>
+                            <origin>../../build/Agama-win32-x64/natives_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/snapshot_blob.bin</origin>
+                            <origin>../../build/Agama-win32-x64/snapshot_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/d3dcompiler_47.dll</origin>
+                            <origin>../../build/Agama-win32-x64/d3dcompiler_47.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/ffmpeg.dll</origin>
+                            <origin>../../build/Agama-win32-x64/ffmpeg.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/libEGL.dll</origin>
+                            <origin>../../build/Agama-win32-x64/libEGL.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/libGLESv2.dll</origin>
+                            <origin>../../build/Agama-win32-x64/libGLESv2.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/node.dll</origin>
+                            <origin>../../build/Agama-win32-x64/node.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/xinput1_3.dll</origin>
+                            <origin>../../build/Agama-win32-x64/xinput1_3.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/LICENSE</origin>
+                            <origin>../../build/Agama-win32-x64/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/version</origin>
+                            <origin>../../build/Agama-win32-x64/version</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-win32-x64/Iguana.exe</origin>
+                            <origin>../../build/Agama-win32-x64/Agama.exe</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -138,7 +138,7 @@
             <startMenuShortcutList>
                 <startMenuShortcut>
                     <comment>Uninstall ${product_fullname}</comment>
-                    <name>Uninstall Iguana App</name>
+                    <name>Uninstall Agama App</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
                     <windowsExec>${installdir}/${uninstallerName}.exe</windowsExec>
@@ -147,11 +147,11 @@
                     <windowsPath>${installdir}/</windowsPath>
                 </startMenuShortcut>
                 <startMenuShortcut>
-                    <comment>Start Iguana App</comment>
-                    <name>Iguana App</name>
+                    <comment>Start Agama App</comment>
+                    <name>Agama App</name>
                     <runAsAdmin>0</runAsAdmin>
                     <runInTerminal>0</runInTerminal>
-                    <windowsExec>${installdir}/Iguana.exe</windowsExec>
+                    <windowsExec>${installdir}/Agama.exe</windowsExec>
                     <windowsExecArgs></windowsExecArgs>
                     <windowsIcon></windowsIcon>
                     <windowsPath>${installdir}/</windowsPath>
@@ -197,7 +197,7 @@
         </runProgram>
         <deleteFile>
             <explanation>Deleting user data</explanation>
-            <path>${windows_folder_appdata}/Iguana</path>
+            <path>${windows_folder_appdata}/Agama</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
@@ -238,7 +238,7 @@
             <actionList>
                 <httpGet>
                     <abortOnError>0</abortOnError>
-                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
                     <filename>${system_temp_directory}/vc_redist.x64.exe</filename>
                     <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
                     <showMessageOnError>0</showMessageOnError>
@@ -254,7 +254,7 @@
         </showProgressDialog>
         <runProgram>
             <abortOnError>0</abortOnError>
-            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
             <program>${system_temp_directory}/vc_redist.x64.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
@@ -265,7 +265,7 @@
             <actionList>
                 <httpGet>
                     <abortOnError>0</abortOnError>
-                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
                     <filename>${system_temp_directory}/vc_redist.x86.exe</filename>
                     <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
                     <showMessageOnError>0</showMessageOnError>
@@ -281,12 +281,64 @@
         </showProgressDialog>
         <runProgram>
             <abortOnError>0</abortOnError>
-            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
+            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
             <program>${system_temp_directory}/vc_redist.x86.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
             <showMessageOnError>0</showMessageOnError>
         </runProgram>
+        <createDirectory>
+            <abortOnError>0</abortOnError>
+            <explanation>Creating ZcashParam directory</explanation>
+            <path>${windows_folder_appdata}/ZcashParams/</path>
+            <progressText>Creating ZcashParam directory</progressText>
+            <showMessageOnError>0</showMessageOnError>
+        </createDirectory>
+        <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-proving.key</explanation>
+            <progressText>Zcash Params file: sprout-proving.key</progressText>
+            <showMessageOnError>0</showMessageOnError>
+            <title>Downloading Zcash Params file</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-proving.key</explanation>
+                    <filename>${windows_folder_appdata}/ZcashParams/sprout-proving.key</filename>
+                    <progressText>Zcash Params file: sprout-proving.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-proving.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${windows_folder_appdata}/ZcashParams/sprout-proving.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+        <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-verifying.key</explanation>
+            <progressText>Zcash Params file: sprout-verifying.key</progressText>
+            <title>Downloading Zcash Params files</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-verifying.key</explanation>
+                    <filename>${windows_folder_appdata}/ZcashParams/sprout-verifying.key</filename>
+                    <progressText>Zcash Params file: sprout-verifying.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-verifying.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${windows_folder_appdata}/ZcashParams/sprout-verifying.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
     </readyToInstallActionList>
     <postInstallationActionList>
         <actionGroup>
@@ -350,7 +402,7 @@
     <windows64bitMode>1</windows64bitMode>
     <finalPageActionList>
         <runProgram>
-            <program>${installdir}/Iguana.exe</program>
+            <program>${installdir}/Agama.exe</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
         </runProgram>
