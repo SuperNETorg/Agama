@@ -199,28 +199,6 @@
                 </compareValues>
             </ruleList>
         </deleteFile>
-        <deleteFile>
-            <explanation>Deleting user settngs</explanation>
-            <path>${user_home_directory}/.config/Iguana</path>
-            <progressText>Deleting user settngs</progressText>
-            <ruleList>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${previous_installation_exists}</value1>
-                    <value2>1</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${installation_type}</value1>
-                    <value2>uninstall</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${keep_settings_and_userdata}</value1>
-                    <value2>0</value2>
-                </compareValues>
-            </ruleList>
-        </deleteFile>
         <exit>
             <explanation>Uninstalled</explanation>
             <progressText>Uninstalled</progressText>
@@ -385,8 +363,8 @@
             <title>Instalation type</title>
             <description>Existing instalation is detected</description>
             <explanation>Existing instalation is detected</explanation>
-            <value>reinstall</value>
-            <default>reinstall</default>
+            <value>uninstall</value>
+            <default>uninstall</default>
             <parameterList>
                 <parameterGroup>
                     <name>uninstall</name>
@@ -397,8 +375,8 @@
                     <parameterList>
                         <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
                             <explanation></explanation>
-                            <value>1</value>
-                            <default>1</default>
+                            <value>0</value>
+                            <default>0</default>
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
