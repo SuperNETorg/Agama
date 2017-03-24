@@ -85,7 +85,7 @@
     <readyToInstallActionList>
         <runProgram>
             <program>open</program>
-            <programArguments>${oldInstalldir}/Agama.app/${uninstallerName}.app</programArguments>
+            <programArguments>-W ${oldInstalldir}/Agama.app/${uninstallerName}.app</programArguments>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>
