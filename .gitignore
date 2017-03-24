@@ -33,6 +33,9 @@ jspm_packages
 # Optional npm cache directory
 .npm
 
+# electron cache directory
+.electron
+
 # Optional REPL history
 .node_repl_history
 

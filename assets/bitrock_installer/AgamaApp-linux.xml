@@ -1,0 +1,399 @@
+<project>
+    <shortName>AgamaApp</shortName>
+    <fullName>iguana</fullName>
+    <version>${PKG_VERSION}</version>
+    <licenseFile>../../LICENSE</licenseFile>
+    <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>../installer_imgs/Agama_installer_splash_image.png</splashImage>
+    <allowLanguageSelection>1</allowLanguageSelection>
+    <componentList>
+        <component>
+            <name>default</name>
+            <description>${project.shortName}</description>
+            <canBeEdited>0</canBeEdited>
+            <detailedDescription>All application files. Required size: ${project.component(default).requiredSize} KB</detailedDescription>
+            <selected>1</selected>
+            <show>1</show>
+            <desktopShortcutList>
+                <shortcut>
+                    <comment>Agama Desktop</comment>
+                    <exec>${installdir}/Agama</exec>
+                    <icon>${installdir}/resources/app/assets/icons/agama_icons/96x96.png</icon>
+                    <name>Agama Desktop</name>
+                    <path>${installdir}</path>
+                    <platforms>all</platforms>
+                    <runAsAdmin>0</runAsAdmin>
+                    <runInTerminal>0</runInTerminal>
+                    <windowsExec></windowsExec>
+                    <windowsExecArgs></windowsExecArgs>
+                    <windowsIcon></windowsIcon>
+                    <windowsPath></windowsPath>
+                </shortcut>
+            </desktopShortcutList>
+            <folderList>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfiles</name>
+                    <platforms>all</platforms>
+                    <distributionFileList>
+                        <distributionDirectory>
+                            <origin>../../build/Agama-linux-x64/locales</origin>
+                        </distributionDirectory>
+                        <distributionDirectory>
+                            <origin>../../build/Agama-linux-x64/resources</origin>
+                        </distributionDirectory>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/version</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/content_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/LICENSE</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/blink_image_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/views_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/ui_resources_200_percent.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/natives_blob.bin</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/snapshot_blob.bin</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/LICENSES.chromium.html</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/libffmpeg.so</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/content_shell.pak</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/icudtl.dat</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/libnode.so</origin>
+                        </distributionFile>
+                        <distributionFile>
+                            <origin>../../build/Agama-linux-x64/Agama</origin>
+                        </distributionFile>
+                    </distributionFileList>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${installdir}</destination>
+                    <name>programfileslinux</name>
+                    <platforms>linux</platforms>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>${windows_folder_program_files}</destination>
+                    <name>programfileswindows</name>
+                    <platforms>windows</platforms>
+                </folder>
+                <folder>
+                    <description>Program Files</description>
+                    <destination>/Applications</destination>
+                    <name>programfilesosx</name>
+                    <platforms>osx</platforms>
+                </folder>
+            </folderList>
+        </component>
+    </componentList>
+    <preInstallationActionList>
+        <setInstallerVariable>
+            <name>previous_installation_exists</name>
+            <value>1</value>
+            <ruleList>
+                <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+            </ruleList>
+        </setInstallerVariable>
+
+        <!-- Retreive values about previous installer so we can uninstall it -->
+        <foreach>
+            <values>version oldVersion installdir oldInstalldir</values>
+            <variables>name variable</variables>
+            <actionList>
+                <setInstallerVariable name="${variable}" value=""/>
+                <iniFileGet>
+                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <key>${name}</key>
+                    <section>details</section>
+                    <variable>${variable}</variable>
+                    <ruleList>
+                        <compareValues>
+                            <logic>equals</logic>
+                            <value1>${previous_installation_exists}</value1>
+                            <value2>1</value2>
+                        </compareValues>
+                    </ruleList>
+                </iniFileGet>
+            </actionList>
+            <ruleList>
+                <platformTest negate="1" type="windows"/>
+            </ruleList>
+        </foreach>
+    </preInstallationActionList>
+    <readyToInstallActionList>
+        <runProgram>
+            <program>${oldInstalldir}/${uninstallerName}</program>
+            <programArguments></programArguments>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </runProgram>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.iguana</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${keep_settings_and_userdata}</value1>
+                    <value2>0</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting zcache-params</explanation>
+            <path>${user_home_directory}/.zcache-params</path>
+            <progressText>Deleting zcache-params</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${keep_settings_and_userdata}</value1>
+                    <value2>0</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <exit>
+            <explanation>Uninstalled</explanation>
+            <progressText>Uninstalled</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+            </ruleList>
+        </exit>
+        <createDirectory>
+            <abortOnError>0</abortOnError>
+            <explanation>Creating ZcashParam directory</explanation>
+            <path>${user_home_directory}/.zcash-params/</path>
+            <progressText>Creating ZcashParam directory</progressText>
+            <showMessageOnError>0</showMessageOnError>
+        </createDirectory>
+        <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-proving.key</explanation>
+            <progressText>Zcash Params file: sprout-proving.key</progressText>
+            <showMessageOnError>0</showMessageOnError>
+            <title>Downloading Zcash Params file</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-proving.key</explanation>
+                    <filename>${user_home_directory}/.zcash-params/sprout-proving.key</filename>
+                    <progressText>Zcash Params file: sprout-proving.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-proving.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${user_home_directory}/.zcash-params/sprout-proving.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+        <showProgressDialog>
+            <abortOnError>0</abortOnError>
+            <explanation>Zcash Params file: sprout-verifying.key</explanation>
+            <progressText>Zcash Params file: sprout-verifying.key</progressText>
+            <title>Downloading Zcash Params files</title>
+            <actionList>
+                <httpGet>
+                    <abortOnError>0</abortOnError>
+                    <explanation>Zcash Params file: sprout-verifying.key</explanation>
+                    <filename>${user_home_directory}/.zcash-params/sprout-verifying.key</filename>
+                    <progressText>Zcash Params file: sprout-verifying.key</progressText>
+                    <showMessageOnError>0</showMessageOnError>
+                    <url>https://z.cash/downloads/sprout-verifying.key</url>
+                </httpGet>
+            </actionList>
+            <ruleList>
+                <fileExists>
+                    <negate>1</negate>
+                    <path>${user_home_directory}/.zcash-params/sprout-verifying.key</path>
+                </fileExists>
+            </ruleList>
+        </showProgressDialog>
+    </readyToInstallActionList>
+    <postInstallationActionList>
+        <createSymLink>
+            <abortOnError>0</abortOnError>
+            <linkName>/bin/Agama</linkName>
+            <target>${installdir}/Agama</target>
+        </createSymLink>
+        <iniFileSet>
+            <file>${user_home_directory}/Desktop/Agama Desktop.desktop</file>
+            <key>Categories</key>
+            <section>Desktop Entry</section>
+            <value>Office;</value>
+        </iniFileSet>
+        <changeOwnerAndGroup>
+            <files>${user_home_directory}/Desktop/Agama Desktop.desktop</files>
+            <group>users</group>
+            <owner>nobody</owner>
+        </changeOwnerAndGroup>
+        <copyFile>
+            <destination>/usr/share/applications/Agama Desktop.desktop</destination>
+            <origin>${user_home_directory}/Desktop/Agama Desktop.desktop</origin>
+        </copyFile>
+
+        <!-- Store values of current installer in etc folder so we can find for uninstal -->
+        <foreach>
+            <values>version "${project.version}" installdir "${installdir}"</values>
+            <variables>name variable</variables>
+            <actionList>
+                <iniFileSet>
+                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <key>${name}</key>
+                    <section>details</section>
+                    <value>${variable}</value>
+                </iniFileSet>
+            </actionList>
+            <ruleList>
+                <platformTest negate="1" type="windows"/>
+            </ruleList>
+        </foreach>
+        <addFilesToUninstaller files="/etc/${project.vendor}-${project.shortName}.ini"/>
+    </postInstallationActionList>
+    <postUninstallationActionList>
+        <deleteFile>
+            <abortOnError>0</abortOnError>
+            <path>/bin/Agama</path>
+        </deleteFile>
+    </postUninstallationActionList>
+    <allowComponentSelection>1</allowComponentSelection>
+    <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
+    <defaultUnixFilePermissions>755</defaultUnixFilePermissions>
+    <enableRollback>0</enableRollback>
+    <enableSslSupport>1</enableSslSupport>
+    <enableTimestamp>1</enableTimestamp>
+    <requireInstallationByRootUser>1</requireInstallationByRootUser>
+    <saveRelativePaths>1</saveRelativePaths>
+    <uninstallerName>Uninstall-Agama</uninstallerName>
+    <vendor>SuperNETOrg</vendor>
+    <finalPageActionList>
+        <runProgram>
+            <program>/bin/Agama</program>
+            <programArguments>&amp;</programArguments>
+            <progressText>Do you want to launch ${project.fullName} now?</progressText>
+            <runAs>$USER</runAs>
+        </runProgram>
+    </finalPageActionList>
+    <parameterList>
+        <directoryParameter>
+            <name>installdir</name>
+            <description>Installer.Parameter.installdir.description</description>
+            <explanation>Installer.Parameter.installdir.explanation</explanation>
+            <value></value>
+            <default>/opt/AgamaApp</default>
+            <allowEmptyValue>0</allowEmptyValue>
+            <cliOptionName>prefix</cliOptionName>
+            <mustBeWritable>1</mustBeWritable>
+            <mustExist>0</mustExist>
+            <width>30</width>
+            <validationActionList>
+                <throwError>
+                    <text>You don't have enough disk space to install the application,
+      please select another installation directory</text>
+                    <ruleList>
+                        <checkFreeDiskSpace>
+                            <logic>less</logic>
+                            <path>${installdir}</path>
+                            <size>${required_diskspace}</size>
+                        </checkFreeDiskSpace>
+                    </ruleList>
+                </throwError>
+            </validationActionList>
+        </directoryParameter>
+        <choiceParameterGroup>
+            <name>installation_type</name>
+            <title>Instalation type</title>
+            <description>Existing instalation is detected</description>
+            <explanation>Existing instalation is detected</explanation>
+            <value>uninstall</value>
+            <default>uninstall</default>
+            <parameterList>
+                <parameterGroup>
+                    <name>uninstall</name>
+                    <title>Uninstall</title>
+                    <explanation>Uninstall</explanation>
+                    <value></value>
+                    <default></default>
+                    <parameterList>
+                        <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
+                            <explanation></explanation>
+                            <value>0</value>
+                            <default>0</default>
+                        </booleanParameter>
+                    </parameterList>
+                </parameterGroup>
+                <labelParameter name="reinstall" description="Re-install current version">
+                    <title>Re-install</title>
+                    <explanation></explanation>
+                    <image></image>
+                </labelParameter>
+            </parameterList>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </choiceParameterGroup>
+    </parameterList>
+</project>
+
