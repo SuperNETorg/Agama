@@ -1,7 +1,7 @@
 <project>
     <shortName>AgamaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.6.1e-beta</version>
+    <version>0.1.6e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
     <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
@@ -12,7 +12,7 @@
             <name>default</name>
             <description>${project.shortName}</description>
             <canBeEdited>0</canBeEdited>
-            <detailedDescription>All application files. Required size: ${project.component(default).requiredSize} bytes</detailedDescription>
+            <detailedDescription>All application files. Required size: ${project.component(default).requiredSize} KB</detailedDescription>
             <selected>1</selected>
             <show>1</show>
             <desktopShortcutList>
@@ -171,8 +171,8 @@
     </componentList>
     <preInstallationActionList>
         <registryGetMatch>
-            <key>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\${product_fullname} ${product_version}</key>
-            <name>UninstallString</name>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\${project.shortname}</key>
+            <name>uninstaller_path</name>
             <variable>uninstaller_path</variable>
         </registryGetMatch>
         <setInstallerVariable>
@@ -238,7 +238,7 @@
             <actionList>
                 <httpGet>
                     <abortOnError>0</abortOnError>
-                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
+                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
                     <filename>${system_temp_directory}/vc_redist.x64.exe</filename>
                     <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
                     <showMessageOnError>0</showMessageOnError>
@@ -254,7 +254,7 @@
         </showProgressDialog>
         <runProgram>
             <abortOnError>0</abortOnError>
-            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
+            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
             <program>${system_temp_directory}/vc_redist.x64.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
@@ -265,7 +265,7 @@
             <actionList>
                 <httpGet>
                     <abortOnError>0</abortOnError>
-                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
+                    <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
                     <filename>${system_temp_directory}/vc_redist.x86.exe</filename>
                     <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
                     <showMessageOnError>0</showMessageOnError>
@@ -281,7 +281,7 @@
         </showProgressDialog>
         <runProgram>
             <abortOnError>0</abortOnError>
-            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for Agama daemon</explanation>
+            <explanation>Visual C++ Redistributable for Visual Studio 2015 library files are needed for iguana daemon</explanation>
             <program>${system_temp_directory}/vc_redist.x86.exe</program>
             <programArguments>/install /passive</programArguments>
             <progressText>Downloading Visual C++ Redistributable for Visual Studio 2015</progressText>
@@ -341,6 +341,12 @@
         </showProgressDialog>
     </readyToInstallActionList>
     <postInstallationActionList>
+        <registrySet>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\${project.shortname}</key>
+            <name>uninstaller_path</name>
+            <type>REG_SZ</type>
+            <value>${installdir}/${uninstallerName}.exe</value>
+        </registrySet>
         <actionGroup>
             <actionList>
                 <copyFile>
@@ -392,6 +398,12 @@
             </ruleList>
         </actionGroup>
     </postInstallationActionList>
+    <postUninstallationActionList>
+        <registryDelete>
+            <key>HKEY_LOCAL_MACHINE\SOFTWARE\${project.shortname}</key>
+            <name>uninstaller_path</name>
+        </registryDelete>
+    </postUninstallationActionList>
     <compressionAlgorithm>lzham-ultra</compressionAlgorithm>
     <enableRollback>0</enableRollback>
     <enableSslSupport>1</enableSslSupport>
