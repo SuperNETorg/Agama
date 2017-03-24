@@ -6,14 +6,16 @@ const electron = require('electron'),
       os = require('os'),
       fsnode = require('fs'),
       fs = require('fs-extra'),
+     	_fs = require('graceful-fs'),
       mkdirp = require('mkdirp'),
       express = require('express'),
       exec = require('child_process').exec,
+      spawn = require('child_process').spawn,
       md5 = require('md5'),
       pm2 = require('pm2'),
-      readLastLines = require('read-last-lines'),
       request = require('request'),
-      async = require('async');
+      async = require('async'),
+      rimraf = require('rimraf');
 
 Promise = require('bluebird');
 
@@ -36,13 +38,17 @@ if (os.platform() === 'darwin') {
 			komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
 			komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
 			komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+
+			zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
+			zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
+			zcashDir = process.env.HOME + '/Library/Application Support/Zcash';
 }
 
 if (os.platform() === 'linux') {
 	var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
 			iguanaDir = process.env.HOME + '/.iguana',
 			iguanaConfsDir = iguanaDir + '/confs',
-			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png'),
+			iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
 			komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
 			komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
 			komodoDir = process.env.HOME + '/.komodo';
@@ -55,11 +61,15 @@ if (os.platform() === 'win32') {
 			iguanaDir = path.normalize(iguanaDir);
 			iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
 			iguanaConfsDir = path.normalize(iguanaConfsDir);
-			iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico'),
+			iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
 			iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
+
 			komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
+			komododBin = path.normalize(komododBin),
 			komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
-			komodoDir = process.env.APPDATA + '/Komodo';
+			komodocliBin = path.normalize(komodocliBin),
+			komodoDir = process.env.APPDATA + '/Komodo',
+			komodoDir = path.normalize(komodoDir);
 }
 
 shepherd.appConfig = {
@@ -79,6 +89,9 @@ shepherd.appConfig = {
 
 console.log('iguana dir: ' + iguanaDir);
 console.log('iguana bin: ' + iguanaBin);
+console.log('--------------------------')
+console.log('iguana dir: ' + komododBin);
+console.log('iguana bin: ' + komodoDir);
 
 // END IGUANA FILES AND CONFIG SETTINGS
 shepherd.get('/', function(req, res, next) {
@@ -90,231 +103,82 @@ shepherd.get('/appconf', function(req, res, next) {
   res.send(obj);
 });
 
+shepherd.get('/sysinfo', function(req, res, next) {
+  var obj = shepherd.SystemInfo();
+  res.send(obj);
+});
+
+var cache = require('./cache');
+var mock = require('./mock');
+
+// expose sockets obj
+shepherd.setIO = function(io) {
+	shepherd.io = io;
+	cache.setVar('io', io);	
+};
+
+cache.setVar('iguanaDir', iguanaDir);
+cache.setVar('appConfig', shepherd.appConfig);
+
 /*
- *	params: pubkey
+ *  type: GET
+ *  params: pubkey
  */
 shepherd.get('/cache', function(req, res, next) {
-	var pubkey = req.query.pubkey;
-
-	if (pubkey) {
-	  if (fs.existsSync(iguanaDir + '/cache-' + pubkey + '.json')) {
-			fs.readFile(iguanaDir + '/cache-' + pubkey + '.json', 'utf8', function (err, data) {
-			  if (err) {
-			    var errorObj = {
-			      'msg': 'error',
-			      'result': err
-			    };
-
-			    res.end(JSON.stringify(errorObj));
-			  } else {
-			    var successObj = {
-			      'msg': 'success',
-			      'result': JSON.parse(data)
-			    };
-
-			  	res.end(JSON.stringify(successObj));
-			  }
-			});
-		} else {
-	    var errorObj = {
-	      'msg': 'error',
-	      'result': 'no pubkey provided'
-	    };
-
-	    res.end(JSON.stringify(errorObj));
-		}
-	}
-});
-
-var allcoinsInProgress = false;
-
-/*
- *	params: userpass, pubkey
- */
-shepherd.get('/allcoins', function(req, res, next) {
-  if (!allcoinsInProgress) {
-    allcoinsInProgress = true;
-
-    var sessionKey = req.query.userpass,
-		    pubkey = req.query.pubkey,
-		    _obj = {
-		      'msg': 'error',
-		      'result': 'error'
-		    },
-		    outObj = {
-		      basilisk: {}
-		    },
-		    writeCache = function() {
-		      fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
-		        if (err) {
-		          return console.log(err);
-		        }
-
-		        console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
-		      });
-		    },
-		    callStack = {},
-		    checkCallStack = function() {
-		    	var total = 0;
-
-		      for (var coin in callStack) {
-		      	total =+ callStack[coin];
-		      }
-
-		    	if (total / Object.keys(callStack).length === 1) {
-		    		allcoinsInProgress = false;
-		    	}
-		    };
-
-    res.end(JSON.stringify({
-      'msg': 'success',
-      'result': 'call is initiated'
-    }));
-
-    console.log('allcoins call started');
-
-    request({
-      url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey,
-      method: 'GET'
-    }, function (error, response, body) {
-      if (response && response.statusCode && response.statusCode === 200) {
-        body = JSON.parse(body);
-        // basilisk coins
-        if (body.basilisk && body.basilisk.length) {
-          // get coin addresses
-          async.each(body.basilisk, function(coin) {
-          	callStack[coin] = 1;
-          });
-
-          async.each(body.basilisk, function(coin) {
-            outObj.basilisk[coin] = {};
-            writeCache();
-
-            request({
-              url: 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*',
-              method: 'GET'
-            }, function (error, response, body) {
-              if (response && response.statusCode && response.statusCode === 200) {
-                outObj.basilisk[coin].addresses = JSON.parse(body).result;
-                writeCache();
-                callStack[coin] = callStack[coin] + outObj.basilisk[coin].addresses.length * (coin === 'BTC' ? 2 : 3);
-                console.log(coin + ' stack len ' + callStack[coin]);
-
-                async.each(outObj.basilisk[coin].addresses, function(address) {
-                  var dexUrls = {
-                    'listunspent': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listunspent' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                    'listtransactions': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/listtransactions' + (coin !== 'BTC' && coin !== 'SYS' ? '2' : '') + '?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-                    'getbalance': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-                    'refresh': 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-                  };
-                  if (coin === 'BTC' && coin === 'SYS') {
-                    delete dexUrls.refresh;
-                    delete dexUrls.getbalance;
-                  }
-                  //console.log(JSON.stringify(dexUrls));
-                  console.log(coin+' address ' + address);
-                  outObj.basilisk[coin][address] = {};
-                  writeCache();
-
-                  async.forEachOf(dexUrls, function(dexUrl, key) {
-                    request({
-                      url: dexUrl,
-                      method: 'GET'
-                    }, function (error, response, body) {
-                      if (response && response.statusCode && response.statusCode === 200) {
-                        outObj.basilisk[coin][address][key] = JSON.parse(body);
-	                      console.log(dexUrl);
-                        console.log(body);
-                        callStack[coin]--;
-                        console.log(coin + ' _stack len ' + callStack[coin]);
-                        checkCallStack();
-
-                        writeCache();
-                      }
-                    });
-                  });
-                });
-              } else {
-                // TODO: error
-              }
-            });
-          });
-        } else {
-          // TODO: error
-        }
-      } else {
-        // TODO: error
-      }
-    });
-  } else {
-    res.end(JSON.stringify({
-      'msg': 'error',
-      'result': 'another call is in progress already'
-    }));
-  }
+	cache.get(req, res, next);
 });
 
 /*
- *	params: userpass, pubkey, coin, address
+ *  type: GET
+ *  params: filename
  */
-shepherd.get('/refresh', function(req, res, next) {
-  var sessionKey = req.query.userpass,
-  		coin = req.query.coin,
-  		address = req.query.address,
-  		pubkey = req.query.pubkey,
-		  errorObj = {
-		    'msg': 'error',
-		    'result': 'error'
-		  },
-		  outObj,
-		  pubkey,
-		  writeCache = function() {
-		    fs.writeFile(iguanaDir + '/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
-		      if (err) {
-		        return console.log(err);
-		      }
+shepherd.get('/groom', function(req, res, next) {
+	cache.groomGet(req, res, next);
+})
 
-		      console.log('file ' + iguanaDir + '/cache-' + pubkey + '.json is updated');
-		    });
-		  };
-
-  if (fs.existsSync(iguanaDir + '/cache-' + pubkey + '.json')) {
-		outObj = JSON.parse(fs.readFileSync(iguanaDir + '/cache-' + pubkey + '.json', 'utf8'));
-
-		if (outObj && !outObj.basilisk) {
-			outObj['basilisk'] = {};
-			outObj['basilisk'][coin] = {};
-		} else {
-			if (!outObj[coin]) {
-				outObj['basilisk'][coin][address] = {};
-			}
-		}
-	} else {
-		outObj = {
-			basilisk: {}
-		};
-	}
-
-	var refreshUrl = 'http://' + shepherd.appConfig.host + ':' + shepherd.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
-
-  request({
-    url: refreshUrl,
-    method: 'GET'
-  }, function (error, response, body) {
-    if (response && response.statusCode && response.statusCode === 200) {
-      outObj.basilisk[coin][address].refresh = JSON.parse(body);
-      console.log(refreshUrl);
-      console.log(body);
-
-			writeCache();
-		  res.end(JSON.stringify({
-		    'msg': 'success',
-		    'result': iguanaDir + '/cache-' + pubkey + '.json updated'
-		  }));
-    }
-  });
+/*
+ *  type: DELETE
+ *  params: filename
+ */
+shepherd.delete('/groom', function(req, res, next) {
+	cache.groomDelete(req, res, next);
 });
 
+/*
+ *  type: POST
+ *  params: filename, payload
+ */
+shepherd.post('/groom', function(req, res) {
+	cache.groomPost(req, res, next);	
+});
+
+/*
+ *  type: GET
+ *  params: userpass, pubkey, skip
+ */
+shepherd.get('/cache-all', function(req, res, next) {
+	cache.all(req, res, next);
+});
+
+/*
+ *  type: GET
+ *  params: userpass, pubkey, coin, address, skip
+ */
+shepherd.get('/cache-one', function(req, res, next) {
+	cache.one(req, res, next);
+});
+
+/*
+ *  type: GET
+ */
+shepherd.get('/mock', function(req, res, next) {
+	mock.get(req, res, next);
+});
+
+/*
+ *	type: GET
+ *	params: herd, lastLines
+ */
 shepherd.post('/debuglog', function(req, res) {
   var _herd = req.body.herdname,
       _lastNLines = req.body.lastLines,
@@ -344,6 +208,10 @@ shepherd.post('/debuglog', function(req, res) {
     });
 });
 
+/*
+ *	type: POST
+ *	params: herd
+ */
 shepherd.post('/herd', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
@@ -361,6 +229,10 @@ shepherd.post('/herd', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: POST
+ *	params: herdname
+ */
 shepherd.post('/herdlist', function(req, res) {
   //console.log('======= req.body =======');
   //console.log(req);
@@ -390,6 +262,9 @@ shepherd.post('/herdlist', function(req, res) {
   });
 });
 
+/*
+ *	type: POST
+ */
 shepherd.post('/slay', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
@@ -405,13 +280,22 @@ shepherd.post('/slay', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: POST
+ */
 shepherd.post('/setconf', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
   console.log(req.body);
   //console.log(req.body.chain);
 
-  setConf(req.body.chain);
+  if (os.platform() === 'win32' && req.body.chain == 'komodod') {
+  	setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+  } else {
+  	setConf(req.body.chain);
+  }
+
+
   var obj = {
     'msg': 'success',
     'result': 'result'
@@ -420,6 +304,9 @@ shepherd.post('/setconf', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
+/*
+ *	type: POST
+ */
 shepherd.post('/getconf', function(req, res) {
   console.log('======= req.body =======');
   //console.log(req);
@@ -435,6 +322,147 @@ shepherd.post('/getconf', function(req, res) {
   };
 
   res.end(JSON.stringify(obj));
+});
+
+/*
+ *	type: GET
+ *	params: coin, type
+ */
+shepherd.get('/kick', function(req, res, next) {
+	var _coin = req.query.coin,
+			_type = req.query.type;
+
+	if (!_coin) {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no coin name provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+
+	if (!_type) {
+    var errorObj = {
+      'msg': 'error',
+      'result': 'no type provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+
+  var kickStartDirs = {
+  	'soft': [
+  		{
+  			'name': 'DB/[coin]',
+  			'type': 'pattern',
+  			'match': 'balancecrc.'
+  		},
+  		{
+  			'name': 'DB/[coin]/utxoaddrs',
+  			'type': 'file'
+  		},
+  		{
+  			'name': 'DB/[coin]/accounts',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/[coin]/fastfind',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'tmp/[coin]',
+  			'type': 'folder'
+  		}
+  	],
+  	'hard': [
+  		{
+  			'name': 'DB/[coin]',
+  			'type': 'pattern',
+  			'match': 'balancecrc.'
+  		},
+  		{
+  			'name': 'DB/[coin]/utxoaddrs',
+  			'type': 'file'
+  		},
+  		{
+  			'name': 'DB/[coin]',
+  			'type': 'pattern',
+  			'match': 'utxoaddrs.'
+  		},
+  		{
+  			'name': 'DB/[coin]/accounts',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/[coin]/fastfind',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/[coin]/spends',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'tmp/[coin]',
+  			'type': 'folder'
+  		}
+  	],
+  	'brutal': [ // delete coin related data
+  		{
+				'name': 'DB/[coin]',
+				'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/purgeable/[coin]',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'DB/ro/[coin]',
+  			'type': 'folder'
+  		},
+  		{
+  			'name': 'tmp/[coin]',
+  			'type': 'folder'
+  		}
+  	]
+  };
+
+  if (_coin && _type) {
+		for (var i = 0; i < kickStartDirs[_type].length; i++) {
+			var currentKickItem = kickStartDirs[_type][i];
+
+			console.log('deleting ' + currentKickItem.type + (currentKickItem.match ? ' ' + currentKickItem.match : '') + ' ' + iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
+			if (currentKickItem.type === 'folder' || currentKickItem.type === 'file') {
+				rimraf(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin), function(err) {
+					if (err) {
+						throw err;
+					}
+				});
+			} else if (currentKickItem.type === 'pattern') {
+				var dirItems = fs.readdirSync(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
+
+				if (dirItems && dirItems.length) {
+			    for (var j = 0; j < dirItems.length; j++) {
+			      if (dirItems[j].indexOf(currentKickItem.match) > -1) {
+							rimraf(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin) + '/' + dirItems[j], function(err) {
+								if (err) {
+									throw err;
+								}
+							});
+
+				      console.log('deleting ' + dirItems[j]);
+			      }
+			    }
+			  }
+			}
+  	}
+
+    var successObj = {
+      'msg': 'success',
+      'result': 'kickstart: brutal is executed'
+    };
+
+    res.end(JSON.stringify(successObj));
+  }
 });
 
 shepherd.loadLocalConfig = function() {
@@ -482,15 +510,21 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
     function(resolve, reject) {
       if (lastNLines) {
-        if (fs.existsSync(fileLocation)) {
-          console.log('reading ' + fileLocation);
+        _fs.access(fileLocation, fs.constants.R_OK, function(err) {
+		      if (err) {
+	          console.log('error reading ' + fileLocation);
+		        reject('readDebugLog error: ' + err);
+		      } else {
+          	console.log('reading ' + fileLocation);
+						_fs.readFile(fileLocation, 'utf-8', function(err, data) {
+					    if (err) throw err;
 
-          readLastLines
-            .read(fileLocation, lastNLines)
-            .then((lines) => resolve(lines));
-        } else {
-          reject('file ' + fileLocation + ' doesn\'t exist!');
-        }
+					    var lines = data.trim().split('\n'),
+					    		lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
+					    resolve(lastLine);
+						});
+	        }
+        });
       } else {
         reject('readDebugLog error: lastNLines param is not provided!');
       }
@@ -549,6 +583,18 @@ function herder(flock, data) {
       })
     });
 
+    // ADD SHEPHERD FOLDER
+    mkdirp(iguanaDir + '/shepherd', function(err) {
+    if (err)
+      console.error(err);
+    else
+      fs.readdir(iguanaDir, (err, files) => {
+        files.forEach(file => {
+          //console.log(file);
+        });
+      })
+    });
+
     // COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
     fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
       if (err)
@@ -577,8 +623,19 @@ function herder(flock, data) {
   }
 
   if (flock === 'komodod') {
+  	var kmdDebugLogLocation = komodoDir + '/debug.log';
     console.log('komodod flock selected...');
     console.log('selected data: ' + data);
+
+    // truncate debug.log
+		_fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
+      if (err) {
+        console.log('error accessing ' + kmdDebugLogLocation);
+      } else {
+      	console.log('truncate ' + kmdDebugLogLocation);
+		    fs.unlink(kmdDebugLogLocation);
+			}
+	  });
 
     pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
@@ -591,6 +648,32 @@ function herder(flock, data) {
         name: data.ac_name, // REVS, USD, EUR etc.
         exec_mode : 'fork',
         cwd: komodoDir,
+        args: data.ac_options
+        //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+      }, function(err, apps) {
+        pm2.disconnect();   // Disconnect from PM2
+          if (err)
+            throw err;
+      });
+    });
+  }
+
+  if (flock === 'zcashd') {
+  	var kmdDebugLogLocation = zcashDir + '/debug.log';
+    console.log('zcashd flock selected...');
+    console.log('selected data: ' + data);
+
+    pm2.connect(true, function(err) { // start up pm2 god
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      pm2.start({
+        script: zcashdBin, // path to binary
+        name: data.ac_name, // REVS, USD, EUR etc.
+        exec_mode : 'fork',
+        cwd: zcashDir,
         args: data.ac_options
         //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
       }, function(err, apps) {
@@ -699,12 +782,21 @@ function setConf(flock) {
 	switch (flock) {
 		case 'komodod':
 			var DaemonConfPath = komodoDir + '/komodo.conf';
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 			break;
 		case 'zcashd':
 			var DaemonConfPath = ZcashDir + '/zcash.conf';
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 			break;
 		default:
 			var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
 	}
 
 	console.log(DaemonConfPath);
@@ -801,8 +893,7 @@ function setConf(flock) {
 							console.log('rpcpass: NOT FOUND');
 							var randomstring = md5(Math.random() * Math.random() * 999);
 
-							fs.appendFile(DaemonConfPath, '\nrpcpass=' + randomstring +
-																						'\nrpcpassword=' + randomstring, (err) => {
+							fs.appendFile(DaemonConfPath, '\nrpcpassword=' + randomstring, (err) => {
 								if (err)
 									throw err;
 								console.log('rpcpass: ADDED');
@@ -899,31 +990,87 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
+	var komodoDir = '',
+				ZcashDir = '',
+				DaemonConfPath = '';
+
   console.log(flock);
 
-  if (os.platform() === 'darwin') {
-    var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
-        ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
-  }
+	if (os.platform() === 'darwin') {
+		komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
+		ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+	}
 
-  if (os.platform() === 'linux') {
-    var komodoDir = process.env.HOME + '/.komodo',
-        ZcashDir = process.env.HOME + '/.zcash';
-  }
+	if (os.platform() === 'linux') {
+		komodoDir = process.env.HOME + '/.komodo';
+		ZcashDir = process.env.HOME + '/.zcash';
+	}
 
-  switch (flock) {
-    case 'komodod':
-      var DaemonConfPath = komodoDir;
-    break;
-    case 'zcashd':
-      var DaemonConfPath = ZcashDir;
-    break;
-    default:
-      var DaemonConfPath = komodoDir + '/' + flock;
-  }
+  if (os.platform() === 'win32') {
+		komodoDir = process.env.APPDATA + '/Komodo';
+		ZcashDir = process.env.APPDATA + '/Zcash';
+	}
+
+	switch (flock) {
+		case 'komodod':
+			DaemonConfPath = komodoDir;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+				console.log('===>>> SHEPHERD API OUTPUT ===>>>');
+			}
+			break;
+		case 'zcashd':
+			DaemonConfPath = ZcashDir;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+			break;
+		default:
+			DaemonConfPath = komodoDir + '/' + flock;
+			if (os.platform() === 'win32') {
+				DaemonConfPath = path.normalize(DaemonConfPath);
+			}
+	}
 
   console.log(DaemonConfPath);
   return DaemonConfPath;
+}
+
+function formatBytes(bytes, decimals) {
+  if (bytes == 0)
+   	return '0 Bytes';
+
+  var k = 1000,
+      dm = decimals + 1 || 3,
+      sizes = [
+       	'Bytes',
+       	'KB',
+       	'MB',
+       	'GB',
+       	'TB',
+       	'PB',
+       	'EB',
+       	'ZB',
+       	'YB'
+      ],
+      i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+shepherd.SystemInfo = function() {
+	const os_data = {
+					'totalmem_bytes': os.totalmem(),
+					'totalmem_readble': formatBytes(os.totalmem()),
+					'arch': os.arch(),
+					'cpu': os.cpus()[0].model,
+					'cpu_cores': os.cpus().length,
+					'platform': os.platform(),
+					'os_release': os.release(),
+					'os_type': os.type()
+				};
+
+	return os_data;
 }
 
 module.exports = shepherd;

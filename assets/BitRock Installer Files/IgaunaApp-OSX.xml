@@ -1,11 +1,11 @@
 <project>
-    <shortName>IguanaApp</shortName>
+    <shortName>AgamaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.4-beta</version>
+    <version>0.1.6.0e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
-    <leftImage>../installer_imgs/Iguana_installer_wizard_image.png</leftImage>
-    <logoImage>../installer_imgs/supernet-iguana-logo.png</logoImage>
-    <splashImage>../installer_imgs/Iguana_installer_splash_image.png</splashImage>
+    <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>../installer_imgs/Agama_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -41,7 +41,7 @@
                     <platforms>osx</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>../../build/Iguana-darwin-x64/Iguana.app</origin>
+                            <origin>../../build/Agama-darwin-x64/Agama.app</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -96,7 +96,7 @@
         </runProgram>
         <deleteFile>
             <explanation>Deleting user data</explanation>
-            <path>${user_home_directory}/.iguana</path>
+            <path>${user_home_directory}/Library/Application Support/Iguana</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
@@ -140,7 +140,7 @@
         </deleteFile>
         <deleteFile>
             <explanation>Deleting user settngs</explanation>
-            <path>${user_home_directory}/.config/Iguana</path>
+            <path>${user_home_directory}/Library/Application Support/Agama</path>
             <progressText>Deleting user settngs</progressText>
             <ruleList>
                 <compareValues>
@@ -254,13 +254,13 @@
     <enableTimestamp>1</enableTimestamp>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
-    <uninstallerDirectory>${installdir}/Iguana/</uninstallerDirectory>
-    <uninstallerName>Uninstall-Iguana</uninstallerName>
+    <uninstallerDirectory>${installdir}/Agama/</uninstallerDirectory>
+    <uninstallerName>Uninstall-Agama.app</uninstallerName>
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
         <runProgram>
             <program>open</program>
-            <programArguments>/Applications/Iguana.app</programArguments>
+            <programArguments>/Applications/Agama.app</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
         </runProgram>
     </finalPageActionList>

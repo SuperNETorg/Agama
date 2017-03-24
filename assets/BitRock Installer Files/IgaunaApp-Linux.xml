@@ -1,11 +1,11 @@
 <project>
-    <shortName>IguanaApp</shortName>
+    <shortName>AgamaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.4.1-beta</version>
+    <version>0.1.6.1e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
-    <leftImage>../installer_imgs/Iguana_installer_wizard_image.png</leftImage>
-    <logoImage>../installer_imgs/supernet-iguana-logo.png</logoImage>
-    <splashImage>../installer_imgs/Iguana_installer_splash_image.png</splashImage>
+    <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>../installer_imgs/Agama_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -17,10 +17,10 @@
             <show>1</show>
             <desktopShortcutList>
                 <shortcut>
-                    <comment>Iguana Desktop</comment>
-                    <exec>${installdir}/Iguana</exec>
-                    <icon>${installdir}/resources/app/assets/icons/iguana_app_icon_png/96x96.png</icon>
-                    <name>Iguana Desktop</name>
+                    <comment>Agama Desktop</comment>
+                    <exec>${installdir}/Agama</exec>
+                    <icon>${installdir}/resources/app/assets/icons/agama_icons/96x96.png</icon>
+                    <name>Agama Desktop</name>
                     <path>${installdir}</path>
                     <platforms>all</platforms>
                     <runAsAdmin>0</runAsAdmin>
@@ -39,52 +39,52 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>../../build/Iguana-linux-x64/locales</origin>
+                            <origin>../../build/Agama-linux-x64/locales</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>../../build/Iguana-linux-x64/resources</origin>
+                            <origin>../../build/Agama-linux-x64/resources</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/version</origin>
+                            <origin>../../build/Agama-linux-x64/version</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/content_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-linux-x64/content_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/LICENSE</origin>
+                            <origin>../../build/Agama-linux-x64/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/blink_image_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-linux-x64/blink_image_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/views_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-linux-x64/views_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/ui_resources_200_percent.pak</origin>
+                            <origin>../../build/Agama-linux-x64/ui_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/natives_blob.bin</origin>
+                            <origin>../../build/Agama-linux-x64/natives_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/snapshot_blob.bin</origin>
+                            <origin>../../build/Agama-linux-x64/snapshot_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/LICENSES.chromium.html</origin>
+                            <origin>../../build/Agama-linux-x64/LICENSES.chromium.html</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/libffmpeg.so</origin>
+                            <origin>../../build/Agama-linux-x64/libffmpeg.so</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/content_shell.pak</origin>
+                            <origin>../../build/Agama-linux-x64/content_shell.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/icudtl.dat</origin>
+                            <origin>../../build/Agama-linux-x64/icudtl.dat</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/libnode.so</origin>
+                            <origin>../../build/Agama-linux-x64/libnode.so</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Iguana-linux-x64/Iguana</origin>
+                            <origin>../../build/Agama-linux-x64/Agama</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
@@ -293,23 +293,23 @@
     <postInstallationActionList>
         <createSymLink>
             <abortOnError>0</abortOnError>
-            <linkName>/bin/Iguana</linkName>
-            <target>${installdir}/Iguana</target>
+            <linkName>/bin/Agama</linkName>
+            <target>${installdir}/Agama</target>
         </createSymLink>
         <iniFileSet>
-            <file>/root/Desktop/Iguana Desktop.desktop</file>
+            <file>${user_home_directory}/Desktop/Agama Desktop.desktop</file>
             <key>Categories</key>
             <section>Desktop Entry</section>
             <value>Office;</value>
         </iniFileSet>
         <changeOwnerAndGroup>
-            <files>${user_home_directory}/Desktop/Iguana Desktop.desktop</files>
+            <files>${user_home_directory}/Desktop/Agama Desktop.desktop</files>
             <group>users</group>
             <owner>nobody</owner>
         </changeOwnerAndGroup>
         <copyFile>
-            <destination>/usr/share/applications/Iguana Desktop.desktop</destination>
-            <origin>/root/Desktop/Iguana Desktop.desktop</origin>
+            <destination>/usr/share/applications/Agama Desktop.desktop</destination>
+            <origin>${user_home_directory}/Desktop/Agama Desktop.desktop</origin>
         </copyFile>
 
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
@@ -333,7 +333,7 @@
     <postUninstallationActionList>
         <deleteFile>
             <abortOnError>0</abortOnError>
-            <path>/bin/Iguana</path>
+            <path>/bin/Agama</path>
         </deleteFile>
     </postUninstallationActionList>
     <allowComponentSelection>1</allowComponentSelection>
@@ -344,11 +344,11 @@
     <enableTimestamp>1</enableTimestamp>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
-    <uninstallerName>Uninstall-Iguana</uninstallerName>
+    <uninstallerName>Uninstall-Agama</uninstallerName>
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
         <runProgram>
-            <program>/bin/Iguana</program>
+            <program>/bin/Agama</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
             <runAs>$USER</runAs>
@@ -360,7 +360,7 @@
             <description>Installer.Parameter.installdir.description</description>
             <explanation>Installer.Parameter.installdir.explanation</explanation>
             <value></value>
-            <default>/opt/IguanaApp</default>
+            <default>/opt/AgamaApp</default>
             <allowEmptyValue>0</allowEmptyValue>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
