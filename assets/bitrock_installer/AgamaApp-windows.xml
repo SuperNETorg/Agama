@@ -1,7 +1,7 @@
 <project>
     <shortName>AgamaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.6e-beta</version>
+    <version>${PKG_VERSION}</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
     <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
