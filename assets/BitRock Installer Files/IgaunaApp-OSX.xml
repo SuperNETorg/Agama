@@ -1,7 +1,7 @@
 <project>
     <shortName>AgamaApp</shortName>
     <fullName>iguana</fullName>
-    <version>0.1.4-beta</version>
+    <version>0.1.6.0e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
     <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
@@ -140,7 +140,7 @@
         </deleteFile>
         <deleteFile>
             <explanation>Deleting user settngs</explanation>
-            <path>${user_home_directory}/.config/Iguana</path>
+            <path>${user_home_directory}/Library/Application Support/Agama</path>
             <progressText>Deleting user settngs</progressText>
             <ruleList>
                 <compareValues>
@@ -255,7 +255,7 @@
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerDirectory>${installdir}/Agama/</uninstallerDirectory>
-    <uninstallerName>Uninstall-Agama</uninstallerName>
+    <uninstallerName>Uninstall-Agama.app</uninstallerName>
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
         <runProgram>
