@@ -1,6 +1,6 @@
 <project>
     <shortName>AgamaApp</shortName>
-    <fullName>Agama</fullName>
+    <fullName>iguana</fullName>
     <version>0.1.6.1e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
@@ -157,7 +157,7 @@
         </runProgram>
         <deleteFile>
             <explanation>Deleting user data</explanation>
-            <path>${user_home_directory}/.Agama</path>
+            <path>${user_home_directory}/.iguana</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
@@ -181,28 +181,6 @@
             <explanation>Deleting zcache-params</explanation>
             <path>${user_home_directory}/.zcache-params</path>
             <progressText>Deleting zcache-params</progressText>
-            <ruleList>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${previous_installation_exists}</value1>
-                    <value2>1</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${installation_type}</value1>
-                    <value2>uninstall</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${keep_settings_and_userdata}</value1>
-                    <value2>0</value2>
-                </compareValues>
-            </ruleList>
-        </deleteFile>
-        <deleteFile>
-            <explanation>Deleting user settngs</explanation>
-            <path>${user_home_directory}/.config/Agama</path>
-            <progressText>Deleting user settngs</progressText>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>

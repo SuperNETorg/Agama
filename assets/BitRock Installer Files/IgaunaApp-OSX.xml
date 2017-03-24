@@ -1,6 +1,6 @@
 <project>
     <shortName>AgamaApp</shortName>
-    <fullName>Agama</fullName>
+    <fullName>iguana</fullName>
     <version>0.1.6.0e-beta</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
@@ -84,8 +84,8 @@
     </preInstallationActionList>
     <readyToInstallActionList>
         <runProgram>
-            <program>${oldInstalldir}/${uninstallerName}</program>
-            <programArguments></programArguments>
+            <program>open</program>
+            <programArguments>${oldInstalldir}/Agama.app/${uninstallerName}.app</programArguments>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>
@@ -96,7 +96,7 @@
         </runProgram>
         <deleteFile>
             <explanation>Deleting user data</explanation>
-            <path>${user_home_directory}/Library/Application Support/Agama</path>
+            <path>${user_home_directory}/Library/Application Support/Iguana</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
@@ -120,28 +120,6 @@
             <explanation>Deleting ZcashParams</explanation>
             <path>${user_home_directory}/Library/Application Support/ZcashParams/</path>
             <progressText>Deleting ZcashParams</progressText>
-            <ruleList>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${previous_installation_exists}</value1>
-                    <value2>1</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${installation_type}</value1>
-                    <value2>uninstall</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${keep_settings_and_userdata}</value1>
-                    <value2>0</value2>
-                </compareValues>
-            </ruleList>
-        </deleteFile>
-        <deleteFile>
-            <explanation>Deleting user settngs</explanation>
-            <path>${user_home_directory}/Library/Application Support/Agama</path>
-            <progressText>Deleting user settngs</progressText>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>
@@ -254,8 +232,8 @@
     <enableTimestamp>1</enableTimestamp>
     <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
-    <uninstallerDirectory>${installdir}/Agama/</uninstallerDirectory>
-    <uninstallerName>Uninstall-Agama.app</uninstallerName>
+    <uninstallerDirectory>${installdir}/Agama.app/</uninstallerDirectory>
+    <uninstallerName>Uninstall-Agama</uninstallerName>
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
         <runProgram>
