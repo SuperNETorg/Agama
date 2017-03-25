@@ -206,11 +206,6 @@
                 </fileExists>
             </ruleList>
         </showProgressDialog>
-        <changeOwnerAndGroup>
-            <files>${user_home_directory}/Library/Application Support/ZcashParams/</files>
-            <group>staff</group>
-            <owner>$USER</owner>
-        </changeOwnerAndGroup>
     </readyToInstallActionList>
     <postInstallationActionList>
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
