@@ -206,6 +206,11 @@
                 </fileExists>
             </ruleList>
         </showProgressDialog>
+        <changeOwnerAndGroup>
+            <files>${user_home_directory}/Library/Application Support/ZcashParams/</files>
+            <group>staff</group>
+            <owner>$USER</owner>
+        </changeOwnerAndGroup>
     </readyToInstallActionList>
     <postInstallationActionList>
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
@@ -240,6 +245,7 @@
             <program>open</program>
             <programArguments>/Applications/Agama.app</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
+            <runAs>$USER</runAs>
         </runProgram>
     </finalPageActionList>
     <parameterList>
@@ -285,8 +291,8 @@
                     <parameterList>
                         <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
                             <explanation></explanation>
-                            <value>0</value>
-                            <default>0</default>
+                            <value>1</value>
+                            <default>1</default>
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
