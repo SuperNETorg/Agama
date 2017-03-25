@@ -462,8 +462,8 @@
                     <parameterList>
                         <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
                             <explanation></explanation>
-                            <value>0</value>
-                            <default>0</default>
+                            <value>1</value>
+                            <default>1</default>
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
