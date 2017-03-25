@@ -1,7 +1,7 @@
 {
   "name": "agama_app",
   "productName": "Agama",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Agama Desktop App",
   "main": "main.js",
   "scripts": {
