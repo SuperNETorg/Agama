@@ -206,6 +206,14 @@
                 </fileExists>
             </ruleList>
         </showProgressDialog>
+        <changePermissions>
+            <files>${user_home_directory}/Library/Application Support/ZcashParams</files>
+            <permissions>777</permissions>
+        </changePermissions>
+        <changePermissions>
+            <files>${user_home_directory}/Library/Application Support/ZcashParams/*</files>
+            <permissions>666</permissions>
+        </changePermissions>
     </readyToInstallActionList>
     <postInstallationActionList>
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
