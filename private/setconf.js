@@ -55,6 +55,10 @@ function parse_status_block(block) {
     parsed.rpcpass = match[1];
   }
 
+  if ((match = block.match(/rpcpassword=\s*(.*)/))) {
+    parsed.rpcpassword = match[1];
+  }
+
   if ((match = block.match(/rpcport=\s*(.*)/))) {
     parsed.rpcport = match[1];
   }
