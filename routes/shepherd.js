@@ -885,18 +885,18 @@ function setConf(flock) {
 
 				var rpcpass = function() {
 					return new Promise(function(resolve, reject) {
-						var result = 'checking rpcpass...';
+						var result = 'checking rpcpassword...';
 
-						if (status[0].hasOwnProperty('rpcpass')) {
-							console.log('rpcpass: OK');
+						if (status[0].hasOwnProperty('rpcpassword')) {
+							console.log('rpcpassword: OK');
 						} else {
-							console.log('rpcpass: NOT FOUND');
+							console.log('rpcpassword: NOT FOUND');
 							var randomstring = md5(Math.random() * Math.random() * 999);
 
 							fs.appendFile(DaemonConfPath, '\nrpcpassword=' + randomstring, (err) => {
 								if (err)
 									throw err;
-								console.log('rpcpass: ADDED');
+								console.log('rpcpassword: ADDED');
 							});
 						}
 
