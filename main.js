@@ -25,7 +25,7 @@ var express = require('express'),
 Promise = require('bluebird');
 
 app.setName('Agama');
-app.setVersion('0.1.6.0e-beta');
+app.setVersion('0.1.6.1e-beta');
 
 if (os.platform() === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
