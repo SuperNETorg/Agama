@@ -388,8 +388,8 @@
                         </booleanParameter>
                         <booleanParameter name="delete_zcash_params" description="Delete Zcash params" displayStyle="checkbox-left">
                             <explanation></explanation>
-                            <value>1</value>
-                            <default>1</default>
+                            <value>0</value>
+                            <default>0</default>
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
