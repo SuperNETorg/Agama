@@ -17,7 +17,7 @@ $(document).ready(function() {
 
   var portcheck;
 
-  function sartcheck() {
+  function startcheck() {
     portcheck = setInterval(function(){
       Iguana_activehandle().then(function(result){
         console.log(result);
@@ -37,5 +37,5 @@ $(document).ready(function() {
     clearInterval(portcheck);
   }
 
-  sartcheck();
+  startcheck();
 });

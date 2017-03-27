@@ -561,7 +561,14 @@ cache.one = function(req, res, next) {
           getAddresses(coin);
         }
       } else {
-        callStack[coin] = callStack[coin] + (coin === 'BTC' ? callsArray.length : callsArray.length - 2);
+        var callsArrayBTC = callsArray.length; // restrict BTC and SYS only to listunspent and listtransactions calls
+        if (callsArray.indexOf('getbalance') > - 1) {
+          callsArrayBTC--;
+        }
+        if (callsArray.indexOf('refresh') > - 1) {
+          callsArrayBTC--;
+        }        
+        callStack[coin] = callStack[coin] + (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
         console.log(coin + ' stack len ' + callStack[coin]);
 
         execDEXRequests(coin, address);
