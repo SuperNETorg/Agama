@@ -11,9 +11,9 @@ $(document).ready(function() {
 
   $('#loading_status_text').text('Starting Iguana daemon...');
 
-  //if (appConf && !appConf.manualIguanaStart) {
+  if (appConf && !appConf.manualIguanaStart) {
     StartIguana();
-  //}
+  }
 
   var portcheck;
 

@@ -4,6 +4,7 @@ function IguanaAJAX(url, ajax_data) {
     url: url,
     type: 'POST',
     dataType: 'json',
+    timeout: 120000
     //beforeSend: showLoadingImgFn
   })
   .fail(function(xhr, textStatus, error) {
