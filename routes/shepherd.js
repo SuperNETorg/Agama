@@ -87,6 +87,49 @@ shepherd.appConfig = {
   }
 };
 
+shepherd.loadLocalConfig = function() {
+  if (fs.existsSync(iguanaDir + '/config.json')) {
+    var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
+    console.log('app config set from local file');
+
+    // find diff between local and hardcoded configs
+    // append diff to local config
+    var compareJSON = function(obj1, obj2) {
+      var result = {};
+
+      for (var i in obj1) {
+        if (!obj2.hasOwnProperty(i)) {
+          result[i] = obj1[i];
+        }
+      }
+
+      return result;
+    };
+
+    var compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
+    if (Object.keys(compareConfigs).length) {
+      var newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
+
+      console.log('config diff is found, updating local config');
+      console.log('config diff:');
+      console.log(compareConfigs);
+
+      shepherd.saveLocalAppConf(newConfig);
+      return newConfig;
+    } else {
+      return JSON.parse(localAppConfig);
+    }
+
+  } else {
+    console.log('local config file is not found!');
+    shepherd.saveLocalAppConf(shepherd.appConfig);
+
+    return shepherd.appConfig;
+  }
+};
+
+shepherd.appConfig = shepherd.loadLocalConfig();
+
 console.log('iguana dir: ' + iguanaDir);
 console.log('iguana bin: ' + iguanaBin);
 console.log('--------------------------')
@@ -114,7 +157,7 @@ var mock = require('./mock');
 // expose sockets obj
 shepherd.setIO = function(io) {
 	shepherd.io = io;
-	cache.setVar('io', io);	
+	cache.setVar('io', io);
 };
 
 cache.setVar('iguanaDir', iguanaDir);
@@ -149,7 +192,7 @@ shepherd.delete('/groom', function(req, res, next) {
  *  params: filename, payload
  */
 shepherd.post('/groom', function(req, res) {
-	cache.groomPost(req, res, next);	
+	cache.groomPost(req, res, next);
 });
 
 /*
@@ -465,47 +508,6 @@ shepherd.get('/kick', function(req, res, next) {
   }
 });
 
-shepherd.loadLocalConfig = function() {
-  if (fs.existsSync(iguanaDir + '/config.json')) {
-    var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
-    console.log('app config set from local file');
-
-    // find diff between local and hardcoded configs
-    // append diff to local config
-    var compareJSON = function(obj1, obj2) {
-      var result = {};
-
-      for (var i in obj1) {
-        if (!obj2.hasOwnProperty(i)) {
-          result[i] = obj1[i];
-        }
-      }
-
-      return result;
-    };
-
-    var compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-    if (Object.keys(compareConfigs).length) {
-      var newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
-
-      console.log('config diff is found, updating local config');
-      console.log('config diff:');
-      console.log(compareConfigs);
-
-      shepherd.saveLocalAppConf(newConfig);
-      return newConfig;
-    } else {
-      return JSON.parse(localAppConfig);
-    }
-
-  } else {
-    console.log('local config file is not found!');
-    shepherd.saveLocalAppConf(shepherd.appConfig);
-
-    return shepherd.appConfig;
-  }
-};
-
 shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
     function(resolve, reject) {
@@ -609,10 +611,12 @@ function herder(flock, data) {
         process.exit(2);
       }
 
+      console.log('iguana core port ' + shepherd.appConfig.iguanaCorePort);
       pm2.start({
         script: iguanaBin, // path to binary
         name: 'IGUANA',
         exec_mode : 'fork',
+        args: ['-port=' + shepherd.appConfig.iguanaCorePort],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         pm2.disconnect(); // Disconnect from PM2

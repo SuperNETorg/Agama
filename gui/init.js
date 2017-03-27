@@ -11,13 +11,13 @@ $(document).ready(function() {
 
   $('#loading_status_text').text('Starting Iguana daemon...');
 
-  if (appConf && !appConf.manualIguanaStart) {
+  //if (appConf && !appConf.manualIguanaStart) {
     StartIguana();
-  }
+  //}
 
   var portcheck;
 
-  function sartcheck() {
+  function startcheck() {
     portcheck = setInterval(function(){
       Iguana_activehandle().then(function(result){
         console.log(result);
@@ -37,5 +37,5 @@ $(document).ready(function() {
     clearInterval(portcheck);
   }
 
-  sartcheck();
+  startcheck();
 });

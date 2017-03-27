@@ -17,7 +17,7 @@ function Iguana_activehandle(callback) {
           'agent': 'SuperNET',
           'method': 'activehandle'
         },
-        AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+        AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
           //console.log(AjaxOutputData.responseText);
           AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
           //console.log(AjaxOutputData);
@@ -31,7 +31,7 @@ function Iguana_activehandle(callback) {
           console.log(textStatus);
           console.log(error);
         });
-  });  
+  });
 }
 //Iguana_activehandle().then(function(result){
     //console.log(result)
@@ -95,7 +95,7 @@ function EDEX_DEXnotarychains() {
       'agent': 'dpow',
       'method': 'notarychains'
     },
-    AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+    AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
       //console.log(AjaxOutputData.responseText);
       AjaxOutputData = JSON.parse(AjaxOutputData.responseText);
       //console.log(AjaxOutputData);
@@ -124,7 +124,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
           'method': 'notarychains'
         },
         tmp_index = 0,
-        get_dex_notarychains = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+        get_dex_notarychains = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
           get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText);
           if (minNotaries > get_dex_notarychains.length) { // if config value exceeds total num of notaries
             minNotaries = get_dex_notarychains.length;
@@ -144,7 +144,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
             console.log(ajax_data);
 
             if (coin_value !== 'MESH' || coin_value !== 'CEAL') {
-              var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+              var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
                 getinfo_each_chain = JSON.parse(getinfo_each_chain.responseText);
                 console.log(getinfo_each_chain);
 
