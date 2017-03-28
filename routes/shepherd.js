@@ -84,7 +84,8 @@ shepherd.appConfig = {
   "maxDescriptors": {
     "darwin": 90000,
     "linux": 1000000
-  }
+  },
+  "killIguanaOnStart": false
 };
 
 shepherd.saveLocalAppConf = function(appSettings) {
