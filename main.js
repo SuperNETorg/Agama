@@ -37,6 +37,30 @@ var shepherd = require('./routes/shepherd'),
 		guiapp = express(),
 		appConfig = shepherd.loadLocalConfig(); // load app config
 
+if (appConfig.killIguanaOnStart) {
+	var iguanaGrep;
+	if (os.platform() === 'darwin') {
+		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}')";
+	}
+	if (os.platform() === 'linux') {
+		iguanaGrep = 'ps -p $(pidof iguana)';
+	}
+	exec(iguanaGrep, function(error, stdout, stderr) {
+		if (stdout.indexOf('iguana') > -1) {
+			console.log('found another iguana process(es)');
+			exec('pkill iguana', function(error, stdout, stderr) {
+				console.log('pkill iguana is issued');
+			  if (error !== null) {
+			    console.log('pkill iguana exec error: ' + error)
+			  };
+			});
+		}
+	  if (error !== null) {
+	    console.log('ps -p $(pidof iguana) exec error: ' + error)
+	  };
+	});
+}
+
 guiapp.use(function(req, res, next) {
 	res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:' + appConfig.iguanaAppPort);
 	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
@@ -217,11 +241,8 @@ function createLoadingWindow() {
       /* the user only tried to close the window */
       closeAppAfterLoading = true;
       e.preventDefault();
-      console.log('lwindow' + loadingWindow);
-      if (loadingWindow)
-      	loadingWindow.hide();
     }
-  });	
+  });
 
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
 	/*if (os.platform() === 'win32') {
@@ -250,9 +271,9 @@ function createWindow (status) {
 		require(path.join(__dirname, 'private/mainmenu'));
 
 		// initialise window
-		mainWindow = new BrowserWindow({
-			width: 1280,
-			height: 800,
+		mainWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
+			width: closeAppAfterLoading ? 1 : 1280,
+			height: closeAppAfterLoading ? 1 : 800,
 			icon: iguanaIcon
 		});
 
@@ -366,7 +387,7 @@ function createWindow (status) {
 				return KillPm2();
 			})
 			.then(HideMainWindow)
-			.then(QuitApp);			
+			.then(QuitApp);
 		}
 
 		// if window closed we kill iguana proc
@@ -396,10 +417,10 @@ app.on('before-quit', function (event) {
 	console.log('before-quit');
 	if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
 		//loading window is still open
-		if (os.platform() === 'darwin') {
+		if (os.platform() === 'darwin' || os.platform() === 'linux') {
+			closeAppAfterLoading = true;
 	    let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
 	    loadingWindow.webContents.executeJavaScript(code);
-			closeAppAfterLoading = true;
 		}
 		console.log('before-quit prevented');
 		event.preventDefault();
