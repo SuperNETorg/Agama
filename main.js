@@ -217,6 +217,7 @@ function createLoadingWindow() {
       /* the user only tried to close the window */
       closeAppAfterLoading = true;
       e.preventDefault();
+      console.log('lwindow' + loadingWindow);
       if (loadingWindow)
       	loadingWindow.hide();
     }
@@ -395,6 +396,11 @@ app.on('before-quit', function (event) {
 	console.log('before-quit');
 	if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
 		//loading window is still open
+		if (os.platform() === 'darwin') {
+	    let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
+	    loadingWindow.webContents.executeJavaScript(code);
+			closeAppAfterLoading = true;
+		}
 		console.log('before-quit prevented');
 		event.preventDefault();
 	}
