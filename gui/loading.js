@@ -1,10 +1,10 @@
-function IguanaAJAX(url, ajax_data) {
+function IguanaAJAX(url, ajax_data, timeout) {
   return $.ajax({
     data: JSON.stringify(ajax_data),
     url: url,
     type: 'POST',
     dataType: 'json',
-    timeout: 120000
+    timeout: timeout ? timeout : 120000
     //beforeSend: showLoadingImgFn
   })
   .fail(function(xhr, textStatus, error) {
@@ -125,7 +125,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
           'method': 'notarychains'
         },
         tmp_index = 0,
-        get_dex_notarychains = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
+        get_dex_notarychains = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data, 10000).done(function(data) {
           get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText);
           if (minNotaries > get_dex_notarychains.length) { // if config value exceeds total num of notaries
             minNotaries = get_dex_notarychains.length;
