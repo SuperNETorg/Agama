@@ -180,6 +180,8 @@ fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
 
 let mainWindow;
 let loadingWindow;
+let willQuitApp = false;
+let closeAppAfterLoading = false;
 
 function createLoadingWindow() {
 	mainWindow = null;
@@ -206,6 +208,18 @@ function createLoadingWindow() {
 		// putting them into an window_arr
 		loadingWindow = null;
 	});
+
+  loadingWindow.on('close', (e) => {
+    if (willQuitApp) {
+      /* the user tried to quit the app */
+      loadingWindow = null;
+    } else {
+      /* the user only tried to close the window */
+      closeAppAfterLoading = true;
+      e.preventDefault();
+      loadingWindow.hide();
+    }
+  });	
 
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
 	/*if (os.platform() === 'win32') {
@@ -239,6 +253,12 @@ function createWindow (status) {
 			height: 800,
 			icon: iguanaIcon
 		});
+
+		if (closeAppAfterLoading) {
+			mainWindow = null;
+			loadingWindow = null;
+			pm2Exit();
+		}
 
 		const staticMenu = Menu.buildFromTemplate([ //if static
 			{ role: 'copy' },
@@ -277,8 +297,7 @@ function createWindow (status) {
 		// DEVTOOLS - only for dev purposes - ca333
 		//mainWindow.webContents.openDevTools()
 
-		// if window closed we kill iguana proc
-		mainWindow.on('closed', function () {
+		function pm2Exit() {
 			var ConnectToPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Closing Main Window...');
@@ -345,7 +364,12 @@ function createWindow (status) {
 				return KillPm2();
 			})
 			.then(HideMainWindow)
-			.then(QuitApp);
+			.then(QuitApp);			
+		}
+
+		// if window closed we kill iguana proc
+		mainWindow.on('closed', function () {
+			pm2Exit();
 		});
 	}
 }
@@ -367,6 +391,7 @@ app.on('window-all-closed', function () {
 //Emitted before the application starts closing its windows.
 //Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function (event) {
+	console.log('before-quit');
 	if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
 		//loading window is still open
 		console.log('before-quit prevented');
