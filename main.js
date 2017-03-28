@@ -217,7 +217,8 @@ function createLoadingWindow() {
       /* the user only tried to close the window */
       closeAppAfterLoading = true;
       e.preventDefault();
-      loadingWindow.hide();
+      if (loadingWindow)
+      	loadingWindow.hide();
     }
   });	
 
