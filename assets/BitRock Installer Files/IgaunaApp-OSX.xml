@@ -303,8 +303,8 @@
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
-                <labelParameter name="reinstall" description="Re-install current version">
-                    <title>Re-install</title>
+                <labelParameter name="reinstall" description="Upgrade current version">
+                    <title>Upgrade</title>
                     <explanation></explanation>
                     <image></image>
                 </labelParameter>
