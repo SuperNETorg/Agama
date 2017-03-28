@@ -38,7 +38,14 @@ var shepherd = require('./routes/shepherd'),
 		appConfig = shepherd.loadLocalConfig(); // load app config
 
 if (appConfig.killIguanaOnStart) {
-	exec('ps -p $(pidof iguana)', function(error, stdout, stderr) {
+	var iguanaGrep;
+	if (os.platform() === 'darwin') {
+		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}')";
+	}
+	if (os.platform() === 'linux') {
+		iguanaGrep = 'ps -p $(pidof iguana)';
+	}
+	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			console.log('found another iguana process(es)');
 			exec('pkill iguana', function(error, stdout, stderr) {
