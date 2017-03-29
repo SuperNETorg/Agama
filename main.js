@@ -45,19 +45,25 @@ if (appConfig.killIguanaOnStart) {
 	if (os.platform() === 'linux') {
 		iguanaGrep = 'ps -p $(pidof iguana)';
 	}
+	if (os.platform() === 'win32') {
+		iguanaGrep = 'tasklist';
+	}	
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			console.log('found another iguana process(es)');
-			exec('pkill iguana', function(error, stdout, stderr) {
-				console.log('pkill iguana is issued');
-			  if (error !== null) {
-			    console.log('pkill iguana exec error: ' + error)
-			  };
+			var pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill iguana';
+			
+			exec(pkillCmd, function(error, stdout, stderr) {
+				console.log(pkillCmd + ' is issued');
+				if (error !== null) {
+					console.log(pkillCmd + 'exec error: ' + error);
+				};
 			});
 		}
-	  if (error !== null) {
-	    console.log('ps -p $(pidof iguana) exec error: ' + error)
-	  };
+
+		if (error !== null) {
+			console.log(iguanaGrep + ' exec error: ' + error);
+		};
 	});
 }
 
@@ -83,8 +89,8 @@ process.once('loaded', () => {
 		app.setAboutPanelOptions({
 			applicationName: app.getName(),
 			applicationVersion: app.getVersion(),
-			copyright: "Released under the MIT license",
-			credits: "SuperNET Team"
+			copyright: 'Released under the MIT license',
+			credits: 'SuperNET Team'
 		})
 	}
 	if (os.platform() === 'linux') {
