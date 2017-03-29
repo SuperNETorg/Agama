@@ -21,7 +21,30 @@
  *
  */
 
-var child_process = require('child_process');
+ /*
+ * Agama komodo-cli paths
+ *
+ */
+
+var child_process = require('child_process'),
+    path = require('path'),
+    os = require('os');
+
+if (os.platform() === 'darwin') {
+  var komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
+      zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli';
+}
+
+if (os.platform() === 'linux') {
+  var komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli');
+}
+
+if (os.platform() === 'win32') {
+  var komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
+      komodocliBin = path.normalize(komodocliBin);
+}
+
+console.log(komodocliBin)
 
 /**
  * The **komodo-cli** command is used to get komodo api calls answer.
@@ -46,7 +69,7 @@ var kmdcli = module.exports = {
  */
 function parse_kmdcli_commands(callback) {
   return function(error, stdout, stderr) {
-    if (error) callback(error, parse_status_block(stderr.trim()));
+    if (error) callback(error, stderr);
     else callback(error, stdout);
     //console.log(stdout)
   };
@@ -95,9 +118,9 @@ function parse_kmdcli_commands(callback) {
  * }
  * 
  */
-function command(interface, callback) {
+function command(kmd_command, callback) {
   if (callback) {
-    return this.exec("./komodo-cli " + interface,
+    return this.exec(komodocliBin + " " + kmd_command,
       parse_kmdcli_commands(callback));  
   }
 }
