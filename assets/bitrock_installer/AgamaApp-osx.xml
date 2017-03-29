@@ -1,6 +1,6 @@
 <project>
     <shortName>AgamaApp</shortName>
-    <fullName>iguana</fullName>
+    <fullName>Agama</fullName>
     <version>${PKG_VERSION}</version>
     <licenseFile>../../LICENSE</licenseFile>
     <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
@@ -85,7 +85,7 @@
     <readyToInstallActionList>
         <runProgram>
             <program>open</program>
-            <programArguments>${oldInstalldir}/Agama.app/${uninstallerName}.app</programArguments>
+            <programArguments>-W ${oldInstalldir}/Agama.app/${uninstallerName}.app</programArguments>
             <ruleList>
                 <compareValues>
                     <logic>equals</logic>
@@ -111,8 +111,8 @@
                 </compareValues>
                 <compareValues>
                     <logic>equals</logic>
-                    <value1>${keep_settings_and_userdata}</value1>
-                    <value2>0</value2>
+                    <value1>${delete_user_data}</value1>
+                    <value2>1</value2>
                 </compareValues>
             </ruleList>
         </deleteFile>
@@ -133,8 +133,8 @@
                 </compareValues>
                 <compareValues>
                     <logic>equals</logic>
-                    <value1>${keep_settings_and_userdata}</value1>
-                    <value2>0</value2>
+                    <value1>${delete_zcash_params}</value1>
+                    <value2>1</value2>
                 </compareValues>
             </ruleList>
         </deleteFile>
@@ -206,6 +206,14 @@
                 </fileExists>
             </ruleList>
         </showProgressDialog>
+        <changePermissions>
+            <files>${user_home_directory}/Library/Application Support/ZcashParams</files>
+            <permissions>777</permissions>
+        </changePermissions>
+        <changePermissions>
+            <files>${user_home_directory}/Library/Application Support/ZcashParams/*</files>
+            <permissions>666</permissions>
+        </changePermissions>
     </readyToInstallActionList>
     <postInstallationActionList>
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
@@ -240,6 +248,7 @@
             <program>open</program>
             <programArguments>/Applications/Agama.app</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
+            <runAs>$USER</runAs>
         </runProgram>
     </finalPageActionList>
     <parameterList>
@@ -283,10 +292,15 @@
                     <value></value>
                     <default></default>
                     <parameterList>
-                        <booleanParameter name="keep_settings_and_userdata" description="Keep setting and user data" displayStyle="checkbox-left">
+                        <booleanParameter name="delete_user_data" description="Delete user data" displayStyle="checkbox-left">
                             <explanation></explanation>
-                            <value>1</value>
-                            <default>1</default>
+                            <value>0</value>
+                            <default>0</default>
+                        </booleanParameter>
+                        <booleanParameter name="delete_zcash_params" description="Delete Zcash params" displayStyle="checkbox-left">
+                            <explanation></explanation>
+                            <value>0</value>
+                            <default>0</default>
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
