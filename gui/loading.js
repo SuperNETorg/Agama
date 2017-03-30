@@ -18,13 +18,15 @@ function Iguana_activehandle(callback) {
           'agent': 'SuperNET',
           'method': 'activehandle'
         },
-        AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
+        AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+          //$('#loading_status_text').text('Retrieving active handle...');
           //console.log(AjaxOutputData.responseText);
           AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
           //console.log(AjaxOutputData);
           resolve(AjaxOutputData);
         })
         .fail(function(xhr, textStatus, error) {
+         // $('#loading_status_text').text('Retrieving active handle error!');
           // handle request failures
           console.log(xhr.statusText);
           if ( xhr.readyState == 0 ) {
@@ -63,7 +65,7 @@ function StartIguana() {
   });
 }
 
-function GetAppConf() { // get iguana app conf
+function GetAppConf(cb) { // get iguana app conf
   var ajax_data = { 'herd': 'iguana' },
       data = false;
 
@@ -77,6 +79,7 @@ function GetAppConf() { // get iguana app conf
     console.log('== App Conf Data OutPut ==');
     console.log(_data);
     data = _data;
+    cb.call(this, data);
   })
   .fail(function(xhr, textStatus, error) {
     // handle request failures
@@ -85,6 +88,7 @@ function GetAppConf() { // get iguana app conf
     }
     console.log(textStatus);
     console.log(error);
+    cb.call(this, data);
   });
 
   return data;
