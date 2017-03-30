@@ -22,6 +22,7 @@ Promise = require('bluebird');
 const fixPath = require('fix-path');
 var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
+    kmdcli = require('../private/kmdcli.js'),
     shepherd = express.Router();
 
 // IGUANA FILES AND CONFIG SETTINGS
@@ -318,6 +319,42 @@ shepherd.post('/herd', function(req, res) {
 
   res.end(JSON.stringify(obj));
 });
+
+
+ /*
+ * 
+ *  ajax_data = { 'command': 'getinfo' };
+ * 
+ * console.log(ajax_data);
+ * $.ajax({
+ *   async: false,
+ *   type: 'POST',
+ *   data: JSON.stringify(ajax_data),
+ *   url: 'http://127.0.0.1:17777/shepherd/kmdcli',
+ *   contentType: 'application/json', // send as JSON
+ *   success: function(data, textStatus, jqXHR) {
+ *     var AjaxOutputData = JSON.parse(data);
+ *     console.log(AjaxOutputData);
+ *   },
+ *   error: function(xhr, textStatus, error) {
+ *     console.log(xhr.statusText);
+ *     console.log(textStatus);
+ *     console.log(error);
+ *   }
+ * });
+ * 
+ */
+/*shepherd.post('/kmdcli', function(req, res) {
+  console.log('======= req.body =======');
+  //console.log(req);
+  console.log(req.body);
+  console.log(req.body.command);
+
+  kmdcli.command(req.body.command, function(err, command) {
+    console.log(command);
+    res.end(JSON.stringify(command));
+  });
+});*/
 
 /*
  *  type: POST
