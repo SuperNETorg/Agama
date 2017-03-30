@@ -68,7 +68,7 @@ if (appConfig.killIguanaOnStart) {
 }
 
 guiapp.use(function(req, res, next) {
-	res.header('Access-Control-Allow-Origin', 'http://127.0.0.1:' + appConfig.iguanaAppPort);
+	res.header('Access-Control-Allow-Origin', '*'/*'http://127.0.0.1:' + appConfig.iguanaAppPort*/);
 	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
 	res.header('Access-Control-Allow-Credentials', 'true');
 	res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -111,18 +111,6 @@ guiapp.get('/', function (req, res) {
 var guipath = path.join(__dirname, '/gui');
 guiapp.use('/gui', express.static(guipath));
 guiapp.use('/shepherd', shepherd);
-
-/*if (cluster.isMaster && process.env.NODE_ENV !== "development") {
-	for (var i = 0; i < numCPUs; i++) {
-			cluster.fork();
-	}
-}
-console.log(cluster)
-*/
-
-/*var rungui = guiapp.listen(appConfig.iguanaAppPort, function () {
-	console.log('guiapp listening on port ' + appConfig.iguanaAppPort + '!');
-});*/
 
 var server = require('http').createServer(guiapp),
 		io = require('socket.io').listen(server);
@@ -403,12 +391,8 @@ function createWindow (status) {
 	}
 }
 
-//app.on('ready', function() {
-	//createLoadingWindow
-//})
-
 app.on('window-all-closed', function () {
-		//if (os.platform() !== 'win32') { ig.kill(); }
+	//if (os.platform() !== 'win32') { ig.kill(); }
 	// in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
 	// so we do not kill the app --> for the case user clicks again on the iguana icon
 	// we open just a new window and respawn iguana proc
@@ -417,34 +401,32 @@ app.on('window-all-closed', function () {
 	}*/
 })
 
-//Emitted before the application starts closing its windows.
-//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
+// Emitted before the application starts closing its windows.
+// Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function (event) {
 	console.log('before-quit');
-	if (mainWindow === null && loadingWindow != null) { //mainWindow not intitialised and loadingWindow not dereferenced
-		//loading window is still open
-		if (os.platform() === 'darwin' || os.platform() === 'linux') {
-			closeAppAfterLoading = true;
-	    let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
-	    loadingWindow.webContents.executeJavaScript(code);
-		}
+	if (mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
+		// loading window is still open
 		console.log('before-quit prevented');
+		closeAppAfterLoading = true;
+		let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
+		loadingWindow.webContents.executeJavaScript(code);
 		event.preventDefault();
 	}
 });
 
-//Emitted when all windows have been closed and the application will quit.
-//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
+// Emitted when all windows have been closed and the application will quit.
+// Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('will-quit', function (event) {
 	if (mainWindow === null && loadingWindow != null) {
-		//loading window is still open
+		// loading window is still open
 		console.log('will-quit while loading window active');
 		event.preventDefault();
 	}
 });
 
-//Emitted when the application is quitting.
-//Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
+// Emitted when the application is quitting.
+// Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', function (event) {
 	if (mainWindow === null && loadingWindow != null) {
 		console.log('quit while loading window active');
@@ -454,6 +436,6 @@ app.on('quit', function (event) {
 
 app.on('activate', function () {
 	if (mainWindow === null) {
-		//createWindow('open');
+		// createWindow('open');
 	}
 });
