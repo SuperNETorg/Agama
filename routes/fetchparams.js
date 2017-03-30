@@ -33,8 +33,6 @@ if (os.platform() === 'linux') {
   var PARAMS_DIR = process.env.HOME + '/.zcash-params';
 }
 
-//PARAMS_DIR="$HOME/Library/Application Support/ZcashParams"
-
 var SPROUT_FILES_DATA = [
   { 
     'file': 'sprout-proving.key',
@@ -46,14 +44,7 @@ var SPROUT_FILES_DATA = [
 ];
 var SPROUT_DL_URL = 'https://z.cash/downloads/';
 
-//console.log(SPROUT_FILES_DATA);
-
 SPROUT_FILES_DATA.forEach(function(value, index) {
-  //console.log(index);
-  //console.log(value);
-  //console.log(value.file);
-  //console.log(value.hash);
-
   fs.exists(value.file, function(exists) {
     if (exists) {
       console.log(value.file + ' already exists at location.');
@@ -94,12 +85,12 @@ SPROUT_FILES_DATA.forEach(function(value, index) {
           })
           .on('end', function () {
             // Do something after request finishes 
-            console.log('download finished.')
+            console.log('download finished.');
             var result = 'File ==> ' + value.file + ': DOWNLOADED';
           })
           .pipe(fs.createWriteStream(value.file));
 
-          console.log(result)
+          console.log(result);
           resolve(result);
         })
       }

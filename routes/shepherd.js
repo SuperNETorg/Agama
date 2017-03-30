@@ -305,10 +305,7 @@ shepherd.post('/debuglog', function(req, res) {
  */
 shepherd.post('/herd', function(req, res) {
   console.log('======= req.body =======');
-  //console.log(req);
   console.log(req.body);
-  //console.log(req.body.herd);
-  //console.log(req.body.options);
 
   herder(req.body.herd, req.body.options);
 
@@ -320,52 +317,12 @@ shepherd.post('/herd', function(req, res) {
   res.end(JSON.stringify(obj));
 });
 
-
- /*
- *
- *  ajax_data = { 'command': 'getinfo' };
- *
- * console.log(ajax_data);
- * $.ajax({
- *   async: false,
- *   type: 'POST',
- *   data: JSON.stringify(ajax_data),
- *   url: 'http://127.0.0.1:17777/shepherd/kmdcli',
- *   contentType: 'application/json', // send as JSON
- *   success: function(data, textStatus, jqXHR) {
- *     var AjaxOutputData = JSON.parse(data);
- *     console.log(AjaxOutputData);
- *   },
- *   error: function(xhr, textStatus, error) {
- *     console.log(xhr.statusText);
- *     console.log(textStatus);
- *     console.log(error);
- *   }
- * });
- *
- */
-/*shepherd.post('/kmdcli', function(req, res) {
-  console.log('======= req.body =======');
-  //console.log(req);
-  console.log(req.body);
-  console.log(req.body.command);
-
-  kmdcli.command(req.body.command, function(err, command) {
-    console.log(command);
-    res.end(JSON.stringify(command));
-  });
-});*/
-
 /*
  *  type: POST
  *  params: herdname
  */
 shepherd.post('/herdlist', function(req, res) {
-  //console.log('======= req.body =======');
-  //console.log(req);
-  //console.log(req.body);
   console.log(req.body.herdname);
-  //console.log(req.body.options);
 
   pm2.connect(true, function(err) {
     if (err) throw err; // TODO: proper error handling
@@ -394,9 +351,7 @@ shepherd.post('/herdlist', function(req, res) {
  */
 shepherd.post('/slay', function(req, res) {
   console.log('======= req.body =======');
-  //console.log(req);
   console.log(req.body);
-  //console.log(req.body.slay);
 
   slayer(req.body.slay);
   var obj = {
@@ -412,9 +367,7 @@ shepherd.post('/slay', function(req, res) {
  */
 shepherd.post('/setconf', function(req, res) {
   console.log('======= req.body =======');
-  //console.log(req);
   console.log(req.body);
-  //console.log(req.body.chain);
 
   if (os.platform() === 'win32' && req.body.chain == 'komodod') {
     setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
@@ -435,9 +388,7 @@ shepherd.post('/setconf', function(req, res) {
  */
 shepherd.post('/getconf', function(req, res) {
   console.log('======= req.body =======');
-  //console.log(req);
   console.log(req.body);
-  //console.log(req.body.chain);
 
   var confpath = getConf(req.body.chain);
   console.log('got conf path is:');
@@ -712,7 +663,6 @@ function herder(flock, data) {
           exec_mode : 'fork',
           cwd: komodoDir,
           args: data.ac_options
-          //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
         }, function(err, apps) {
           pm2.disconnect();   // Disconnect from PM2
             if (err)
@@ -741,7 +691,6 @@ function herder(flock, data) {
         exec_mode : 'fork',
         cwd: zcashDir,
         args: data.ac_options
-        //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
       }, function(err, apps) {
         pm2.disconnect();   // Disconnect from PM2
           if (err)
@@ -778,7 +727,6 @@ function slayer(flock) {
   console.log(flock);
 
   pm2.delete(flock, function(err, ret) {
-    //console.log(err);
     pm2.disconnect();
     console.log(ret);
   });
@@ -882,8 +830,6 @@ function setConf(flock) {
       var result = 'CheckConf is done';
 
       setconf.status(DaemonConfPath, function(err, status) {
-        //console.log(status[0]);
-        //console.log(status[0].rpcuser);
         var rpcuser = function() {
           return new Promise(function(resolve, reject) {
             var result = 'checking rpcuser...';
@@ -901,7 +847,6 @@ function setConf(flock) {
               });
             }
 
-            //console.log(result)
             resolve(result);
           });
         }
@@ -923,7 +868,6 @@ function setConf(flock) {
               });
             }
 
-            //console.log(result)
             resolve(result);
           });
         }
@@ -943,7 +887,6 @@ function setConf(flock) {
               });
             }
 
-            //console.log(result)
             resolve(result);
           });
         }
@@ -952,7 +895,7 @@ function setConf(flock) {
           return new Promise(function(resolve, reject) {
             var result = 'checking addnode...';
 
-            if(status[0].hasOwnProperty('addnode')) {
+            if (status[0].hasOwnProperty('addnode')) {
               console.log('addnode: OK');
             } else {
               console.log('addnode: NOT FOUND')
@@ -970,7 +913,6 @@ function setConf(flock) {
               });
             }
 
-            //console.log(result)
             resolve(result);
           });
         }
@@ -980,7 +922,7 @@ function setConf(flock) {
           return rpcpass();
         })
         .then(server)
-        .then(addnode)
+        .then(addnode);
       });
 
       setTimeout(function() {
