@@ -71,7 +71,6 @@ function GetAppConf(cb) { // get iguana app conf
 
   console.log(ajax_data);
   $.ajax({
-    async: false,
     type: 'GET',
     url: 'http://127.0.0.1:17777/shepherd/appconf'
   })
