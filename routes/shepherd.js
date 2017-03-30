@@ -322,9 +322,9 @@ shepherd.post('/herd', function(req, res) {
 
 
  /*
- * 
+ *
  *  ajax_data = { 'command': 'getinfo' };
- * 
+ *
  * console.log(ajax_data);
  * $.ajax({
  *   async: false,
@@ -342,7 +342,7 @@ shepherd.post('/herd', function(req, res) {
  *     console.log(error);
  *   }
  * });
- * 
+ *
  */
 /*shepherd.post('/kmdcli', function(req, res) {
   console.log('======= req.body =======');
@@ -421,7 +421,6 @@ shepherd.post('/setconf', function(req, res) {
   } else {
     setConf(req.body.chain);
   }
-
 
   var obj = {
     'msg': 'success',
@@ -619,9 +618,6 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 };
 
 function herder(flock, data) {
-  //console.log(flock);
-  //console.log(data);
-
   if (data == undefined) {
     data = 'none';
     console.log('it is undefined');
@@ -630,32 +626,6 @@ function herder(flock, data) {
   if (flock === 'iguana') {
     console.log('iguana flock selected...');
     console.log('selected data: ' + data);
-
-    //Make sure iguana isn't running before starting new process, kill it dammit!
-    // A simple pid lookup
-    /*ps.lookup({
-      command: 'iguana',
-      //arguments: '--debug',
-      }, function(err, resultList ) {
-      if (err) {
-        throw new Error( err );
-      }
-      resultList.forEach(function( process ){
-        if( process ){
-          console.log( 'PID: %s, COMMAND: %s, ARGUMENTS: %s', process.pid, process.command, process.arguments );
-          console.log(process.pid);
-          // A simple pid lookup
-          ps.kill( process.pid, function( err ) {
-            if (err) {
-              throw new Error( err );
-            }
-            else {
-              console.log( 'Process %s has been killed!', process.pid );
-            }
-          });
-        }
-      });
-    });*/
 
     // MAKE SURE IGUANA DIR IS THERE FOR USER
     mkdirp(iguanaDir, function(err) {
@@ -711,39 +681,47 @@ function herder(flock, data) {
   }
 
   if (flock === 'komodod') {
-    var kmdDebugLogLocation = komodoDir + '/debug.log';
+    var kmdDebugLogLocation = ( data.ac_name ? komodoDir + '/' + data.ac_name : komodoDir ) + '/debug.log';
     console.log('komodod flock selected...');
     console.log('selected data: ' + data);
 
     // truncate debug.log
-    _fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
-      if (err) {
-        console.log('error accessing ' + kmdDebugLogLocation);
-      } else {
-        console.log('truncate ' + kmdDebugLogLocation);
-        fs.unlink(kmdDebugLogLocation);
-      }
-    });
-
-    pm2.connect(true, function(err) { // start up pm2 god
-      if (err) {
-        console.error(err);
-        process.exit(2);
-      }
-
-      pm2.start({
-        script: komododBin, // path to binary
-        name: data.ac_name, // REVS, USD, EUR etc.
-        exec_mode : 'fork',
-        cwd: komodoDir,
-        args: data.ac_options
-        //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
-      }, function(err, apps) {
-        pm2.disconnect();   // Disconnect from PM2
-          if (err)
-            throw err;
+    try {
+      _fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
+        if (err) {
+          console.log('error accessing ' + kmdDebugLogLocation);
+        } else {
+          console.log('truncate ' + kmdDebugLogLocation);
+          fs.unlink(kmdDebugLogLocation);
+        }
       });
-    });
+    } catch(e) {
+      console.log('komodod debug.log access err: ' + e);
+    }
+
+    try {
+      pm2.connect(true, function(err) { // start up pm2 god
+        if (err) {
+          console.error(err);
+          process.exit(2);
+        }
+
+        pm2.start({
+          script: komododBin, // path to binary
+          name: data.ac_name, // REVS, USD, EUR etc.
+          exec_mode : 'fork',
+          cwd: komodoDir,
+          args: data.ac_options
+          //args: ["-server", "-ac_name=USD", "-addnode=78.47.196.146"],  //separate the params with commas
+        }, function(err, apps) {
+          pm2.disconnect();   // Disconnect from PM2
+            if (err)
+              throw err;
+        });
+      });
+    } catch(e) {
+      console.log('failed to start komodod err: ' + e);
+    }
   }
 
   if (flock === 'zcashd') {
