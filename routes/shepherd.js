@@ -15,7 +15,8 @@ const electron = require('electron'),
       pm2 = require('pm2'),
       request = require('request'),
       async = require('async'),
-      rimraf = require('rimraf');
+      rimraf = require('rimraf'),
+      portscanner = require('portscanner');
 
 Promise = require('bluebird');
 
@@ -23,6 +24,7 @@ const fixPath = require('fix-path');
 var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
     kmdcli = require('../private/kmdcli.js'),
+    assetChainPorts = require('./ports.js')
     shepherd = express.Router();
 
 // IGUANA FILES AND CONFIG SETTINGS
@@ -650,26 +652,35 @@ function herder(flock, data) {
       console.log('komodod debug.log access err: ' + e);
     }
 
+    // get komodod instance port
+    var _port = assetChainPorts[data.ac_name];
+
     try {
-      pm2.connect(true, function(err) { // start up pm2 god
-        if (err) {
-          console.error(err);
-          process.exit(2);
+      // check if komodod instance is already running
+      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+        // Status is 'open' if currently in use or 'closed' if available 
+        if (status === 'closed') {
+          pm2.connect(true, function(err) { // start up pm2 god
+            if (err) {
+              console.error(err);
+              process.exit(2);
+            }
+
+            pm2.start({
+              script: komododBin, // path to binary
+              name: data.ac_name, // REVS, USD, EUR etc.
+              exec_mode : 'fork',
+              cwd: komodoDir,
+              args: data.ac_options
+            }, function(err, apps) {
+              pm2.disconnect();   // Disconnect from PM2
+                if (err)
+                  throw err;
+            });
+          });          
+        } else {
+          console.log('port ' + _port + ' (' + data.ac_name + ') is already in use');
         }
-
-        data.ac_options.push('-reindex &');
-
-        pm2.start({
-          script: komododBin, // path to binary
-          name: data.ac_name, // REVS, USD, EUR etc.
-          exec_mode : 'fork',
-          cwd: komodoDir,
-          args: data.ac_options
-        }, function(err, apps) {
-          pm2.disconnect();   // Disconnect from PM2
-            if (err)
-              throw err;
-        });
       });
     } catch(e) {
       console.log('failed to start komodod err: ' + e);
