@@ -679,14 +679,18 @@ function herder(flock, data) {
     console.log('selected data: ' + data);
 
     // truncate debug.log
-    _fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
-      if (err) {
-        console.log('error accessing ' + kmdDebugLogLocation);
-      } else {
-        console.log('truncate ' + kmdDebugLogLocation);
-        fs.unlink(kmdDebugLogLocation);
-      }
-    });
+    try {
+      _fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
+        if (err) {
+          console.log('error accessing ' + kmdDebugLogLocation);
+        } else {
+          console.log('truncate ' + kmdDebugLogLocation);
+          fs.unlink(kmdDebugLogLocation);
+        }
+      });
+    } catch(err) {
+      console.log('komodod debug.log access err: ' + err);
+    }
 
     pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
