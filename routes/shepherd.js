@@ -657,6 +657,8 @@ function herder(flock, data) {
           process.exit(2);
         }
 
+        data.ac_options.push('-reindex &');
+
         pm2.start({
           script: komododBin, // path to binary
           name: data.ac_name, // REVS, USD, EUR etc.
