@@ -88,7 +88,8 @@ shepherd.appConfig = {
     "darwin": 90000,
     "linux": 1000000
   },
-  "killIguanaOnStart": false
+  "killIguanaOnStart": false,
+  "dev": false
 };
 
 shepherd.saveLocalAppConf = function(appSettings) {
@@ -658,7 +659,7 @@ function herder(flock, data) {
     try {
       // check if komodod instance is already running
       portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
-        // Status is 'open' if currently in use or 'closed' if available 
+        // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           pm2.connect(true, function(err) { // start up pm2 god
             if (err) {
@@ -677,7 +678,7 @@ function herder(flock, data) {
                 if (err)
                   throw err;
             });
-          });          
+          });
         } else {
           console.log('port ' + _port + ' (' + data.ac_name + ') is already in use');
         }
