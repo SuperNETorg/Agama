@@ -47,12 +47,12 @@ if (appConfig.killIguanaOnStart) {
 	}
 	if (os.platform() === 'win32') {
 		iguanaGrep = 'tasklist';
-	}	
+	}
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			console.log('found another iguana process(es)');
 			var pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill iguana';
-			
+
 			exec(pkillCmd, function(error, stdout, stderr) {
 				console.log(pkillCmd + ' is issued');
 				if (error !== null) {
@@ -68,7 +68,7 @@ if (appConfig.killIguanaOnStart) {
 }
 
 guiapp.use(function(req, res, next) {
-	res.header('Access-Control-Allow-Origin', '*'/*'http://127.0.0.1:' + appConfig.iguanaAppPort*/);
+	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:' + appConfig.iguanaAppPort);
 	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
 	res.header('Access-Control-Allow-Credentials', 'true');
 	res.header('Access-Control-Allow-Headers', 'Content-Type');

@@ -88,7 +88,8 @@ shepherd.appConfig = {
     "darwin": 90000,
     "linux": 1000000
   },
-  "killIguanaOnStart": false
+  "killIguanaOnStart": false,
+  "dev": false
 };
 
 shepherd.saveLocalAppConf = function(appSettings) {
@@ -317,6 +318,23 @@ shepherd.post('/herd', function(req, res) {
   };
 
   res.end(JSON.stringify(obj));
+
+  if (req.body.herd === 'komodod') {
+    var _port = assetChainPorts[req.body.options.ac_name];
+    // check if komodod instance is already running
+    setTimeout(function() {
+      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+        // Status is 'open' if currently in use or 'closed' if available
+        if (status === 'closed') {
+          cache.io.emit('service', {
+            'komodod': {
+              'error': 'start error'
+            }
+          });
+        }
+      });
+    }, 10000);
+  }
 });
 
 /*
@@ -627,8 +645,10 @@ function herder(flock, data) {
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         pm2.disconnect(); // Disconnect from PM2
-          if (err)
+          if (err) {
             throw err;
+            console.log('iguana fork error: ' + err);
+          }
       });
     });
   }
@@ -658,7 +678,7 @@ function herder(flock, data) {
     try {
       // check if komodod instance is already running
       portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
-        // Status is 'open' if currently in use or 'closed' if available 
+        // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           pm2.connect(true, function(err) { // start up pm2 god
             if (err) {
@@ -673,11 +693,11 @@ function herder(flock, data) {
               cwd: komodoDir,
               args: data.ac_options
             }, function(err, apps) {
-              pm2.disconnect();   // Disconnect from PM2
-                if (err)
-                  throw err;
+              pm2.disconnect(); // Disconnect from PM2
+              if (err)
+                throw err;
             });
-          });          
+          });
         } else {
           console.log('port ' + _port + ' (' + data.ac_name + ') is already in use');
         }
@@ -705,9 +725,9 @@ function herder(flock, data) {
         cwd: zcashDir,
         args: data.ac_options
       }, function(err, apps) {
-        pm2.disconnect();   // Disconnect from PM2
-          if (err)
-            throw err;
+        pm2.disconnect(); // Disconnect from PM2
+        if (err)
+          throw err;
       });
     });
   }
@@ -717,18 +737,18 @@ function herder(flock, data) {
     console.log('selected data: ' + data);
 
     pm2.connect(true,function(err) { //start up pm2 god
-    if (err) {
-      console.error(err);
-      process.exit(2);
-    }
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
 
-    pm2.start({
-      script: CorsProxyBin, // path to binary
-      name: 'CORSPROXY',
-      exec_mode : 'fork',
-      cwd: iguanaDir
-    }, function(err, apps) {
-      pm2.disconnect(); // Disconnect from PM2
+      pm2.start({
+        script: CorsProxyBin, // path to binary
+        name: 'CORSPROXY',
+        exec_mode : 'fork',
+        cwd: iguanaDir
+      }, function(err, apps) {
+        pm2.disconnect(); // Disconnect from PM2
         if (err)
           throw err;
       });
