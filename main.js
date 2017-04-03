@@ -40,10 +40,10 @@ var shepherd = require('./routes/shepherd'),
 if (appConfig.killIguanaOnStart) {
 	var iguanaGrep;
 	if (os.platform() === 'darwin') {
-		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}')";
+		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
 	}
 	if (os.platform() === 'linux') {
-		iguanaGrep = 'ps -p $(pidof iguana)';
+		iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
 	}
 	if (os.platform() === 'win32') {
 		iguanaGrep = 'tasklist';
@@ -51,7 +51,7 @@ if (appConfig.killIguanaOnStart) {
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			console.log('found another iguana process(es)');
-			var pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill iguana';
+			var pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -9 iguana';
 
 			exec(pkillCmd, function(error, stdout, stderr) {
 				console.log(pkillCmd + ' is issued');

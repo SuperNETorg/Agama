@@ -80,7 +80,7 @@ shepherd.appConfig = {
   "iguanaGuiOnly": false,
   "manualIguanaStart": false,
   "skipBasiliskNetworkCheck": false,
-  "minNotaries": 50,
+  "minNotaries": 8,
   "host": "127.0.0.1",
   "iguanaAppPort": 17777,
   "iguanaCorePort": 7778,
@@ -88,7 +88,7 @@ shepherd.appConfig = {
     "darwin": 90000,
     "linux": 1000000
   },
-  "killIguanaOnStart": false,
+  "killIguanaOnStart": true,
   "dev": false
 };
 
