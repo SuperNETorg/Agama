@@ -56,7 +56,7 @@ if (appConfig.killIguanaOnStart) {
 			exec(pkillCmd, function(error, stdout, stderr) {
 				console.log(pkillCmd + ' is issued');
 				if (error !== null) {
-					console.log(pkillCmd + 'exec error: ' + error);
+					console.log(pkillCmd + ' exec error: ' + error);
 				};
 			});
 		}
