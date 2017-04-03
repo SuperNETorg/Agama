@@ -178,6 +178,28 @@
             </ruleList>
         </deleteFile>
         <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.config/Agama</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${delete_user_data}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
             <explanation>Deleting zcash params</explanation>
             <path>${user_home_directory}/.zcash-params</path>
             <progressText>Deleting zcash-params</progressText>
@@ -328,10 +350,9 @@
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
         <runProgram>
-            <program>/bin/Agama</program>
+            <program>${user_home_directory}/bin/Agama</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
-            <runAs>$USER</runAs>
         </runProgram>
     </finalPageActionList>
     <parameterList>

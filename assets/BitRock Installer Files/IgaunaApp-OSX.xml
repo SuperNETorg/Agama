@@ -96,7 +96,29 @@
         </runProgram>
         <deleteFile>
             <explanation>Deleting user data</explanation>
-            <path>${user_home_directory}/Library/Application Support/Iguana</path>
+            <path>${user_home_directory}/Library/Application Support/Agama</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${delete_user_data}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/Library/Application Support/iguana</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
