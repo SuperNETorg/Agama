@@ -114,7 +114,7 @@
             <name>previous_installation_exists</name>
             <value>1</value>
             <ruleList>
-                <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+                <fileTest condition="exists" path="${user_home_directory}/.${project.vendor}-${project.shortName}.ini"/>
             </ruleList>
         </setInstallerVariable>
 
@@ -125,7 +125,7 @@
             <actionList>
                 <setInstallerVariable name="${variable}" value=""/>
                 <iniFileGet>
-                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <file>${user_home_directory}/.${project.vendor}-${project.shortName}.ini</file>
                     <key>${name}</key>
                     <section>details</section>
                     <variable>${variable}</variable>
@@ -279,7 +279,7 @@
     <postInstallationActionList>
         <createSymLink>
             <abortOnError>0</abortOnError>
-            <linkName>/bin/Agama</linkName>
+            <linkName>${user_home_directory}/bin/Agama</linkName>
             <target>${installdir}/Agama</target>
         </createSymLink>
         <iniFileSet>
@@ -288,13 +288,8 @@
             <section>Desktop Entry</section>
             <value>Office;</value>
         </iniFileSet>
-        <changeOwnerAndGroup>
-            <files>${user_home_directory}/Desktop/Agama Desktop.desktop</files>
-            <group>users</group>
-            <owner>nobody</owner>
-        </changeOwnerAndGroup>
         <copyFile>
-            <destination>/usr/share/applications/Agama Desktop.desktop</destination>
+            <destination>${user_home_directory}/.local/share/applications/Agama Desktop.desktop</destination>
             <origin>${user_home_directory}/Desktop/Agama Desktop.desktop</origin>
         </copyFile>
 
@@ -304,7 +299,7 @@
             <variables>name variable</variables>
             <actionList>
                 <iniFileSet>
-                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <file>${user_home_directory}/.${project.vendor}-${project.shortName}.ini</file>
                     <key>${name}</key>
                     <section>details</section>
                     <value>${variable}</value>
@@ -314,7 +309,7 @@
                 <platformTest negate="1" type="windows"/>
             </ruleList>
         </foreach>
-        <addFilesToUninstaller files="/etc/${project.vendor}-${project.shortName}.ini"/>
+        <addFilesToUninstaller files="${user_home_directory}/.${project.vendor}-${project.shortName}.ini"/>
     </postInstallationActionList>
     <postUninstallationActionList>
         <deleteFile>
@@ -345,7 +340,7 @@
             <description>Installer.Parameter.installdir.description</description>
             <explanation>Installer.Parameter.installdir.explanation</explanation>
             <value></value>
-            <default>/opt/AgamaApp</default>
+            <default>${user_home_directory}/.AgamaApp</default>
             <allowEmptyValue>0</allowEmptyValue>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
