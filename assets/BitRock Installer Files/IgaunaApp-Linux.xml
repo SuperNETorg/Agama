@@ -110,6 +110,17 @@
         </component>
     </componentList>
     <preInstallationActionList>
+        <setInstallerVariableFromScriptOutput>
+            <exec>xdg-user-dir</exec>
+            <execArgs>DESKTOP</execArgs>
+            <name>desktopDir</name>
+            <ruleList>
+                <programTest>
+                    <condition>is_in_path</condition>
+                    <name>xdg-user-dir</name>
+                </programTest>
+            </ruleList>
+        </setInstallerVariableFromScriptOutput>
         <setInstallerVariable>
             <name>previous_installation_exists</name>
             <value>1</value>
@@ -305,14 +316,14 @@
             <target>${installdir}/Agama</target>
         </createSymLink>
         <iniFileSet>
-            <file>${user_home_directory}/Desktop/Agama Desktop.desktop</file>
+            <file>${desktopDir}/Agama Desktop.desktop</file>
             <key>Categories</key>
             <section>Desktop Entry</section>
             <value>Office;</value>
         </iniFileSet>
         <copyFile>
             <destination>${user_home_directory}/.local/share/applications/Agama Desktop.desktop</destination>
-            <origin>${user_home_directory}/Desktop/Agama Desktop.desktop</origin>
+            <origin>${desktopDir}/Agama Desktop.desktop</origin>
         </copyFile>
 
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
