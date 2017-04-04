@@ -18,7 +18,7 @@ function Iguana_activehandle(callback) {
           'agent': 'SuperNET',
           'method': 'activehandle'
         },
-        AjaxOutputData = IguanaAJAX('http://127.0.0.1:7778', ajax_data).done(function(data) {
+        AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
           //$('#loading_status_text').text('Retrieving active handle...');
           //console.log(AjaxOutputData.responseText);
           AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
