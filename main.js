@@ -20,7 +20,9 @@ var express = require('express'),
 		mkdirp = require('mkdirp'),
 		pm2 = require('pm2'),
 		cluster = require('cluster'),
-		numCPUs = require('os').cpus().length;
+		numCPUs = require('os').cpus().length,
+		kmdcli = require('./private/kmdcli.js'),
+		ipc = require('electron').ipcMain;
 
 Promise = require('bluebird');
 
@@ -238,6 +240,14 @@ function createLoadingWindow() {
     }
   });
 
+ipc.on('invokeAction', function(event, data){
+	//console.log(data);
+	kmdcli.command(data, function(err, command) {
+		//console.log(command);
+		var result = command;
+    	event.sender.send('kmdcliReply', result);
+	});
+});
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
 	/*if (os.platform() === 'win32') {
 		process.chdir(iguanaDir);
