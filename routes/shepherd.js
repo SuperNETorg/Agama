@@ -25,7 +25,8 @@ var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
     kmdcli = require('../private/kmdcli.js'),
     assetChainPorts = require('./ports.js')
-    shepherd = express.Router();
+    shepherd = express.Router(),
+    iguanaInstanceRegistry = {};
 
 // IGUANA FILES AND CONFIG SETTINGS
 var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
@@ -213,6 +214,61 @@ shepherd.setIO = function(io) {
 
 cache.setVar('iguanaDir', iguanaDir);
 cache.setVar('appConfig', shepherd.appConfig);
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/forks', function(req, res, next) {
+  var successObj = {
+    'msg': 'success',
+    'result': iguanaInstanceRegistry
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+/*
+ *  type: POST
+ *  params: name
+ */
+shepherd.post('/forks', function(req, res, next) {
+  const name = req.body.name;
+        port = shepherd.appConfig.iguanaCorePort;
+
+  portscanner.findAPortNotInUse(port, port + 100, '127.0.0.1', function(error, _port) {
+    pm2.connect(true, function(err) { //start up pm2 god
+      if (err) {
+        console.error(err);
+        process.exit(2);
+      }
+
+      console.log('iguana core fork port ' + _port);
+      pm2.start({
+        script: iguanaBin, // path to binary
+        name: 'IGUANA ' + _port + ' ' + name,
+        exec_mode : 'fork',
+        args: ['-port=' + _port],
+        cwd: iguanaDir //set correct iguana directory
+      }, function(err, apps) {
+        iguanaInstanceRegistry[_port] = name;
+
+        var successObj = {
+          'msg': 'success',
+          'result': port
+        };
+
+        res.end(JSON.stringify(successObj));
+
+        pm2.disconnect(); // Disconnect from PM2
+          if (err) {
+            throw err;
+            console.log('iguana fork error: ' + err);
+          }
+      });
+    });
+  });
+});
 
 /*
  *  type: GET
@@ -644,6 +700,7 @@ function herder(flock, data) {
         args: ['-port=' + shepherd.appConfig.iguanaCorePort],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
+        iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = 'main';
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
             throw err;
