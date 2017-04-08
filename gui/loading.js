@@ -74,7 +74,9 @@ function StartIguana_Cache() {
       contentType: 'application/json', // send as JSON
     })
   start_iguana_cache.done(function(data) {
-    console.log(data);
+    _data = JSON.parse(data);
+    console.log(_data.result);
+    sessionStorage.setItem('IguanaCachePort', _data.result);
   });
 }
 
