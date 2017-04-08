@@ -199,11 +199,12 @@ cache.one = function(req, res, next) {
     var sessionKey = req.query.userpass,
         coin = req.query.coin,
         address = req.query.address,
+        addresses = req.query.addresses && req.query.addresses.indexOf(':') > -1 ? req.query.addresses.split(':') : null,
         pubkey = req.query.pubkey,
         mock = req.query.mock,
         skipTimeout = req.query.skip,
         callsArray = req.query.calls.split(':'),
-        iguanaCorePort = req.query.port || cache.appConfig.iguanaCorePort,
+        iguanaCorePort = req.query.port ? req.query.port : cache.appConfig.iguanaCorePort,
         errorObj = {
           'msg': 'error',
           'result': 'error'
@@ -259,7 +260,7 @@ cache.one = function(req, res, next) {
 
     callStack[coin] = 1;
     console.log(callsArray);
-    console.log('iguana core port ' + req.query.port);
+    console.log('iguana core port ' + iguanaCorePort);
 
     if (!sessionKey) {
       var errorObj = {
@@ -443,48 +444,56 @@ cache.one = function(req, res, next) {
         });
       }
 
-      function getAddresses(coin) {
-        var tempUrl = 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
-        request({
-          url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
-          method: 'GET'
-        }, function (error, response, body) {
-          if (response && response.statusCode && response.statusCode === 200) {
-            cache.io.emit('messages', {
-              'message': {
-                'shepherd': {
-                  'method': 'cache-one',
-                  'status': 'in progress',
-                  'iguanaAPI': {
-                    'method': 'getaddressesbyaccount',
-                    'coin': coin,
-                    'status': 'done',
-                    'resp': body
-                  }
-                }
+      function parseAddresses(coin, addrArray) {
+        cache.io.emit('messages', {
+          'message': {
+            'shepherd': {
+              'method': 'cache-one',
+              'status': 'in progress',
+              'iguanaAPI': {
+                'method': 'getaddressesbyaccount',
+                'coin': coin,
+                'status': 'done',
+                'resp': addrArray
               }
-            });
-            outObj.basilisk[coin].addresses = JSON.parse(body).result;
-            console.log(JSON.parse(body).result);
-            writeCache();
-            var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
-            var callsArrayBTC = callsArray.length;
-            if (callsArray.indexOf('getbalance') > - 1) {
-              callsArrayBTC--;
             }
-            if (callsArray.indexOf('refresh') > - 1) {
-              callsArrayBTC--;
-            }
-            callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
-            console.log(coin + ' stack len ' + callStack[coin]);
-
-            async.each(outObj.basilisk[coin].addresses, function(address) {
-              execDEXRequests(address, coin);
-            });
-          } else {
-            // TODO: error
           }
         });
+        outObj.basilisk[coin].addresses = addrArray;
+        console.log(addrArray);
+        writeCache();
+        var addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
+        var callsArrayBTC = callsArray.length;
+        if (callsArray.indexOf('getbalance') > - 1) {
+          callsArrayBTC--;
+        }
+        if (callsArray.indexOf('refresh') > - 1) {
+          callsArrayBTC--;
+        }
+        callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
+        console.log(coin + ' stack len ' + callStack[coin]);
+
+        async.each(outObj.basilisk[coin].addresses, function(address) {
+          execDEXRequests(address, coin);
+        });
+      }
+
+      function getAddresses(coin) {
+        if (addresses) {
+          parseAddresses(coin, addresses);
+        } else {
+          var tempUrl = 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
+          request({
+            url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
+            method: 'GET'
+          }, function (error, response, body) {
+            if (response && response.statusCode && response.statusCode === 200) {
+              parseAddresses(coin, JSON.parse(body).result);
+            } else {
+              // TODO: error
+            }
+          });
+        }
       }
 
       // update all available coin addresses
