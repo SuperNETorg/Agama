@@ -203,6 +203,7 @@ cache.one = function(req, res, next) {
         mock = req.query.mock,
         skipTimeout = req.query.skip,
         callsArray = req.query.calls.split(':'),
+        iguanaCorePort = req.query.port || cache.appConfig.iguanaCorePort,
         errorObj = {
           'msg': 'error',
           'result': 'error'
@@ -258,6 +259,7 @@ cache.one = function(req, res, next) {
 
     callStack[coin] = 1;
     console.log(callsArray);
+    console.log('iguana core port ' + req.query.port);
 
     if (!sessionKey) {
       var errorObj = {
@@ -317,10 +319,10 @@ cache.one = function(req, res, next) {
 
       function execDEXRequests(address, coin) {
         let dexUrls = {
-          'listunspent': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'listtransactions': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-          'getbalance': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'refresh': 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+          'listunspent': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+          'listtransactions': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
+          'getbalance': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
+          'refresh': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
         },
         _dexUrls = {};
 
@@ -442,7 +444,7 @@ cache.one = function(req, res, next) {
       }
 
       function getAddresses(coin) {
-        var tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
+        var tempUrl = 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
         request({
           url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
           method: 'GET'
@@ -502,7 +504,7 @@ cache.one = function(req, res, next) {
         });
 
         if (coin === 'all') {
-          var tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
+          var tempUrl = 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
           request({
             url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
             method: 'GET'
@@ -567,7 +569,7 @@ cache.one = function(req, res, next) {
         }
         if (callsArray.indexOf('refresh') > - 1) {
           callsArrayBTC--;
-        }        
+        }
         callStack[coin] = callStack[coin] + (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
         console.log(coin + ' stack len ' + callStack[coin]);
 
