@@ -255,7 +255,7 @@ shepherd.post('/forks', function(req, res, next) {
 
         var successObj = {
           'msg': 'success',
-          'result': port
+          'result': _port
         };
 
         res.end(JSON.stringify(successObj));
