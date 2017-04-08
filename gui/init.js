@@ -14,6 +14,7 @@ $(document).ready(function() {
   function inititalWalletLoading(appConf) {
     if (appConf && !appConf.manualIguanaStart) {
       StartIguana();
+      StartIguana_Cache();
     }
 
     var portcheck;

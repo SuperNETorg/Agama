@@ -65,6 +65,19 @@ function StartIguana() {
   });
 }
 
+function StartIguana_Cache() {
+  ajax_data = { 'name': 'IGUANA_CACHE' };
+  var start_iguana_cache= $.ajax({
+      type: 'POST',
+      data: JSON.stringify(ajax_data),
+      url: 'http://127.0.0.1:17777/shepherd/forks',
+      contentType: 'application/json', // send as JSON
+    })
+  start_iguana_cache.done(function(data) {
+    console.log(data);
+  });
+}
+
 function GetAppConf(cb) { // get iguana app conf
   var ajax_data = { 'herd': 'iguana' },
       data = false;
