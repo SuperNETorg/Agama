@@ -22,20 +22,35 @@ cache.get = function(req, res, next) {
 
           res.end(JSON.stringify(errorObj));
         } else {
-          var parsedJSON = 'JSON parse error';
+          //var parsedJSON = 'JPARSE';//'JSON parse error';
 
           try {
-            parsedJSON = JSON.parse(data);
+            var parsedJSON = JSON.parse(data);
+
+            var successObj = {
+              'msg': 'success',
+              'result': parsedJSON
+            };
+
+            res.end(JSON.stringify(successObj));
           } catch (e) {
-            console.log('JSON parse error');
+            console.log(e);
+            if (e.toString().indexOf('at position') > -1) {
+              const errorPos = e.toString().split(' ');
+              //console.log(errorPos[errorPos.length - 1]);
+              //JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
+              console.log('JSON error ---> ' + data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20) + ' | error sequence: ' + data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1));
+              console.log('attempting to recover JSON data');
+              fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', data.substring(0, errorPos[errorPos.length - 1]), function(err) {
+                var successObj = {
+                  'msg': 'success',
+                  'result': data.substring(0, errorPos[errorPos.length - 1])
+                };
+
+                res.end(JSON.stringify(successObj));
+              });
+            }
           }
-
-          var successObj = {
-            'msg': 'success',
-            'result': parsedJSON
-          };
-
-          res.end(JSON.stringify(successObj));
         }
       });
     } else {
