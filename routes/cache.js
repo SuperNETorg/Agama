@@ -208,6 +208,13 @@ cache.one = function(req, res, next) {
   }
 
   if (!cacheCallInProgress) {
+    fs.readFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8', function (err, data) {
+      if (data) {
+        data = data.replace('waiting', 'failed');
+        fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', data, function(err) {
+        });
+      }
+    });
     // TODO: add check to allow only one cache call/sequence in progress
     cacheCallInProgress = true;
 
@@ -435,6 +442,17 @@ cache.one = function(req, res, next) {
                 console.log(body);
                 callStack[coin]--;
                 console.log(coin + ' _stack len ' + callStack[coin]);
+                cache.io.emit('messages', {
+                  'message': {
+                    'shepherd': {
+                      'method': 'cache-one',
+                      'status': 'in progress',
+                      'iguanaAPI': {
+                        'currentStackLength': callStack[coin]
+                      }
+                    }
+                  }
+                });
                 checkCallStack();
 
                 writeCache();
@@ -446,6 +464,17 @@ cache.one = function(req, res, next) {
                 outObj.basilisk[coin][address][key].status = 'done';
                 callStack[coin]--;
                 console.log(coin + ' _stack len ' + callStack[coin]);
+                cache.io.emit('messages', {
+                  'message': {
+                    'shepherd': {
+                      'method': 'cache-one',
+                      'status': 'in progress',
+                      'iguanaAPI': {
+                        'currentStackLength': callStack[coin]
+                      }
+                    }
+                  }
+                });
                 checkCallStack();
                 writeCache();
               }
@@ -454,6 +483,17 @@ cache.one = function(req, res, next) {
             console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
             callStack[coin]--;
             console.log(coin + ' _stack len ' + callStack[coin]);
+            cache.io.emit('messages', {
+              'message': {
+                'shepherd': {
+                  'method': 'cache-one',
+                  'status': 'in progress',
+                  'iguanaAPI': {
+                    'currentStackLength': callStack[coin]
+                  }
+                }
+              }
+            });
             checkCallStack();
           }
         });
@@ -488,6 +528,17 @@ cache.one = function(req, res, next) {
         callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
         console.log(coin + ' stack len ' + callStack[coin]);
 
+        cache.io.emit('messages', {
+          'message': {
+            'shepherd': {
+              'method': 'cache-one',
+              'status': 'in progress',
+              'iguanaAPI': {
+                'totalStackLength': callStack[coin]
+              }
+            }
+          }
+        });
         async.each(outObj.basilisk[coin].addresses, function(address) {
           execDEXRequests(address, coin);
         });
@@ -596,6 +647,18 @@ cache.one = function(req, res, next) {
         }
         callStack[coin] = callStack[coin] + (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
         console.log(coin + ' stack len ' + callStack[coin]);
+
+        cache.io.emit('messages', {
+          'message': {
+            'shepherd': {
+              'method': 'cache-one',
+              'status': 'in progress',
+              'iguanaAPI': {
+                'totalStackLength': callStack[coin]
+              }
+            }
+          }
+        });
 
         execDEXRequests(coin, address);
       }
