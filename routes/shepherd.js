@@ -90,7 +90,8 @@ shepherd.appConfig = {
     "linux": 1000000
   },
   "killIguanaOnStart": true,
-  "dev": false
+  "dev": false,
+  "v2": false
 };
 
 shepherd.saveLocalAppConf = function(appSettings) {
