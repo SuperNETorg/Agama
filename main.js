@@ -70,7 +70,7 @@ if (appConfig.killIguanaOnStart) {
 }
 
 guiapp.use(function(req, res, next) {
-	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:' + appConfig.iguanaAppPort);
+	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:3000');
 	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
 	res.header('Access-Control-Allow-Credentials', 'true');
 	res.header('Access-Control-Allow-Headers', 'Content-Type');
@@ -306,7 +306,11 @@ function createWindow (status) {
 
 		// load our index.html (i.e. easyDEX GUI)
 		if (appConfig.edexGuiOnly) {
-			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
+			if (appConfig.v2) {
+				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/react/build');
+			} else {
+				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
+			}
 		} else {
 			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/main.html');
 		}
