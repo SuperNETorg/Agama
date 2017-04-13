@@ -14,7 +14,6 @@ $(document).ready(function() {
   function inititalWalletLoading(appConf) {
     if (appConf && !appConf.manualIguanaStart) {
       StartIguana();
-      StartIguana_Cache();
     }
 
     var portcheck;
@@ -26,6 +25,7 @@ $(document).ready(function() {
 
           if (result !== 'error') {
             stopcheck();
+            StartIguana_Cache();
             $('#loading_status_text').text('Connecting to Basilisk Network...');
             EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries);
           }
