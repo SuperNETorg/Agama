@@ -21,7 +21,7 @@ var express = require('express'),
 		pm2 = require('pm2'),
 		cluster = require('cluster'),
 		numCPUs = require('os').cpus().length,
-		kmdcli = require('./private/kmdcli.js'),
+		coincli = require('./private/coincli.js'),
 		ipc = require('electron').ipcMain;
 
 Promise = require('bluebird');
@@ -240,14 +240,35 @@ function createLoadingWindow() {
     }
   });
 
-ipc.on('invokeAction', function(event, data){
-	//console.log(data);
-	kmdcli.command(data, function(err, command) {
-		//console.log(command);
-		var result = command;
-    	event.sender.send('kmdcliReply', result);
+	/*
+	* var ipc = require('electron').ipcRenderer;
+	* ipc.once('coincliReply', function(event, response){
+	* 		console.log(response);
+	* 	});
+	* ipc.send('InvokeAction', '{"cli":"kmd","command":"getinfo"}');
+	*/
+
+	ipc.on('InvokeAction', function(event, data){
+		console.log(JSON.stringify(data));
+		console.log(data.cli)
+		console.log(data.command)
+
+		if (data.cli == 'kmd') {
+			coincli.kmdcommand(data.command, function(err, command) {
+				//console.log(command);
+				var result = command;
+				event.sender.send('coincliReply', result);
+			});
+		}
+		if (data.cli == 'zec') {
+			coincli.zeccommand(data.command, function(err, command) {
+				//console.log(command);
+				var result = command;
+				event.sender.send('coincliReply', result);
+			});
+		}
 	});
-});
+
 	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
 	/*if (os.platform() === 'win32') {
 		process.chdir(iguanaDir);

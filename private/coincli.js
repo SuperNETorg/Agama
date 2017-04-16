@@ -50,12 +50,13 @@ console.log(komodocliBin)
  * The **komodo-cli** command is used to get komodo api calls answer.
  *
  * @private
- * @category kmdcli
+ * @category coincli
  *
  */
-var kmdcli = module.exports = {
+var coincli = module.exports = {
   exec: child_process.exec,
-  command: command
+  kmdcommand: kmdcommand,
+  zeccommand: zeccommand
 };
 
 /**
@@ -63,11 +64,11 @@ var kmdcli = module.exports = {
  *
  * @private
  * @static
- * @category kmdcli
+ * @category coincli
  * @param {function} callback The callback function.
  *
  */
-function parse_kmdcli_commands(callback) {
+function parse_coincli_commands(callback) {
   return function(error, stdout, stderr) {
     if (error) callback(error, stderr);
     else callback(error, stdout);
@@ -80,13 +81,13 @@ function parse_kmdcli_commands(callback) {
  *
  * @private
  * @static
- * @category kmdcli
+ * @category coincli
  * @param {function} callback The callback function.
  * @example
  *
- * var kmdcli = require('./kmdcli');
+ * var coincli = require('./coincli');
  *
- * kmdcli.command('getinfo', function(err, command) {
+ * coincli.kmdcommand('getinfo', function(err, command) {
  *   console.log(command);
  * });
  *
@@ -118,9 +119,18 @@ function parse_kmdcli_commands(callback) {
  * }
  * 
  */
-function command(kmd_command, callback) {
+
+ 
+function kmdcommand(kmd_command, callback) {
   if (callback) {
     return this.exec(komodocliBin + " " + kmd_command,
-      parse_kmdcli_commands(callback));  
+      parse_coincli_commands(callback));  
+  }
+}
+
+function zeccommand(zec_command, callback) {
+  if (callback) {
+    return this.exec(zcashcliBin + " " + zec_command,
+      parse_coincli_commands(callback));  
   }
 }
