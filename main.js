@@ -245,10 +245,10 @@ function createLoadingWindow() {
 	* ipc.once('coincliReply', function(event, response){
 	* 		console.log(response);
 	* 	});
-	* ipc.send('InvokeAction', '{"cli":"kmd","command":"getinfo"}');
+	* ipc.send('InvokeCoinCliAction', '{"cli":"kmd","command":"getinfo"}');
 	*/
 
-	ipc.on('InvokeAction', function(event, data){
+	ipc.on('InvokeCoinCliAction', function(event, data){
 		console.log(JSON.stringify(data));
 		console.log(data.cli)
 		console.log(data.command)
