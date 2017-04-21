@@ -41,7 +41,7 @@
                     <platforms>osx</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>./build/Agama-darwin-x64/Agama.app</origin>
+                            <origin>../build/Agama-darwin-x64/Agama.app</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
