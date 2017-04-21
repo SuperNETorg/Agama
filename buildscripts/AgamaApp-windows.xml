@@ -3,9 +3,9 @@
     <fullName>Agama</fullName>
     <version>${PKG_VERSION}</version>
     <licenseFile>./LICENSE</licenseFile>
-    <leftImage>assets/installer_imgs/Agama_installer_wizard_image.png</leftImage>
-    <logoImage>assets/installer_imgs/supernet-agama-logo.png</logoImage>
-    <splashImage>assets/installer_imgs/Agama_installer_splash_image.png</splashImage>
+    <leftImage>../assets/installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>../assets/installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>../assets/installer_imgs/Agama_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
