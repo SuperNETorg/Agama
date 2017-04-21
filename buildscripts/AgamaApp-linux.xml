@@ -2,10 +2,10 @@
     <shortName>AgamaApp</shortName>
     <fullName>Agama</fullName>
     <version>${PKG_VERSION}</version>
-    <licenseFile>../../LICENSE</licenseFile>
-    <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
-    <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
-    <splashImage>../installer_imgs/Agama_installer_splash_image.png</splashImage>
+    <licenseFile>./LICENSE</licenseFile>
+    <leftImage>assets/installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>assets/installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>assets/installer_imgs/Agama_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -39,52 +39,52 @@
                     <platforms>all</platforms>
                     <distributionFileList>
                         <distributionDirectory>
-                            <origin>../../build/Agama-linux-x64/locales</origin>
+                            <origin>./build/Agama-linux-x64/locales</origin>
                         </distributionDirectory>
                         <distributionDirectory>
-                            <origin>../../build/Agama-linux-x64/resources</origin>
+                            <origin>./build/Agama-linux-x64/resources</origin>
                         </distributionDirectory>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/version</origin>
+                            <origin>./build/Agama-linux-x64/version</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/content_resources_200_percent.pak</origin>
+                            <origin>./build/Agama-linux-x64/content_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/LICENSE</origin>
+                            <origin>./build/Agama-linux-x64/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/blink_image_resources_200_percent.pak</origin>
+                            <origin>./build/Agama-linux-x64/blink_image_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/views_resources_200_percent.pak</origin>
+                            <origin>./build/Agama-linux-x64/views_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/ui_resources_200_percent.pak</origin>
+                            <origin>./build/Agama-linux-x64/ui_resources_200_percent.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/natives_blob.bin</origin>
+                            <origin>./build/Agama-linux-x64/natives_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/snapshot_blob.bin</origin>
+                            <origin>./build/Agama-linux-x64/snapshot_blob.bin</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/LICENSES.chromium.html</origin>
+                            <origin>./build/Agama-linux-x64/LICENSES.chromium.html</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/libffmpeg.so</origin>
+                            <origin>./build/Agama-linux-x64/libffmpeg.so</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/content_shell.pak</origin>
+                            <origin>./build/Agama-linux-x64/content_shell.pak</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/icudtl.dat</origin>
+                            <origin>./build/Agama-linux-x64/icudtl.dat</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/libnode.so</origin>
+                            <origin>./build/Agama-linux-x64/libnode.so</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../../build/Agama-linux-x64/Agama</origin>
+                            <origin>./build/Agama-linux-x64/Agama</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
