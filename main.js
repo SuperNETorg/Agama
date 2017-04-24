@@ -121,7 +121,7 @@ server.listen(appConfig.iguanaAppPort, function() {
 	console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');
 });
 
-io.set('origins', 'http://127.0.0.1:' + appConfig.iguanaAppPort); // set origin
+io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : 'http://127.0.0.1:' + appConfig.iguanaAppPort); // set origin
 
 io.on('connection', function(client) {
 	console.log('EDEX GUI is connected...');
@@ -332,6 +332,8 @@ function createWindow (status) {
 			var ConnectToPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Closing Main Window...');
+
+					shepherd.quitKomodod();
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
