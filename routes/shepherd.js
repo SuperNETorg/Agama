@@ -90,8 +90,21 @@ shepherd.appConfig = {
     "linux": 1000000
   },
   "killIguanaOnStart": true,
-  "dev": false
+  "dev": false,
+  "v2": false
 };
+
+shepherd.quitKomodod = function() {
+  // exit komodod gracefully
+  console.log('exec ' + komodocliBin + ' stop');
+  exec(komodocliBin + ' stop', function(error, stdout, stderr) {
+    console.log('stdout: ' + stdout)
+    console.log('stderr: ' + stderr)
+    if (error !== null) {
+      console.log('exec error: ' + error)
+    }
+  });
+}
 
 shepherd.saveLocalAppConf = function(appSettings) {
   var appConfFileName = iguanaDir + '/config.json';
@@ -737,24 +750,36 @@ function herder(flock, data) {
       portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
-          pm2.connect(true, function(err) { // start up pm2 god
-            if (err) {
-              console.error(err);
-              process.exit(2);
-            }
-
-            pm2.start({
-              script: komododBin, // path to binary
-              name: data.ac_name, // REVS, USD, EUR etc.
-              exec_mode : 'fork',
-              cwd: komodoDir,
-              args: data.ac_options
-            }, function(err, apps) {
-              pm2.disconnect(); // Disconnect from PM2
-              if (err)
-                throw err;
+          // start komodod via exec
+          if (data.ac_name === 'komodod') {
+            console.log('exec' + komododBin + ' ' + data.ac_options.join(' '));
+            exec(komododBin + ' ' + data.ac_options.join(' '), function(error, stdout, stderr) {
+              console.log('stdout: ' + stdout)
+              console.log('stderr: ' + stderr)
+              if (error !== null) {
+                console.log('exec error: ' + error)
+              }
             });
-          });
+          } else {
+            pm2.connect(true, function(err) { // start up pm2 god
+              if (err) {
+                console.error(err);
+                process.exit(2);
+              }
+
+              pm2.start({
+                script: komododBin, // path to binary
+                name: data.ac_name, // REVS, USD, EUR etc.
+                exec_mode : 'fork',
+                cwd: komodoDir,
+                args: data.ac_options
+              }, function(err, apps) {
+                pm2.disconnect(); // Disconnect from PM2
+                if (err)
+                  throw err;
+              });
+            });
+          }
         } else {
           console.log('port ' + _port + ' (' + data.ac_name + ') is already in use');
         }
