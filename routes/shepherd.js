@@ -752,8 +752,8 @@ function herder(flock, data) {
         if (status === 'closed') {
           // start komodod via exec
           if (data.ac_name === 'komodod') {
-            console.log('exec' + komododBin + ' -' + data.ac_options.join(' '));
-            exec(komododBin + ' -' + data.ac_options.join(' '), function(error, stdout, stderr) {
+            console.log('exec' + komododBin + ' ' + data.ac_options.join(' '));
+            exec(komododBin + ' ' + data.ac_options.join(' '), function(error, stdout, stderr) {
               console.log('stdout: ' + stdout)
               console.log('stderr: ' + stderr)
               if (error !== null) {
