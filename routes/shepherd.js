@@ -91,7 +91,11 @@ shepherd.appConfig = {
   },
   "killIguanaOnStart": true,
   "dev": false,
-  "v2": false
+  "v2": false,
+  "forks": {
+    "basilisk": false,
+    "all": false
+  }
 };
 
 shepherd.quitKomodod = function() {
@@ -265,6 +269,7 @@ shepherd.post('/forks', function(req, res, next) {
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         iguanaInstanceRegistry[_port] = name;
+        cache.setVar('iguanaInstances', iguanaInstanceRegistry);
 
         var successObj = {
           'msg': 'success',
