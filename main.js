@@ -334,6 +334,10 @@ function createWindow (status) {
 					console.log('Closing Main Window...');
 
 					shepherd.quitKomodod();
+					// if komodod is under heavy load it may not respond to cli stop the first time
+					setInterval(function() {
+						shepherd.quitKomodod();
+					}, 100);
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
