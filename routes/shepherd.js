@@ -316,7 +316,7 @@ shepherd.delete('/groom', function(req, res, next) {
  *  type: POST
  *  params: filename, payload
  */
-shepherd.post('/groom', function(req, res) {
+shepherd.post('/groom', function(req, res, next) {
   cache.groomPost(req, res, next);
 });
 
