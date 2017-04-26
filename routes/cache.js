@@ -337,7 +337,7 @@ cache.one = function(req, res, next) {
         }
       });
 
-      function execDEXRequests(address, coin) {
+      function execDEXRequests(coin, address) {
         let dexUrls = {
           'listunspent': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
           'listtransactions': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
@@ -356,6 +356,7 @@ cache.one = function(req, res, next) {
         }
 
         console.log(coin + ' address ' + address);
+
         if (!outObj.basilisk[coin][address]) {
           outObj.basilisk[coin][address] = {};
           writeCache();
@@ -537,7 +538,7 @@ cache.one = function(req, res, next) {
           }
         });
         async.each(outObj.basilisk[coin].addresses, function(address) {
-          execDEXRequests(address, coin);
+          execDEXRequests(coin, address);
         });
       }
 
