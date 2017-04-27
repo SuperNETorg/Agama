@@ -268,7 +268,10 @@ shepherd.post('/forks', function(req, res, next) {
         args: ['-port=' + _port],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
-        iguanaInstanceRegistry[_port] = name;
+        iguanaInstanceRegistry[_port] = {
+          'name': name,
+          'pid': apps[0].process.pid
+        };
         cache.setVar('iguanaInstances', iguanaInstanceRegistry);
 
         var successObj = {
@@ -718,7 +721,10 @@ function herder(flock, data) {
         args: ['-port=' + shepherd.appConfig.iguanaCorePort],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
-        iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = 'main';
+        iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
+          'name': 'main',
+          'pid': apps[0].process.pid
+        };
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
             throw err;
@@ -1076,8 +1082,8 @@ function setConf(flock) {
 
 function getConf(flock) {
   var komodoDir = '',
-        ZcashDir = '',
-        DaemonConfPath = '';
+      ZcashDir = '',
+      DaemonConfPath = '';
 
   console.log(flock);
 
