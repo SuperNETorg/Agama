@@ -15,6 +15,11 @@ $(document).ready(function() {
     if (appConf && !appConf.manualIguanaStart) {
       StartIguana();
     }
+    /*if (appConf && appConf.forks && appConf.forks.basilisk) {
+      setTimeout(function() {
+        StartBasiliskInstance();
+      }, 4000);
+    }*/
 
     var portcheck;
 
@@ -25,7 +30,6 @@ $(document).ready(function() {
 
           if (result !== 'error') {
             stopcheck();
-            StartIguana_Cache();
             $('#loading_status_text').text('Connecting to Basilisk Network...');
             EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries);
           }

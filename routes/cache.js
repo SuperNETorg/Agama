@@ -22,15 +22,12 @@ cache.get = function(req, res, next) {
 
           res.end(JSON.stringify(errorObj));
         } else {
-          //var parsedJSON = 'JPARSE';//'JSON parse error';
-
           try {
-            var parsedJSON = JSON.parse(data);
-
-            var successObj = {
-              'msg': 'success',
-              'result': parsedJSON
-            };
+            var parsedJSON = JSON.parse(data),
+                successObj = {
+                  'msg': 'success',
+                  'result': parsedJSON
+                };
 
             res.end(JSON.stringify(successObj));
           } catch (e) {
@@ -340,7 +337,7 @@ cache.one = function(req, res, next) {
         }
       });
 
-      function execDEXRequests(address, coin) {
+      function execDEXRequests(coin, address) {
         let dexUrls = {
           'listunspent': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
           'listtransactions': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
@@ -359,6 +356,7 @@ cache.one = function(req, res, next) {
         }
 
         console.log(coin + ' address ' + address);
+
         if (!outObj.basilisk[coin][address]) {
           outObj.basilisk[coin][address] = {};
           writeCache();
@@ -540,7 +538,7 @@ cache.one = function(req, res, next) {
           }
         });
         async.each(outObj.basilisk[coin].addresses, function(address) {
-          execDEXRequests(address, coin);
+          execDEXRequests(coin, address);
         });
       }
 
@@ -548,7 +546,7 @@ cache.one = function(req, res, next) {
         if (addresses) {
           parseAddresses(coin, addresses);
         } else {
-          var tempUrl = 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
+          var tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort /*iguanaCorePort*/ + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
           request({
             url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
             method: 'GET'
@@ -579,7 +577,7 @@ cache.one = function(req, res, next) {
         });
 
         if (coin === 'all') {
-          var tempUrl = 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
+          var tempUrl = 'http://' + cache.appConfig.host + ':' + /*iguanaCorePort*/ cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
           request({
             url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
             method: 'GET'

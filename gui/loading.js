@@ -65,18 +65,28 @@ function StartIguana() {
   });
 }
 
-function StartIguana_Cache() {
-  ajax_data = { 'name': 'IGUANA_CACHE' };
-  var start_iguana_cache= $.ajax({
-      type: 'POST',
-      data: JSON.stringify(ajax_data),
-      url: 'http://127.0.0.1:17777/shepherd/forks',
-      contentType: 'application/json', // send as JSON
-    })
-  start_iguana_cache.done(function(data) {
-    _data = JSON.parse(data);
-    console.log(_data.result);
-    sessionStorage.setItem('IguanaCachePort', _data.result);
+function StartBasiliskInstance() {
+  var ajax_data = { 'name': 'basilisk'};
+
+  console.log(ajax_data);
+  $.ajax({
+    type: 'POST',
+    data: JSON.stringify(ajax_data),
+    url: 'http://127.0.0.1:17777/shepherd/forks',
+    dataType: 'xml/html/script/json', // expected format for response
+    contentType: 'application/json', // send as JSON
+    success: function(data, textStatus, jqXHR) {
+      var AjaxOutputData = JSON.parse(data);
+      console.log('== Shepherd Forks Data OutPut ==');
+      console.log(AjaxOutputData);
+    },
+    error: function(xhr, textStatus, error) {
+      console.log(xhr.statusText);
+      if ( xhr.readyState == 0 ) {
+      }
+      console.log(textStatus);
+      console.log(error);
+    }
   });
 }
 
