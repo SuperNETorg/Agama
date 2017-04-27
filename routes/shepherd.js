@@ -236,6 +236,62 @@ cache.setVar('appConfig', shepherd.appConfig);
  *  type: GET
  *
  */
+shepherd.get('/forks/restart', function(req, res, next) {
+  var _pmid = req.query.pmid;
+
+  pm2.connect(function(err) {
+    if (err) {
+      console.error(err);
+    }
+
+    pm2.restart(_pmid, function(err, ret) {
+      if (err) {
+        console.error(err);
+      }
+      pm2.disconnect();
+
+      var successObj = {
+        'msg': 'success',
+        'result': 'restarted'
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  });
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/forks/stop', function(req, res, next) {
+  var _pmid = req.query.pmid;
+
+  pm2.connect(function(err) {
+    if (err) {
+      console.error(err);
+    }
+
+    pm2.stop(_pmid, function(err, ret) {
+      if (err) {
+        console.error(err);
+      }
+      pm2.disconnect();
+
+      var successObj = {
+        'msg': 'success',
+        'result': 'stopped'
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  });
+});
+
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/forks', function(req, res, next) {
   var successObj = {
     'msg': 'success',
@@ -250,7 +306,8 @@ shepherd.get('/forks', function(req, res, next) {
  *  params: name
  */
 shepherd.post('/forks', function(req, res, next) {
-  const name = req.body.name;
+  const mode = req.body.mode,
+        coin = req.body.coin,
         port = shepherd.appConfig.iguanaCorePort;
 
   portscanner.findAPortNotInUse(port, port + 100, '127.0.0.1', function(error, _port) {
@@ -263,14 +320,16 @@ shepherd.post('/forks', function(req, res, next) {
       console.log('iguana core fork port ' + _port);
       pm2.start({
         script: iguanaBin, // path to binary
-        name: 'IGUANA ' + _port + ' ' + name,
+        name: 'IGUANA ' + _port + ' ' + mode + ' / ' + coin,
         exec_mode : 'fork',
         args: ['-port=' + _port],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         iguanaInstanceRegistry[_port] = {
-          'name': name,
-          'pid': apps[0].process.pid
+          'mode': mode,
+          'coin': coin,
+          'pid': apps[0].process.pid,
+          'pmid': apps[0].pm2_env.pm_id
         };
         cache.setVar('iguanaInstances', iguanaInstanceRegistry);
 
@@ -722,8 +781,10 @@ function herder(flock, data) {
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
-          'name': 'main',
-          'pid': apps[0].process.pid
+          'mode': 'main',
+          'coin': 'none',
+          'pid': apps[0].process.pid,
+          'pmid': apps[0].pm2_env.pm_id
         };
         pm2.disconnect(); // Disconnect from PM2
           if (err) {

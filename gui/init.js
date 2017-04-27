@@ -15,11 +15,11 @@ $(document).ready(function() {
     if (appConf && !appConf.manualIguanaStart) {
       StartIguana();
     }
-    if (appConf && appConf.forks && appConf.forks.basilisk) {
+    /*if (appConf && appConf.forks && appConf.forks.basilisk) {
       setTimeout(function() {
         StartBasiliskInstance();
       }, 4000);
-    }
+    }*/
 
     var portcheck;
 
