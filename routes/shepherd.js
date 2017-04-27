@@ -98,10 +98,10 @@ shepherd.appConfig = {
   }
 };
 
-shepherd.quitKomodod = function() {
+shepherd.quitKomodod = function(chain) {
   // exit komodod gracefully
-  console.log('exec ' + komodocliBin + ' stop');
-  exec(komodocliBin + ' stop', function(error, stdout, stderr) {
+  console.log('exec ' + komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop');
+  exec(komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
     console.log('stdout: ' + stdout)
     console.log('stderr: ' + stderr)
     if (error !== null) {
