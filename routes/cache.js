@@ -152,37 +152,46 @@ cache.groomPost = function(req, res) {
   var _filename = req.body.filename,
       _payload = req.body.payload;
 
-  if (_filename) {
-    if (!_payload) {
+  if (!cacheCallInProgress) {
+    if (_filename) {
+      if (!_payload) {
+        var errorObj = {
+          'msg': 'error',
+          'result': 'no payload provided'
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
+          if (err) {
+            var errorObj = {
+              'msg': 'error',
+              'result': err
+            };
+
+            res.end(JSON.stringify(errorObj));
+          } else {
+            var successObj = {
+              'msg': 'success',
+              'result': 'done'
+            };
+
+            res.end(JSON.stringify(successObj));
+          }
+        });
+      }
+    } else {
       var errorObj = {
         'msg': 'error',
-        'result': 'no payload provided'
+        'result': 'no file name provided'
       };
 
       res.end(JSON.stringify(errorObj));
-    } else {
-      fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
-        if (err) {
-          var errorObj = {
-            'msg': 'error',
-            'result': err
-          };
-
-          res.end(JSON.stringify(errorObj));
-        } else {
-          var successObj = {
-            'msg': 'success',
-            'result': 'done'
-          };
-
-          res.end(JSON.stringify(successObj));
-        }
-      });
     }
   } else {
     var errorObj = {
       'msg': 'error',
-      'result': 'no file name provided'
+      'result': 'another job is in progress'
     };
 
     res.end(JSON.stringify(errorObj));
@@ -303,9 +312,35 @@ cache.one = function(req, res, next) {
 
     console.log('cache-one call started');
 
+    function fixJSON(data) {
+      console.log(data);
+      if (data && data.length) {
+        try {
+          var parsedJSON = JSON.parse(data);
+
+          return parsedJSON;
+        } catch (e) {
+          console.log(e);
+          if (e.toString().indexOf('at position') > -1) {
+            const errorPos = e.toString().split(' ');
+
+            console.log('JSON error ---> ' + data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20) + ' | error sequence: ' + data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1));
+            console.log('attempting to recover JSON data');
+            return JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
+          }
+          if (e.toString().indexOf('Unexpected end of JSON input')) {
+            return {};
+          }
+        }
+      } else {
+        return {};
+      }
+    }
+
     if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json') && coin !== 'all') {
       var _file = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
-      outObj = _file ? JSON.parse(_file) : {};
+      //outObj = _file ? JSON.parse(_file) : {};
+      outObj = fixJSON(_file);
 
       if (!outObj || !outObj.basilisk) {
         console.log('no local basilisk info');
