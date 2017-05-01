@@ -3,60 +3,84 @@ const fs = require('fs-extra'),
       async = require('async');
 
 var cache = {};
+var inMemCache;
+var inMemPubkey;
 
 cache.setVar = function(variable, value) {
   cache[variable] = value;
+}
+
+cache.dumpCacheBeforeExit = function() {
+  if (inMemCache) {
+    console.log('dumping cache before exit');
+    fs.writeFileSync(cache.iguanaDir + '/shepherd/cache-' + inMemPubkey + '.json', JSON.stringify(inMemCache), 'utf8');
+  }
 }
 
 cache.get = function(req, res, next) {
   var pubkey = req.query.pubkey;
 
   if (pubkey) {
-    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
-      fs.readFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8', function (err, data) {
-        if (err) {
-          var errorObj = {
-            'msg': 'error',
-            'result': err
-          };
+    inMemPubkey = pubkey;
 
-          res.end(JSON.stringify(errorObj));
-        } else {
-          try {
-            var parsedJSON = JSON.parse(data),
-                successObj = {
-                  'msg': 'success',
-                  'result': parsedJSON
-                };
+    if (!inMemCache) {
+      console.log('serving cache from disk');
 
-            res.end(JSON.stringify(successObj));
-          } catch (e) {
-            console.log(e);
-            if (e.toString().indexOf('at position') > -1) {
-              const errorPos = e.toString().split(' ');
-              //console.log(errorPos[errorPos.length - 1]);
-              //JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
-              console.log('JSON error ---> ' + data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20) + ' | error sequence: ' + data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1));
-              console.log('attempting to recover JSON data');
-              fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', data.substring(0, errorPos[errorPos.length - 1]), function(err) {
-                var successObj = {
-                  'msg': 'success',
-                  'result': data.substring(0, errorPos[errorPos.length - 1])
-                };
+      if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
+        fs.readFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8', function (err, data) {
+          if (err) {
+            var errorObj = {
+              'msg': 'error',
+              'result': err
+            };
 
-                res.end(JSON.stringify(successObj));
-              });
+            res.end(JSON.stringify(errorObj));
+          } else {
+            try {
+              var parsedJSON = JSON.parse(data),
+                  successObj = {
+                    'msg': 'success',
+                    'result': parsedJSON
+                  };
+
+              inMemCache = parsedJSON;
+              res.end(JSON.stringify(successObj));
+            } catch (e) {
+              console.log(e);
+              if (e.toString().indexOf('at position') > -1) {
+                const errorPos = e.toString().split(' ');
+                //console.log(errorPos[errorPos.length - 1]);
+                //JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
+                console.log('JSON error ---> ' + data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20) + ' | error sequence: ' + data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1));
+                console.log('attempting to recover JSON data');
+                fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', data.substring(0, errorPos[errorPos.length - 1]), function(err) {
+                  var successObj = {
+                    'msg': 'success',
+                    'result': data.substring(0, errorPos[errorPos.length - 1])
+                  };
+
+                  inMemCache = JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
+                  res.end(JSON.stringify(successObj));
+                });
+              }
             }
           }
-        }
-      });
-    } else {
-      var errorObj = {
-        'msg': 'error',
-        'result': 'no file with handle ' + pubkey
-      };
+        });
+      } else {
+        var errorObj = {
+          'msg': 'error',
+          'result': 'no file with handle ' + pubkey
+        };
 
-      res.end(JSON.stringify(errorObj));
+        res.end(JSON.stringify(errorObj));
+      }
+    } else {
+      const successObj = {
+            'msg': 'success',
+            'result': inMemCache
+          };
+
+      res.end(JSON.stringify(successObj));
     }
   } else {
     var errorObj = {
@@ -162,23 +186,31 @@ cache.groomPost = function(req, res) {
 
         res.end(JSON.stringify(errorObj));
       } else {
-        fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
-          if (err) {
-            var errorObj = {
-              'msg': 'error',
-              'result': err
-            };
+        if (inMemCache) {
+          inMemCache = JSON.parse(_payload);
 
-            res.end(JSON.stringify(errorObj));
-          } else {
-            var successObj = {
-              'msg': 'success',
-              'result': 'done'
-            };
+          console.log('appending groom post to in mem cache');
+        } else {
+          console.log('appending groom post to on disk cache');
 
-            res.end(JSON.stringify(successObj));
-          }
-        });
+          fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
+            if (err) {
+              var errorObj = {
+                'msg': 'error',
+                'result': err
+              };
+
+              res.end(JSON.stringify(errorObj));
+            } else {
+              var successObj = {
+                'msg': 'success',
+                'result': 'done'
+              };
+
+              res.end(JSON.stringify(successObj));
+            }
+          });
+        }
       }
     } else {
       var errorObj = {
@@ -199,7 +231,7 @@ cache.groomPost = function(req, res) {
 }
 
 var cacheCallInProgress = false,
-    cacheGlobLifetime = 300; // sec
+    cacheGlobLifetime = 600; // sec
 
 // TODO: reset calls' states on new /cache call start
 var mock = require('./mock');
@@ -214,11 +246,14 @@ cache.one = function(req, res, next) {
   }
 
   if (!cacheCallInProgress) {
+    cache.dumpCacheBeforeExit();
     fs.readFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8', function (err, data) {
       if (data) {
+        inMemCache = JSON.parse(data);
         data = data.replace('waiting', 'failed');
-        fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', data, function(err) {
-        });
+        /*fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', data, function(err) {
+        });*/
+        cache.dumpCacheBeforeExit();
       }
     });
     // TODO: add check to allow only one cache call/sequence in progress
@@ -244,7 +279,8 @@ cache.one = function(req, res, next) {
             outObj.timestamp = timeStamp;
           }
 
-          fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
+          inMemCache = outObj;
+          /*fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
             if (err) {
               return console.log(err);
             }
@@ -253,7 +289,7 @@ cache.one = function(req, res, next) {
             if (timeStamp) {
               console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is timestamped');
             }
-          });
+          });*/
         },
         callStack = {},
         checkCallStack = function() {
@@ -264,6 +300,14 @@ cache.one = function(req, res, next) {
           }
 
           if (total / Object.keys(callStack).length === 1) {
+            cache.dumpCacheBeforeExit();
+            /*fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(inMemCache), function(err) {
+              if (err) {
+                return console.log(err);
+              }
+
+              console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
+            });*/
             cacheCallInProgress = false;
             cache.io.emit('messages', {
               'message': {
@@ -286,6 +330,7 @@ cache.one = function(req, res, next) {
         },
         internalError = false;
 
+    inMemPubkey = pubkey;
     callStack[coin] = 1;
     console.log(callsArray);
     console.log('iguana core port ' + iguanaCorePort);
@@ -313,7 +358,6 @@ cache.one = function(req, res, next) {
     console.log('cache-one call started');
 
     function fixJSON(data) {
-      console.log(data);
       if (data && data.length) {
         try {
           var parsedJSON = JSON.parse(data);
@@ -338,9 +382,13 @@ cache.one = function(req, res, next) {
     }
 
     if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json') && coin !== 'all') {
-      var _file = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
-      //outObj = _file ? JSON.parse(_file) : {};
-      outObj = fixJSON(_file);
+      if (inMemCache) {
+        outObj = inMemCache;
+      } else {
+        var _file = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
+        //outObj = _file ? JSON.parse(_file) : {};
+        outObj = fixJSON(_file);
+      }
 
       if (!outObj || !outObj.basilisk) {
         console.log('no local basilisk info');

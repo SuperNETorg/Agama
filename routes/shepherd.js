@@ -220,6 +220,10 @@ shepherd.get('/sysinfo', function(req, res, next) {
   res.send(obj);
 });
 
+shepherd.dumpCacheBeforeExit = function() {
+  cache.dumpCacheBeforeExit();
+}
+
 var cache = require('./cache');
 var mock = require('./mock');
 
