@@ -354,6 +354,7 @@ function createWindow (status) {
 				return new Promise(function(resolve, reject) {
 					console.log('Closing Main Window...');
 
+					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod();
 					// if komodod is under heavy load it may not respond to cli stop the first time
 					setInterval(function() {
