@@ -111,6 +111,30 @@ shepherd.quitKomodod = function(chain) {
   });
 }
 
+/*
+ *  type: POST
+ *  params: payload
+ */
+shepherd.post('/appconf', function(req, res, next) {
+  if (!req.body.payload) {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'no payload provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  } else {
+    shepherd.saveLocalAppConf(req.body.payload);
+
+    const errorObj = {
+      'msg': 'success',
+      'result': 'config saved'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+});
+
 shepherd.saveLocalAppConf = function(appSettings) {
   var appConfFileName = iguanaDir + '/config.json';
 
@@ -237,6 +261,7 @@ shepherd.setIO = function(io) {
 cache.setVar('iguanaDir', iguanaDir);
 cache.setVar('appConfig', shepherd.appConfig);
 
+// fetch sync only forks info
 shepherd.getSyncOnlyForksInfo = function() {
   async.forEachOf(iguanaInstanceRegistry, function(data, port) {
     if (iguanaInstanceRegistry[port].mode.indexOf('/sync') > -1) {
@@ -271,6 +296,10 @@ shepherd.getSyncOnlyForksInfo = function() {
   });
 }
 
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/forks/info/start', function(req, res, next) {
   var successObj = {
     'msg': 'success',
@@ -281,6 +310,10 @@ shepherd.get('/forks/info/start', function(req, res, next) {
   shepherd.getSyncOnlyForksInfo();
 });
 
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/forks/info/show', function(req, res, next) {
   var successObj = {
     'msg': 'success',
