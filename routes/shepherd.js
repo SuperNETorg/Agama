@@ -271,7 +271,7 @@ shepherd.getSyncOnlyForksInfo = function() {
         method: 'GET'
       }, function (error, response, body) {
         if (response && response.statusCode && response.statusCode === 200) {
-          console.log(body);
+          // console.log(body);
           try {
             syncOnlyIguanaInstanceInfo[port].getinfo = JSON.parse(body);
           } catch(e) {}
@@ -284,7 +284,7 @@ shepherd.getSyncOnlyForksInfo = function() {
         method: 'GET'
       }, function (error, response, body) {
         if (response && response.statusCode && response.statusCode === 200) {
-          console.log(body);
+          // console.log(body);
           try {
             syncOnlyIguanaInstanceInfo[port].activehandle = JSON.parse(body);
           } catch(e) {}
@@ -292,6 +292,7 @@ shepherd.getSyncOnlyForksInfo = function() {
           // TODO: error
         }
       });
+      syncOnlyIguanaInstanceInfo[port].registry = iguanaInstanceRegistry[port];
     }
   });
 }
