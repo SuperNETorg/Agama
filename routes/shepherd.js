@@ -16,17 +16,18 @@ const electron = require('electron'),
       request = require('request'),
       async = require('async'),
       rimraf = require('rimraf'),
-      portscanner = require('portscanner');
-
-Promise = require('bluebird');
+      portscanner = require('portscanner'),
+      Promise = require('bluebird');
 
 const fixPath = require('fix-path');
 var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
-    coincli = require('../private/coincli.js'),
+    //coincli = require('../private/coincli.js'),
     assetChainPorts = require('./ports.js')
     shepherd = express.Router(),
-    iguanaInstanceRegistry = {};
+    iguanaInstanceRegistry = {},
+    syncOnlyIguanaInstanceInfo = {},
+    syncOnlyInstanceInterval = -1;
 
 // IGUANA FILES AND CONFIG SETTINGS
 var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
@@ -109,6 +110,30 @@ shepherd.quitKomodod = function(chain) {
     }
   });
 }
+
+/*
+ *  type: POST
+ *  params: payload
+ */
+shepherd.post('/appconf', function(req, res, next) {
+  if (!req.body.payload) {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'no payload provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  } else {
+    shepherd.saveLocalAppConf(req.body.payload);
+
+    const errorObj = {
+      'msg': 'success',
+      'result': 'config saved'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+});
 
 shepherd.saveLocalAppConf = function(appSettings) {
   var appConfFileName = iguanaDir + '/config.json';
@@ -236,6 +261,69 @@ shepherd.setIO = function(io) {
 cache.setVar('iguanaDir', iguanaDir);
 cache.setVar('appConfig', shepherd.appConfig);
 
+// fetch sync only forks info
+shepherd.getSyncOnlyForksInfo = function() {
+  async.forEachOf(iguanaInstanceRegistry, function(data, port) {
+    if (iguanaInstanceRegistry[port].mode.indexOf('/sync') > -1) {
+      syncOnlyIguanaInstanceInfo[port] = {};
+      request({
+        url: 'http://localhost:' + port + '/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@1234',
+        method: 'GET'
+      }, function (error, response, body) {
+        if (response && response.statusCode && response.statusCode === 200) {
+          // console.log(body);
+          try {
+            syncOnlyIguanaInstanceInfo[port].getinfo = JSON.parse(body);
+          } catch(e) {}
+        } else {
+          // TODO: error
+        }
+      });
+      request({
+        url: 'http://localhost:' + port + '/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234',
+        method: 'GET'
+      }, function (error, response, body) {
+        if (response && response.statusCode && response.statusCode === 200) {
+          // console.log(body);
+          try {
+            syncOnlyIguanaInstanceInfo[port].activehandle = JSON.parse(body);
+          } catch(e) {}
+        } else {
+          // TODO: error
+        }
+      });
+      syncOnlyIguanaInstanceInfo[port].registry = iguanaInstanceRegistry[port];
+    }
+  });
+}
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/forks/info/start', function(req, res, next) {
+  var successObj = {
+    'msg': 'success',
+    'result': 'started'
+  };
+
+  res.end(JSON.stringify(successObj));
+  shepherd.getSyncOnlyForksInfo();
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/forks/info/show', function(req, res, next) {
+  var successObj = {
+    'msg': 'success',
+    'result': JSON.stringify(syncOnlyIguanaInstanceInfo)
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
 /*
  *  type: GET
  *
@@ -336,6 +424,16 @@ shepherd.post('/forks', function(req, res, next) {
           'pmid': apps[0].pm2_env.pm_id
         };
         cache.setVar('iguanaInstances', iguanaInstanceRegistry);
+
+        // get sync only forks info
+        if (syncOnlyInstanceInterval === -1) {
+          setTimeout(function() {
+            shepherd.getSyncOnlyForksInfo();
+          }, 5000);
+          setInterval(function() {
+            shepherd.getSyncOnlyForksInfo();
+          }, 20000);
+        }
 
         var successObj = {
           'msg': 'success',

@@ -141,6 +141,8 @@ cache.groomDelete = function(req, res, next) {
 
   if (_filename) {
     if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
+      inMemCache = {};
+      
       fs.unlink(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
         if (err) {
           const errorObj = {
@@ -746,7 +748,8 @@ cache.one = function(req, res, next) {
               'method': 'cache-one',
               'status': 'in progress',
               'iguanaAPI': {
-                'totalStackLength': callStack[coin]
+                'totalStackLength': callStack[coin],
+                'currentStackLength': callStack[coin]
               }
             }
           }
