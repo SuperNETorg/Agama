@@ -99,6 +99,67 @@ shepherd.appConfig = {
   }
 };
 
+shepherd.get('/coinslist', function(req, res, next) {
+  if (fs.existsSync(iguanaDir + '/shepherd/coinslist.json')) {
+    fs.readFile(iguanaDir + '/shepherd/coinslist.json', 'utf8', function (err, data) {
+      if (err) {
+        const errorObj = {
+          'msg': 'error',
+          'result': err
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': data ? JSON.parse(data) : ''
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    });
+  } else {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'coin list doesn\'t exist'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+});
+
+shepherd.post('/coinslist', function(req, res, next) {
+  const _payload = req.body.payload;
+
+  if (!_payload) {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'no payload provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  } else {
+    fs.writeFile(cache.iguanaDir + '/shepherd/coinslist.json', JSON.stringify(_payload), function (err) {
+      if (err) {
+        const errorObj = {
+          'msg': 'error',
+          'result': err
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': 'done'
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    });
+  }
+});
+
+// TODO: check if komodod is running
 shepherd.quitKomodod = function(chain) {
   // exit komodod gracefully
   console.log('exec ' + komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop');
