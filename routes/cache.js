@@ -141,7 +141,7 @@ cache.groomDelete = function(req, res, next) {
 
   if (_filename) {
     if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
-      inMemCache = {};
+      inMemCache = null;
 
       fs.unlink(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
         if (err) {
