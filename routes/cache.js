@@ -141,8 +141,8 @@ cache.groomDelete = function(req, res, next) {
 
   if (_filename) {
     if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
-      inMemCache = {};
-      
+      inMemCache = null;
+
       fs.unlink(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
         if (err) {
           const errorObj = {
@@ -183,6 +183,8 @@ cache.groomPost = function(req, res) {
         _payload = req.body.payload;
 
   if (!cacheCallInProgress) {
+    cacheCallInProgress = true;
+
     if (_filename) {
       if (!_payload) {
         const errorObj = {
@@ -192,31 +194,29 @@ cache.groomPost = function(req, res) {
 
         res.end(JSON.stringify(errorObj));
       } else {
-        if (inMemCache) {
-          inMemCache = JSON.parse(_payload);
+        inMemCache = JSON.parse(_payload);
+        console.log('appending groom post to in mem cache');
+        console.log('appending groom post to on disk cache');
 
-          console.log('appending groom post to in mem cache');
-        } else {
-          console.log('appending groom post to on disk cache');
+        fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
+          if (err) {
+            const errorObj = {
+              'msg': 'error',
+              'result': err
+            };
 
-          fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
-            if (err) {
-              const errorObj = {
-                'msg': 'error',
-                'result': err
-              };
+            cacheCallInProgress = false;
+            res.end(JSON.stringify(errorObj));
+          } else {
+            const successObj = {
+              'msg': 'success',
+              'result': 'done'
+            };
 
-              res.end(JSON.stringify(errorObj));
-            } else {
-              const successObj = {
-                'msg': 'success',
-                'result': 'done'
-              };
-
-              res.end(JSON.stringify(successObj));
-            }
-          });
-        }
+            cacheCallInProgress = false;
+            res.end(JSON.stringify(successObj));
+          }
+        });
       }
     } else {
       const errorObj = {
@@ -289,15 +289,14 @@ cache.one = function(req, res, next) {
 
   if (!cacheCallInProgress) {
     cache.dumpCacheBeforeExit();
-    fs.readFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8', function (err, data) {
-      if (data) {
-        inMemCache = JSON.parse(data);
-        data = data.replace('waiting', 'failed');
-        /*fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', data, function(err) {
-        });*/
+
+    let _data = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8');
+    if (_data) {
+        inMemCache = JSON.parse(_data);
+        _data = _data.replace('waiting', 'failed');
         cache.dumpCacheBeforeExit();
-      }
-    });
+    }
+
     // TODO: add check to allow only one cache call/sequence in progress
     cacheCallInProgress = true;
 
@@ -322,16 +321,6 @@ cache.one = function(req, res, next) {
           }
 
           inMemCache = outObj;
-          /*fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(outObj), function(err) {
-            if (err) {
-              return console.log(err);
-            }
-
-            console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
-            if (timeStamp) {
-              console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is timestamped');
-            }
-          });*/
         },
         checkTimestamp = function(dateToCheck) {
           var currentEpochTime = new Date(Date.now()) / 1000,
@@ -394,9 +383,11 @@ cache.one = function(req, res, next) {
 
     if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json') && coin !== 'all') {
       if (inMemCache) {
+        console.log('cache one from mem');
         outObj = inMemCache;
       } else {
         var _file = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
+        console.log('cache one from disk');
         //outObj = _file ? JSON.parse(_file) : {};
         outObj = fixJSON(_file);
       }
