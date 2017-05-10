@@ -185,7 +185,7 @@ shepherd.post('/appconf', function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   } else {
-    shepherd.saveLocalAppConf(req.body.payload);
+    shepherd.saveLocalAppConf(JSON.parse(req.body.payload));
 
     const errorObj = {
       'msg': 'success',
