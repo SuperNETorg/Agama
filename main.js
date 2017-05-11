@@ -26,8 +26,13 @@ var express = require('express'),
 
 Promise = require('bluebird');
 
-app.setName('Agama');
-app.setVersion('0.1.6.2e-beta');
+const appBasicInfo = {
+	name: 'Agama',
+	version: '0.1.6.2e-beta'
+};
+
+app.setName(appBasicInfo.name);
+app.setVersion(appBasicInfo.version);
 
 if (os.platform() === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
@@ -140,6 +145,7 @@ io.on('connection', function(client) {
 });
 
 shepherd.setIO(io); // pass sockets object to shepherd router
+shepherd.setVar('appBasicInfo', appBasicInfo);
 
 module.exports = guiapp;
 // END GUI App Settings

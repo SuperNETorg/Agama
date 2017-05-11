@@ -292,17 +292,35 @@ console.log('iguana dir: ' + komododBin);
 console.log('iguana bin: ' + komodoDir);
 
 // END IGUANA FILES AND CONFIG SETTINGS
+// default route
 shepherd.get('/', function(req, res, next) {
   res.send('Iguana app server');
 });
 
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/appconf', function(req, res, next) {
   var obj = shepherd.loadLocalConfig();
   res.send(obj);
 });
 
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/sysinfo', function(req, res, next) {
   var obj = shepherd.SystemInfo();
+  res.send(obj);
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/appinfo', function(req, res, next) {
+  var obj = shepherd.appInfo();
   res.send(obj);
 });
 
@@ -317,6 +335,10 @@ var mock = require('./mock');
 shepherd.setIO = function(io) {
   shepherd.io = io;
   cache.setVar('io', io);
+};
+
+shepherd.setVar = function(_name, _body) {
+  shepherd[_name] = _body;
 };
 
 cache.setVar('iguanaDir', iguanaDir);
@@ -1386,6 +1408,40 @@ shepherd.SystemInfo = function() {
         };
 
   return os_data;
+}
+
+shepherd.SystemInfo = function() {
+  const os_data = {
+          'totalmem_bytes': os.totalmem(),
+          'totalmem_readable': formatBytes(os.totalmem()),
+          'arch': os.arch(),
+          'cpu': os.cpus()[0].model,
+          'cpu_cores': os.cpus().length,
+          'platform': os.platform(),
+          'os_release': os.release(),
+          'os_type': os.type()
+        };
+
+  return os_data;
+}
+
+shepherd.appInfo = function() {
+  const sysInfo = shepherd.SystemInfo();
+  const releaseInfo = shepherd.appBasicInfo;
+  const dirs = {
+    iguanaDir,
+    iguanaBin,
+    komodoDir,
+    komododBin
+    configLocation: iguanaDir + '/config.json',
+    cacheLocation: iguanaDir + '/shepherd',
+  };
+
+  return {
+    sysInfo,
+    releaseInfo,
+    dirs,
+  };
 }
 
 module.exports = shepherd;
