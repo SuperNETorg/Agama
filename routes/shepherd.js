@@ -1432,7 +1432,7 @@ shepherd.appInfo = function() {
     iguanaDir,
     iguanaBin,
     komodoDir,
-    komododBin
+    komododBin,
     configLocation: iguanaDir + '/config.json',
     cacheLocation: iguanaDir + '/shepherd',
   };

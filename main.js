@@ -59,7 +59,7 @@ if (appConfig.killIguanaOnStart) {
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			console.log('found another iguana process(es)');
-			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -9 iguana';
+			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
 
 			exec(pkillCmd, function(error, stdout, stderr) {
 				console.log(pkillCmd + ' is issued');
