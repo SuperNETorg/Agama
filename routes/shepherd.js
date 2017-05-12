@@ -103,13 +103,13 @@ shepherd.writeLog = function(data) {
   const timeFormatted = new Date(Date.now()).toLocaleString().replace('AM', '').replace('PM', '');
 
   if (fs.existsSync(logLocation + '/agamalog.txt')) {
-    fs.appendFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+    fs.appendFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
       if (err) {
         console.log('error writing log file');
       }
     });
   } else {
-    fs.writeFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+    fs.writeFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
       if (err) {
         console.log('error writing log file');
       }
