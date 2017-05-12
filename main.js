@@ -43,7 +43,16 @@ if (os.platform() === 'linux') {
 var shepherd = require('./routes/shepherd'),
 		guiapp = express();
 
+shepherd.writeLog('app init');
 shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
+shepherd.writeLog('sys info:');
+shepherd.writeLog('totalmem_readable: ' + formatBytes(os.totalmem()));
+shepherd.writeLog('arch: ' + os.arch());
+shepherd.writeLog('cpu: ' + os.cpus()[0].model);
+shepherd.writeLog('cpu_cores: ' + os.cpus().length);
+shepherd.writeLog('platform: ' + os.platform());
+shepherd.writeLog('os_release: ' + os.release());
+shepherd.writeLog('os_type: ' + os.type());
 
 var appConfig = shepherd.loadLocalConfig(); // load app config
 
@@ -509,3 +518,25 @@ app.on('activate', function () {
 		// createWindow('open');
 	}
 });
+
+function formatBytes(bytes, decimals) {
+  if (bytes === 0)
+    return '0 Bytes';
+
+  var k = 1000,
+      dm = decimals + 1 || 3,
+      sizes = [
+        'Bytes',
+        'KB',
+        'MB',
+        'GB',
+        'TB',
+        'PB',
+        'EB',
+        'ZB',
+        'YB'
+      ],
+      i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
