@@ -41,8 +41,13 @@ if (os.platform() === 'linux') {
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd'),
-		guiapp = express(),
-		appConfig = shepherd.loadLocalConfig(); // load app config
+		guiapp = express();
+
+shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
+
+var appConfig = shepherd.loadLocalConfig(); // load app config
+
+shepherd.writeLog('app started in ' + (appConfig.dev ? 'dev mode' : ' user mode'));
 
 if (appConfig.killIguanaOnStart) {
 	var iguanaGrep;
@@ -59,18 +64,22 @@ if (appConfig.killIguanaOnStart) {
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			console.log('found another iguana process(es)');
+			shepherd.writeLog('found another iguana process(es)');
 			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
 
 			exec(pkillCmd, function(error, stdout, stderr) {
 				console.log(pkillCmd + ' is issued');
+				shepherd.writeLog(pkillCmd + ' is issued');
 				if (error !== null) {
 					console.log(pkillCmd + ' exec error: ' + error);
+					shepherd.writeLog(pkillCmd + ' exec error: ' + error);
 				};
 			});
 		}
 
 		if (error !== null) {
 			console.log(iguanaGrep + ' exec error: ' + error);
+			shepherd.writeLog(iguanaGrep + ' exec error: ' + error);
 		};
 	});
 }
@@ -125,12 +134,14 @@ var server = require('http').createServer(guiapp),
 
 server.listen(appConfig.iguanaAppPort, function() {
 	console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');
+	shepherd.writeLog('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');
 });
 
 io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : 'http://127.0.0.1:' + appConfig.iguanaAppPort); // set origin
 
 io.on('connection', function(client) {
 	console.log('EDEX GUI is connected...');
+	shepherd.writeLog('EDEX GUI is connected...');
 
 	client.on('event', function(data) { // listen for client requests
 		console.log(data);
@@ -225,6 +236,7 @@ function createLoadingWindow() {
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/');
+	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
 	//loadingWindow.webContents.openDevTools()
@@ -335,8 +347,10 @@ function createWindow (status) {
 		// load our index.html (i.e. easyDEX GUI)
 		if (appConfig.edexGuiOnly) {
 			if (appConfig.v2) {
+				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/react/build');
 			} else {
+				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
 			}
 		} else {
@@ -360,6 +374,7 @@ function createWindow (status) {
 			var ConnectToPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Closing Main Window...');
+					shepherd.writeLog('exiting app...');
 
 					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod();
@@ -370,6 +385,7 @@ function createWindow (status) {
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
+						shepherd.writeLog('connecting to pm2...');
 
 						if (err) {
 							console.log(err);
@@ -379,6 +395,7 @@ function createWindow (status) {
 					var result = 'Connecting To Pm2: done';
 
 					console.log(result);
+					shepherd.writeLog(result);
 					resolve(result);
 				})
 			}
@@ -386,10 +403,12 @@ function createWindow (status) {
 			var KillPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('killing to pm2...');
+					shepherd.writeLog('killing to pm2...');
 
 					pm2.killDaemon(function(err) {
 						pm2.disconnect();
 						console.log('killed to pm2...');
+						shepherd.writeLog('killed to pm2...');
 
 						if (err)
 							throw err;
@@ -399,6 +418,7 @@ function createWindow (status) {
 
 					setTimeout(function() {
 						console.log(result);
+						shepherd.writeLog(result);
 
 						resolve(result);
 					}, 2000)
@@ -457,6 +477,7 @@ app.on('before-quit', function (event) {
 	if (mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
 		console.log('before-quit prevented');
+		shepherd.writeLog('quit app after loading is done');
 		closeAppAfterLoading = true;
 		let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
 		loadingWindow.webContents.executeJavaScript(code);

@@ -1398,21 +1398,6 @@ function formatBytes(bytes, decimals) {
 shepherd.SystemInfo = function() {
   const os_data = {
           'totalmem_bytes': os.totalmem(),
-          'totalmem_readble': formatBytes(os.totalmem()),
-          'arch': os.arch(),
-          'cpu': os.cpus()[0].model,
-          'cpu_cores': os.cpus().length,
-          'platform': os.platform(),
-          'os_release': os.release(),
-          'os_type': os.type()
-        };
-
-  return os_data;
-}
-
-shepherd.SystemInfo = function() {
-  const os_data = {
-          'totalmem_bytes': os.totalmem(),
           'totalmem_readable': formatBytes(os.totalmem()),
           'arch': os.arch(),
           'cpu': os.cpus()[0].model,
@@ -1442,6 +1427,25 @@ shepherd.appInfo = function() {
     releaseInfo,
     dirs,
   };
+}
+
+shepherd.writeLog = function(data) {
+  const logLocation = iguanaDir + '/shepherd';
+  const timeFormatted = new Date(Date.now()).toLocaleString().replace('AM', '').replace('PM', '');
+
+  if (fs.existsSync(logLocation + '/agamalog.txt')) {
+    fs.appendFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+      if (err) {
+        console.log('error writing log file');
+      }
+    });
+  } else {
+    fs.writeFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+      if (err) {
+        console.log('error writing log file');
+      }
+    });
+  }
 }
 
 module.exports = shepherd;
