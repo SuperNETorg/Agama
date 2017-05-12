@@ -67,8 +67,7 @@ if (os.platform() === 'win32') {
       iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
       iguanaConfsDir = path.normalize(iguanaConfsDir);
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
-      iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
-
+      iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc),
       komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
       komododBin = path.normalize(komododBin),
       komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
@@ -98,6 +97,25 @@ shepherd.appConfig = {
     "all": false
   }
 };
+
+shepherd.writeLog = function(data) {
+  const logLocation = iguanaDir + '/shepherd';
+  const timeFormatted = new Date(Date.now()).toLocaleString().replace('AM', '').replace('PM', '');
+
+  if (fs.existsSync(logLocation + '/agamalog.txt')) {
+    fs.appendFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+      if (err) {
+        console.log('error writing log file');
+      }
+    });
+  } else {
+    fs.writeFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+      if (err) {
+        console.log('error writing log file');
+      }
+    });
+  }
+}
 
 shepherd.get('/coinslist', function(req, res, next) {
   if (fs.existsSync(iguanaDir + '/shepherd/coinslist.json')) {
@@ -207,6 +225,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
 
       setTimeout(function() {
         console.log(result);
+        shepherd.writeLog(result);
         resolve(result);
       }, 1000);
     });
@@ -230,6 +249,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
       setTimeout(function() {
         console.log(result);
         console.log('app conf.json file is created successfully at: ' + iguanaConfsDir);
+        shepherd.writeLog('app conf.json file is created successfully at: ' + iguanaConfsDir);
         resolve(result);
       }, 2000);
     });
@@ -243,6 +263,7 @@ shepherd.loadLocalConfig = function() {
   if (fs.existsSync(iguanaDir + '/config.json')) {
     var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
     console.log('app config set from local file');
+    shepherd.writeLog('app config set from local file');
 
     // find diff between local and hardcoded configs
     // append diff to local config
@@ -266,6 +287,9 @@ shepherd.loadLocalConfig = function() {
         console.log('config diff is found, updating local config');
         console.log('config diff:');
         console.log(compareConfigs);
+        shepherd.writeLog('aconfig diff is found, updating local config');
+        shepherd.writeLog('config diff:');
+        shepherd.writeLog(compareConfigs);
 
         shepherd.saveLocalAppConf(newConfig);
         return newConfig;
@@ -277,6 +301,7 @@ shepherd.loadLocalConfig = function() {
     }
   } else {
     console.log('local config file is not found!');
+    shepherd.writeLog('local config file is not found!');
     shepherd.saveLocalAppConf(shepherd.appConfig);
 
     return shepherd.appConfig;
@@ -290,19 +315,41 @@ console.log('iguana bin: ' + iguanaBin);
 console.log('--------------------------')
 console.log('iguana dir: ' + komododBin);
 console.log('iguana bin: ' + komodoDir);
+shepherd.writeLog('iguana dir: ' + iguanaDir);
+shepherd.writeLog('iguana bin: ' + iguanaBin);
+shepherd.writeLog('iguana dir: ' + komododBin);
+shepherd.writeLog('iguana bin: ' + komodoDir);
 
 // END IGUANA FILES AND CONFIG SETTINGS
+// default route
 shepherd.get('/', function(req, res, next) {
   res.send('Iguana app server');
 });
 
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/appconf', function(req, res, next) {
   var obj = shepherd.loadLocalConfig();
   res.send(obj);
 });
 
+/*
+ *  type: GET
+ *
+ */
 shepherd.get('/sysinfo', function(req, res, next) {
   var obj = shepherd.SystemInfo();
+  res.send(obj);
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/appinfo', function(req, res, next) {
+  var obj = shepherd.appInfo();
   res.send(obj);
 });
 
@@ -317,6 +364,10 @@ var mock = require('./mock');
 shepherd.setIO = function(io) {
   shepherd.io = io;
   cache.setVar('io', io);
+};
+
+shepherd.setVar = function(_name, _body) {
+  shepherd[_name] = _body;
 };
 
 cache.setVar('iguanaDir', iguanaDir);
@@ -407,6 +458,7 @@ shepherd.get('/forks/restart', function(req, res, next) {
         'msg': 'success',
         'result': 'restarted'
       };
+      shepherd.writeLog('iguana fork pmid ' + _pmid + ' restarted');
 
       res.end(JSON.stringify(successObj));
     });
@@ -435,6 +487,8 @@ shepherd.get('/forks/stop', function(req, res, next) {
         'msg': 'success',
         'result': 'stopped'
       };
+
+      shepherd.writeLog('iguana fork pmid ' + _pmid + ' stopped');
 
       res.end(JSON.stringify(successObj));
     });
@@ -471,6 +525,8 @@ shepherd.post('/forks', function(req, res, next) {
       }
 
       console.log('iguana core fork port ' + _port);
+      shepherd.writeLog('iguana core fork port ' + _port);
+
       pm2.start({
         script: iguanaBin, // path to binary
         name: 'IGUANA ' + _port + ' ' + mode + ' / ' + coin,
@@ -506,6 +562,7 @@ shepherd.post('/forks', function(req, res, next) {
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
             throw err;
+            shepherd.writeLog('iguana fork error: ' + err);
             console.log('iguana fork error: ' + err);
           }
       });
@@ -625,6 +682,7 @@ shepherd.post('/herd', function(req, res) {
       portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
+          shepherd.writeLog('komodod service start error at port ' + _port + ', reason: port is closed');
           cache.io.emit('service', {
             'komodod': {
               'error': 'start error'
@@ -653,6 +711,8 @@ shepherd.post('/herdlist', function(req, res) {
 
       console.log(list[0].pm2_env.status) // print status of IGUANA proc
       console.log(list[0].pid) // print pid of IGUANA proc
+      shepherd.writeLog(list[0].pm2_env.status);
+      shepherd.writeLog(list[0].pid);
 
       var obj = {
         'herdname': req.body.herdname,
@@ -712,6 +772,9 @@ shepherd.post('/getconf', function(req, res) {
   var confpath = getConf(req.body.chain);
   console.log('got conf path is:');
   console.log(confpath);
+  shepherd.writeLog('got conf path is:');
+  shepherd.writeLog(confpath);
+
   var obj = {
     'msg': 'success',
     'result': confpath
@@ -802,7 +865,7 @@ shepherd.get('/kick', function(req, res, next) {
         'type': 'folder'
       }
     ],
-    'brutal': [ // delete coin related data
+    'brutal': [ // delete all coin related data
       {
         'name': 'DB/[coin]',
         'type': 'folder'
@@ -868,6 +931,7 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
         _fs.access(fileLocation, fs.constants.R_OK, function(err) {
           if (err) {
             console.log('error reading ' + fileLocation);
+            shepherd.writeLog('error reading ' + fileLocation);
             reject('readDebugLog error: ' + err);
           } else {
             console.log('reading ' + fileLocation);
@@ -896,6 +960,8 @@ function herder(flock, data) {
   if (flock === 'iguana') {
     console.log('iguana flock selected...');
     console.log('selected data: ' + data);
+    shepherd.writeLog('iguana flock selected...');
+    shepherd.writeLog('selected data: ' + data);
 
     // MAKE SURE IGUANA DIR IS THERE FOR USER
     mkdirp(iguanaDir, function(err) {
@@ -927,6 +993,7 @@ function herder(flock, data) {
         return console.error(err);
 
       console.log('confs files copied successfully at: ' + iguanaConfsDir);
+      shepherd.writeLog('confs files copied successfully at: ' + iguanaConfsDir);
     });
 
     pm2.connect(true,function(err) { //start up pm2 god
@@ -936,6 +1003,8 @@ function herder(flock, data) {
       }
 
       console.log('iguana core port ' + shepherd.appConfig.iguanaCorePort);
+      shepherd.writeLog('iguana core port ' + shepherd.appConfig.iguanaCorePort);
+
       pm2.start({
         script: iguanaBin, // path to binary
         name: 'IGUANA',
@@ -949,9 +1018,12 @@ function herder(flock, data) {
           'pid': apps[0].process.pid,
           'pmid': apps[0].pm2_env.pm_id
         };
+        shepherd.writeLog('iguana core started at port ' + shepherd.appConfig.iguanaCorePort + ' pid ' + apps[0].process.pid);
+
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
             throw err;
+            shepherd.writeLog('iguana core port ' + shepherd.appConfig.iguanaCorePort);
             console.log('iguana fork error: ' + err);
           }
       });
@@ -962,19 +1034,24 @@ function herder(flock, data) {
     var kmdDebugLogLocation = ( data.ac_name ? komodoDir + '/' + data.ac_name : komodoDir ) + '/debug.log';
     console.log('komodod flock selected...');
     console.log('selected data: ' + data);
+    shepherd.writeLog('komodod flock selected...');
+    shepherd.writeLog('selected data: ' + data);
 
     // truncate debug.log
     try {
       _fs.access(kmdDebugLogLocation, fs.constants.R_OK, function(err) {
         if (err) {
           console.log('error accessing ' + kmdDebugLogLocation);
+          shepherd.writeLog('error accessing ' + kmdDebugLogLocation);
         } else {
           console.log('truncate ' + kmdDebugLogLocation);
+          shepherd.writeLog('truncate ' + kmdDebugLogLocation);
           fs.unlink(kmdDebugLogLocation);
         }
       });
     } catch(e) {
       console.log('komodod debug.log access err: ' + e);
+      shepherd.writeLog('komodod debug.log access err: ' + e);
     }
 
     // get komodod instance port
@@ -988,11 +1065,17 @@ function herder(flock, data) {
           // start komodod via exec
           if (data.ac_name === 'komodod') {
             console.log('exec' + komododBin + ' ' + data.ac_options.join(' '));
+            shepherd.writeLog('exec' + komododBin + ' ' + data.ac_options.join(' '));
+
             exec(komododBin + ' ' + data.ac_options.join(' '), function(error, stdout, stderr) {
-              console.log('stdout: ' + stdout)
-              console.log('stderr: ' + stderr)
+              console.log('stdout: ' + stdout);
+              console.log('stderr: ' + stderr);
+              shepherd.writeLog('stdout: ' + stdout);
+              shepherd.writeLog('stderr: ' + stderr);
+
               if (error !== null) {
                 console.log('exec error: ' + error)
+                shepherd.writeLog('exec error: ' + error);
               }
             });
           } else {
@@ -1009,6 +1092,8 @@ function herder(flock, data) {
                 cwd: komodoDir,
                 args: data.ac_options
               }, function(err, apps) {
+                shepherd.writeLog('komodod fork started ' + data.ac_name + ' ' + JSON.stringify(data.ac_options));
+
                 pm2.disconnect(); // Disconnect from PM2
                 if (err)
                   throw err;
@@ -1017,10 +1102,12 @@ function herder(flock, data) {
           }
         } else {
           console.log('port ' + _port + ' (' + data.ac_name + ') is already in use');
+          shepherd.writeLog('port ' + _port + ' (' + data.ac_name + ') is already in use');
         }
       });
     } catch(e) {
       console.log('failed to start komodod err: ' + e);
+      shepherd.writeLog('failed to start komodod err: ' + e);
     }
   }
 
@@ -1028,6 +1115,8 @@ function herder(flock, data) {
     var kmdDebugLogLocation = zcashDir + '/debug.log';
     console.log('zcashd flock selected...');
     console.log('selected data: ' + data);
+    shepherd.writeLog('zcashd flock selected...');
+    shepherd.writeLog('selected data: ' + data);
 
     pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
@@ -1042,6 +1131,8 @@ function herder(flock, data) {
         cwd: zcashDir,
         args: data.ac_options
       }, function(err, apps) {
+        shepherd.writeLog('zcashd fork started ' + data.ac_name + ' ' + JSON.stringify(data.ac_options));
+
         pm2.disconnect(); // Disconnect from PM2
         if (err)
           throw err;
@@ -1049,6 +1140,7 @@ function herder(flock, data) {
     });
   }
 
+  // deprecated, to be removed
   if (flock === 'corsproxy') {
     console.log('corsproxy flock selected...');
     console.log('selected data: ' + data);
@@ -1078,12 +1170,16 @@ function slayer(flock) {
 
   pm2.delete(flock, function(err, ret) {
     pm2.disconnect();
+    shepherd.writeLog('deleting flock ' + flock);
+    shepherd.writeLog(ret);
+
     console.log(ret);
   });
 }
 
 function setConf(flock) {
   console.log(flock);
+  shepherd.writeLog('setconf ' + flock);
 
   if (os.platform() === 'darwin') {
     var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
@@ -1121,6 +1217,7 @@ function setConf(flock) {
   }
 
   console.log(DaemonConfPath);
+  shepherd.writeLog('setconf ' + DaemonConfPath);
 
   var CheckFileExists = function() {
     return new Promise(function(resolve, reject) {
@@ -1132,6 +1229,8 @@ function setConf(flock) {
 
       setTimeout(function() {
         console.log(result);
+        shepherd.writeLog('setconf ' + result);
+
         resolve(result);
       }, 2000);
     });
@@ -1145,6 +1244,8 @@ function setConf(flock) {
 
       setTimeout(function() {
         console.log(result);
+        shepherd.writeLog('setconf ' + result);
+
         resolve(result);
       }, 1000);
     });
@@ -1156,6 +1257,7 @@ function setConf(flock) {
 
       fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
         if (err) {
+          shepherd.writeLog('setconf error ' + err);
           return console.log(err);
         }
 
@@ -1169,7 +1271,9 @@ function setConf(flock) {
 
       fsnode.chmodSync(DaemonConfPath, '0666');
       setTimeout(function() {
+        shepherd.writeLog('setconf ' + result);
         console.log(result);
+
         resolve(result);
       }, 2000);
     });
@@ -1186,14 +1290,18 @@ function setConf(flock) {
 
             if (status[0].hasOwnProperty('rpcuser')) {
               console.log('rpcuser: OK');
+              shepherd.writeLog('rpcuser: OK');
             } else {
-              console.log('rpcuser: NOT FOUND');
               var randomstring = md5(Math.random() * Math.random() * 999);
+
+              console.log('rpcuser: NOT FOUND');
+              shepherd.writeLog('rpcuser: NOT FOUND');
 
               fs.appendFile(DaemonConfPath, '\nrpcuser=user' + randomstring.substring(0, 16), (err) => {
                 if (err)
                   throw err;
                 console.log('rpcuser: ADDED');
+                shepherd.writeLog('rpcuser: ADDED');
               });
             }
 
@@ -1207,14 +1315,18 @@ function setConf(flock) {
 
             if (status[0].hasOwnProperty('rpcpassword')) {
               console.log('rpcpassword: OK');
+              shepherd.writeLog('rpcpassword: OK');
             } else {
-              console.log('rpcpassword: NOT FOUND');
               var randomstring = md5(Math.random() * Math.random() * 999);
+
+              console.log('rpcpassword: NOT FOUND');
+              shepherd.writeLog('rpcpassword: NOT FOUND');
 
               fs.appendFile(DaemonConfPath, '\nrpcpassword=' + randomstring, (err) => {
                 if (err)
                   throw err;
                 console.log('rpcpassword: ADDED');
+                shepherd.writeLog('rpcpassword: ADDED');
               });
             }
 
@@ -1228,12 +1340,16 @@ function setConf(flock) {
 
             if (status[0].hasOwnProperty('server')) {
               console.log('server: OK');
+              shepherd.writeLog('server: OK');
             } else {
               console.log('server: NOT FOUND');
+              shepherd.writeLog('server: NOT FOUND');
+
               fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
                 if (err)
                   throw err;
                 console.log('server: ADDED');
+                shepherd.writeLog('server: ADDED');
               });
             }
 
@@ -1247,6 +1363,7 @@ function setConf(flock) {
 
             if (status[0].hasOwnProperty('addnode')) {
               console.log('addnode: OK');
+              shepherd.writeLog('addnode: OK');
             } else {
               console.log('addnode: NOT FOUND')
               fs.appendFile(DaemonConfPath,
@@ -1260,6 +1377,7 @@ function setConf(flock) {
                 if (err)
                   throw err;
                 console.log('addnode: ADDED');
+                shepherd.writeLog('addnode: ADDED');
               });
             }
 
@@ -1277,6 +1395,8 @@ function setConf(flock) {
 
       setTimeout(function() {
         console.log(result);
+        shepherd.writeLog('checkconf addnode ' + result);
+
         resolve(result);
       }, 2000);
     });
@@ -1290,6 +1410,8 @@ function setConf(flock) {
 
       setTimeout(function() {
         console.log(result);
+        shepherd.writeLog('MakeConfReadOnly ' + result);
+
         resolve(result);
       }, 1000);
     });
@@ -1310,6 +1432,7 @@ function getConf(flock) {
       DaemonConfPath = '';
 
   console.log(flock);
+  shepherd.writeLog('getconf flock: ' + flock);
 
   if (os.platform() === 'darwin') {
     komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
@@ -1347,12 +1470,13 @@ function getConf(flock) {
       }
   }
 
+  shepherd.writeLog('getconf path: ' + DaemonConfPath);
   console.log(DaemonConfPath);
   return DaemonConfPath;
 }
 
 function formatBytes(bytes, decimals) {
-  if (bytes == 0)
+  if (bytes === 0)
     return '0 Bytes';
 
   var k = 1000,
@@ -1376,7 +1500,7 @@ function formatBytes(bytes, decimals) {
 shepherd.SystemInfo = function() {
   const os_data = {
           'totalmem_bytes': os.totalmem(),
-          'totalmem_readble': formatBytes(os.totalmem()),
+          'totalmem_readable': formatBytes(os.totalmem()),
           'arch': os.arch(),
           'cpu': os.cpus()[0].model,
           'cpu_cores': os.cpus().length,
@@ -1386,6 +1510,25 @@ shepherd.SystemInfo = function() {
         };
 
   return os_data;
+}
+
+shepherd.appInfo = function() {
+  const sysInfo = shepherd.SystemInfo();
+  const releaseInfo = shepherd.appBasicInfo;
+  const dirs = {
+    iguanaDir,
+    iguanaBin,
+    komodoDir,
+    komododBin,
+    configLocation: iguanaDir + '/config.json',
+    cacheLocation: iguanaDir + '/shepherd',
+  };
+
+  return {
+    sysInfo,
+    releaseInfo,
+    dirs,
+  };
 }
 
 module.exports = shepherd;
