@@ -12,13 +12,14 @@ function IguanaAJAX(url, ajax_data, timeout) {
   });
 }
 
-function Iguana_activehandle(callback) {
+function Iguana_activehandle(appConf) {
+  $('#loading_status_text').text(appConf.iguanaCorePort);
   return new Promise((resolve) => {
     var ajax_data = {
           'agent': 'SuperNET',
           'method': 'activehandle'
         },
-        AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
+        AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + appConf.iguanaCorePort, ajax_data).done(function(data) {
           //$('#loading_status_text').text('Retrieving active handle...');
           //console.log(AjaxOutputData.responseText);
           AjaxOutputData = JSON.parse(AjaxOutputData.responseText)
@@ -111,30 +112,7 @@ function GetAppConf(cb) { // get iguana app conf
   return data;
 }
 
-function EDEX_DEXnotarychains() {
-  return new Promise((resolve) => {
-    var ajax_data = {
-      'agent': 'dpow',
-      'method': 'notarychains'
-    },
-    AjaxOutputData = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
-      //console.log(AjaxOutputData.responseText);
-      AjaxOutputData = JSON.parse(AjaxOutputData.responseText);
-      //console.log(AjaxOutputData);
-      resolve(AjaxOutputData);
-    })
-    .fail(function(xhr, textStatus, error) {
-      // handle request failures
-      console.log(xhr.statusText);
-      if ( xhr.readyState == 0 ) {
-      }
-      console.log(textStatus);
-      console.log(error);
-    });
-  });
-}
-
-function EDEX_DEXgetinfoAll(skip, minNotaries) {
+function EDEX_DEXgetinfoAll(skip, minNotaries, appConf) {
   const remote = require('electron').remote;
   var window = remote.getCurrentWindow();
 
@@ -146,7 +124,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
           'method': 'notarychains'
         },
         tmp_index = 0,
-        get_dex_notarychains = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data, 10000).done(function(data) {
+        get_dex_notarychains = IguanaAJAX('http://127.0.0.1:' + appConf.iguanaCorePort, ajax_data, 10000).done(function(data) {
           get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText);
           if (minNotaries > get_dex_notarychains.length) { // if config value exceeds total num of notaries
             minNotaries = get_dex_notarychains.length;
@@ -166,7 +144,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries) {
             console.log(ajax_data);
 
             if (coin_value !== 'MESH' || coin_value !== 'CEAL') {
-              var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:' + config.iguanaPort, ajax_data).done(function(data) {
+              var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:' + appConf.iguanaCorePort, ajax_data).done(function(data) {
                 getinfo_each_chain = JSON.parse(getinfo_each_chain.responseText);
                 console.log(getinfo_each_chain);
 
