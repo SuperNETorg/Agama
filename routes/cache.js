@@ -290,11 +290,13 @@ cache.one = function(req, res, next) {
   if (!cacheCallInProgress) {
     cache.dumpCacheBeforeExit();
 
-    let _data = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8');
-    if (_data) {
-        inMemCache = JSON.parse(_data);
-        _data = _data.replace('waiting', 'failed');
-        cache.dumpCacheBeforeExit();
+    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+      let _data = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8');
+      if (_data) {
+          inMemCache = JSON.parse(_data);
+          _data = _data.replace('waiting', 'failed');
+          cache.dumpCacheBeforeExit();
+      }
     }
 
     // TODO: add check to allow only one cache call/sequence in progress

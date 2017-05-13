@@ -357,7 +357,8 @@ function createWindow (status) {
 		if (appConfig.edexGuiOnly) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
-				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/react/build');
+				mainWindow.loadURL('http://127.0.0.1:3000');			
+				//mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/react/build');
 			} else {
 				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');

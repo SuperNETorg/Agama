@@ -13,7 +13,6 @@ function IguanaAJAX(url, ajax_data, timeout) {
 }
 
 function Iguana_activehandle(appConf) {
-  $('#loading_status_text').text(appConf.iguanaCorePort);
   return new Promise((resolve) => {
     var ajax_data = {
           'agent': 'SuperNET',

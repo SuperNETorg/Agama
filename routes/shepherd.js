@@ -537,7 +537,7 @@ shepherd.post('/forks', function(req, res, next) {
         iguanaInstanceRegistry[_port] = {
           'mode': mode,
           'coin': coin,
-          'pid': apps[0].process.pid,
+          'pid': apps[0].process && apps[0].process.pid,
           'pmid': apps[0].pm2_env.pm_id
         };
         cache.setVar('iguanaInstances', iguanaInstanceRegistry);
