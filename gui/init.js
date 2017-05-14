@@ -20,7 +20,7 @@ $(document).ready(function() {
 
     function startcheck() {
       portcheck = setInterval(function(){
-        Iguana_activehandle().then(function(result){
+        Iguana_activehandle(appConf).then(function(result){
           console.log(result);
 
           if (result !== 'error') {
@@ -31,7 +31,7 @@ $(document).ready(function() {
             }
 
             $('#loading_status_text').text('Connecting to Basilisk Network...');
-            EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries);
+            EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries, appConf);
           }
         })
         //var check = Iguana_activehandle();

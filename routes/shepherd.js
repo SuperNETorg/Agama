@@ -103,13 +103,13 @@ shepherd.writeLog = function(data) {
   const timeFormatted = new Date(Date.now()).toLocaleString().replace('AM', '').replace('PM', '');
 
   if (fs.existsSync(logLocation + '/agamalog.txt')) {
-    fs.appendFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+    fs.appendFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
       if (err) {
         console.log('error writing log file');
       }
     });
   } else {
-    fs.writeFile(logLocation + '/agamalog.txt', new Date(Date.now()).toLocaleString() + '  ' + data + '\r\n', function (err) {
+    fs.writeFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
       if (err) {
         console.log('error writing log file');
       }
@@ -203,7 +203,7 @@ shepherd.post('/appconf', function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   } else {
-    shepherd.saveLocalAppConf(JSON.parse(req.body.payload));
+    shepherd.saveLocalAppConf(req.body.payload);
 
     const errorObj = {
       'msg': 'success',
@@ -537,7 +537,7 @@ shepherd.post('/forks', function(req, res, next) {
         iguanaInstanceRegistry[_port] = {
           'mode': mode,
           'coin': coin,
-          'pid': apps[0].process.pid,
+          'pid': apps[0].process && apps[0].process.pid,
           'pmid': apps[0].pm2_env.pm_id
         };
         cache.setVar('iguanaInstances', iguanaInstanceRegistry);
