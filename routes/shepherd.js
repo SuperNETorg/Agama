@@ -1177,6 +1177,35 @@ function slayer(flock) {
   });
 }
 
+shepherd.setConfKMD = function() {
+  if (os.platform() === 'darwin') {
+    var komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
+        ZcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+  }
+
+  if (os.platform() === 'linux') {
+    var komodoDir = process.env.HOME + '/.komodo',
+        ZcashDir = process.env.HOME + '/.zcash';
+  }
+
+  if (os.platform() === 'win32') {
+    var komodoDir = process.env.APPDATA + '/Komodo',
+        ZcashDir = process.env.APPDATA + '/Zcash';
+  }
+
+  // check if kmd conf exists
+  _fs.access(komodoDir + '/komodo.conf', fs.constants.R_OK, function(err) {
+    if (err) {
+      console.log('creating komodo conf');
+      shepherd.writeLog('creating komodo conf in  ' + komodoDir + '/komodo.conf');
+      setConf('komodod');
+    } else {
+      shepherd.writeLog('komodo conf exists');
+      console.log('komodo conf exists');
+    }
+  });
+}
+
 function setConf(flock) {
   console.log(flock);
   shepherd.writeLog('setconf ' + flock);
@@ -1211,6 +1240,7 @@ function setConf(flock) {
       break;
     default:
       var DaemonConfPath = komodoDir + '/' + flock + '/' + flock + '.conf';
+
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
