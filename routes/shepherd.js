@@ -1067,7 +1067,9 @@ function herder(flock, data) {
             console.log('exec' + komododBin + ' ' + data.ac_options.join(' '));
             shepherd.writeLog('exec' + komododBin + ' ' + data.ac_options.join(' '));
 
-            exec(komododBin + ' ' + data.ac_options.join(' '), function(error, stdout, stderr) {
+            exec(komododBin + ' ' + data.ac_options.join(' '), {
+              maxBuffer: 1024 * 10000 // 10 mb
+            }, function(error, stdout, stderr) {
               console.log('stdout: ' + stdout);
               console.log('stderr: ' + stderr);
               shepherd.writeLog('stdout: ' + stdout);
