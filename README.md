@@ -15,7 +15,7 @@ cd ../../
 
 Install Agama App
 ```shell
-cd iguana
+cd Agama
 npm install
 ```
 
