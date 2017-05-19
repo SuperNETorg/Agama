@@ -41,7 +41,9 @@ if (os.platform() === 'linux') {
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd'),
-		guiapp = express();
+	guiapp = express();
+
+shepherd.createIguanaDirs();
 
 shepherd.writeLog('app init');
 shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
