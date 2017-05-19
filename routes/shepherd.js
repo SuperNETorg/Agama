@@ -23,7 +23,8 @@ const fixPath = require('fix-path');
 var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
     //coincli = require('../private/coincli.js'),
-    assetChainPorts = require('./ports.js')
+    assetChainPorts = require('./ports.js'),
+    md5 = require(),
     shepherd = express.Router(),
     iguanaInstanceRegistry = {},
     syncOnlyIguanaInstanceInfo = {},
@@ -114,6 +115,22 @@ shepherd.writeLog = function(data) {
         console.log('error writing log file');
       }
     });
+  }
+}
+
+shepherd.createIguanaDirs = function() {
+  if (!fs.existsSync(iguanaDir)) {
+    fs.mkdirSync(iguanaDir);
+    shepherd.writeLog('creating iguana folder at ' + iguanaDir);
+  } else {
+    console.log('iguana folder already exists');
+  }
+
+  if (!fs.existsSync(iguanaDir + '/shepherd')) {
+    fs.mkdirSync(iguanaDir + '/shepherd');
+    shepherd.writeLog('creating shepherd folder at ' + iguanaDir + '/shepherd');
+  } else {
+    console.log('shepherd folder already exists');
   }
 }
 
