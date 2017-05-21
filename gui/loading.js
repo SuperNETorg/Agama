@@ -123,6 +123,7 @@ function EDEX_DEXgetinfoAll(skip, minNotaries, appConf) {
           'method': 'notarychains'
         },
         tmp_index = 0,
+        tmp_index_failed = 0,
         get_dex_notarychains = IguanaAJAX('http://127.0.0.1:' + appConf.iguanaCorePort, ajax_data, 10000).done(function(data) {
           get_dex_notarychains = JSON.parse(get_dex_notarychains.responseText);
           if (minNotaries > get_dex_notarychains.length) { // if config value exceeds total num of notaries
@@ -143,11 +144,11 @@ function EDEX_DEXgetinfoAll(skip, minNotaries, appConf) {
             console.log(ajax_data);
 
             if (coin_value !== 'MESH' || coin_value !== 'CEAL') {
-              var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:' + appConf.iguanaCorePort, ajax_data).done(function(data) {
+              var getinfo_each_chain = IguanaAJAX('http://127.0.0.1:' + appConf.iguanaCorePort, ajax_data, 10000).done(function(data) {
                 getinfo_each_chain = JSON.parse(getinfo_each_chain.responseText);
                 console.log(getinfo_each_chain);
 
-                tmp_index = parseInt(coin_index) + 1;
+                tmp_index++;
                 $('#loading_sub_status_text').text('Connection status... ' + tmp_index + '/' + get_dex_notarychains.length + ': ' + coin_value);
 
                 if (getinfo_each_chain.error === 'less than required responses') {
@@ -156,13 +157,21 @@ function EDEX_DEXgetinfoAll(skip, minNotaries, appConf) {
                   $('#loading_sub_status_output_text').text('Output: Connected');
                 }
 
-                if ( tmp_index == minNotaries ) {
+                if ( tmp_index + tmp_index_failed === minNotaries ) {
                   console.log('min notaries connected');
                   window.createWindow('open');
                   window.hide();
                 }
               })
               .fail(function(xhr, textStatus, error) {
+                tmp_index_failed++;
+
+                if ( tmp_index + tmp_index_failed === minNotaries ) {
+                  console.log('min notaries connected');
+                  window.createWindow('open');
+                  window.hide();
+                }
+
                 // handle request failures
                 console.log(xhr.statusText);
                 if ( xhr.readyState == 0 ) {
