@@ -20,14 +20,18 @@ $(document).ready(function() {
 
     function startcheck() {
       portcheck = setInterval(function(){
-        Iguana_activehandle().then(function(result){
+        Iguana_activehandle(appConf).then(function(result){
           console.log(result);
 
           if (result !== 'error') {
             stopcheck();
-            StartIguana_Cache();
+
+            if (appConf && appConf.forks && appConf.forks.basilisk) {
+              StartIguana_Cache();
+            }
+
             $('#loading_status_text').text('Connecting to Basilisk Network...');
-            EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries);
+            EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries, appConf);
           }
         })
         //var check = Iguana_activehandle();
