@@ -27,7 +27,8 @@ var ps = require('ps-node'),
     shepherd = express.Router(),
     iguanaInstanceRegistry = {},
     syncOnlyIguanaInstanceInfo = {},
-    syncOnlyInstanceInterval = -1;
+    syncOnlyInstanceInterval = -1,
+    guiLog = {};
 
 // IGUANA FILES AND CONFIG SETTINGS
 var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
@@ -100,7 +101,7 @@ shepherd.appConfig = {
 
 shepherd.writeLog = function(data) {
   const logLocation = iguanaDir + '/shepherd';
-  const timeFormatted = new Date(Date.now()).toLocaleString().replace('AM', '').replace('PM', '');
+  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
 
   if (fs.existsSync(logLocation + '/agamalog.txt')) {
     fs.appendFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
@@ -168,6 +169,44 @@ shepherd.get('/coinslist', function(req, res, next) {
   }
 });
 
+/*
+ *  type: POST
+ *  params: payload
+ */
+shepherd.post('/guilog', function(req, res, next) {
+  const logLocation = iguanaDir + '/shepherd';
+
+  if (!guiLog[shepherd.appSessionHash]) {
+    guiLog[shepherd.appSessionHash] = {};
+  }
+
+  if (guiLog[shepherd.appSessionHash][req.body.timestamp]) {
+    guiLog[shepherd.appSessionHash][req.body.timestamp].status = req.body.status;
+    guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
+  } else {
+    guiLog[shepherd.appSessionHash][req.body.timestamp] = {
+      'function': req.body.function,
+      'type': req.body.type,
+      'url': req.body.url,
+      'payload': req.body.payload,
+      'status': req.body.status,
+    };
+  }
+
+  fs.writeFile(logLocation + '/agamalog.json', JSON.stringify(guiLog), function (err) {
+    if (err) {
+      shepherd.writeLog('error writing gui log file');
+    }
+
+    const returnObj = {
+      'msg': 'success',
+      'result': 'gui log entry is added'
+    };
+
+    res.end(JSON.stringify(returnObj));
+  });
+});
+
 shepherd.post('/coinslist', function(req, res, next) {
   const _payload = req.body.payload;
 
@@ -206,6 +245,7 @@ shepherd.quitKomodod = function(chain) {
   exec(komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
     console.log('stdout: ' + stdout)
     console.log('stderr: ' + stderr)
+    
     if (error !== null) {
       console.log('exec error: ' + error)
     }
@@ -1587,6 +1627,7 @@ shepherd.appInfo = function() {
     sysInfo,
     releaseInfo,
     dirs,
+    appSession: shepherd.appSessionHash
   };
 }
 
