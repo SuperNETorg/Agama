@@ -7,7 +7,7 @@
 echo
 echo =========================================
 echo Step: Removing old binaries
-cd build
+cd ./build
 rm -rvf artifacts.supernet.org
 echo
 echo Step: Cloning latest binaries for build
