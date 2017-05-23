@@ -207,6 +207,37 @@ shepherd.post('/guilog', function(req, res, next) {
   });
 });
 
+shepherd.get('/getlog', function(req, res, next) {
+  const logExt = req.query.type === 'txt' ? 'txt' : 'json';
+
+  if (fs.existsSync(iguanaDir + '/shepherd/agamalog.' + logExt)) {
+    fs.readFile(iguanaDir + '/shepherd/agamalog.' + logExt, 'utf8', function (err, data) {
+      if (err) {
+        const errorObj = {
+          'msg': 'error',
+          'result': err
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': data ? JSON.parse(data) : ''
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    });
+  } else {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'agama.' + logExt + ' doesn\'t exist'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+});
+
 shepherd.post('/coinslist', function(req, res, next) {
   const _payload = req.body.payload;
 
