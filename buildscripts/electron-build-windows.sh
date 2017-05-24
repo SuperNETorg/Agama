@@ -11,7 +11,7 @@ rm -rvf artifacts.supernet.org
 echo
 echo Step: Cloning latest binaries for build
 wget --recursive --no-parent -q https://artifacts.supernet.org/latest/windows/
-find artifacts.supernet.org -exec ls -l {} \;
+find artifacts.supernet.org/latest/windows/ -exec ls -l {} \;
 cd ..
 echo =========================================
 echo
