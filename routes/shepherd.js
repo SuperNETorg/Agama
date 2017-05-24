@@ -81,10 +81,10 @@ shepherd.appConfig = {
   "edexGuiOnly": true,
   "iguanaGuiOnly": false,
   "manualIguanaStart": false,
-  "skipBasiliskNetworkCheck": false,
+  "skipBasiliskNetworkCheck": true,
   "minNotaries": 8,
   "host": "127.0.0.1",
-  "iguanaAppPort": 17777,
+  "agamaPort": 17777,
   "iguanaCorePort": 7778,
   "maxDescriptors": {
     "darwin": 90000,
@@ -276,7 +276,7 @@ shepherd.quitKomodod = function(chain) {
   exec(komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
     console.log('stdout: ' + stdout)
     console.log('stderr: ' + stderr)
-    
+
     if (error !== null) {
       console.log('exec error: ' + error)
     }
