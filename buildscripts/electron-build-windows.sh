@@ -10,7 +10,7 @@ echo Step: Removing old binaries
 rm -rvf artifacts.supernet.org
 echo
 echo Step: Cloning latest binaries for build
-wget --recursive --no-parent -q --show-progress https://artifacts.supernet.org/latest/windows/
+wget --recursive --no-parent -q https://artifacts.supernet.org/latest/windows/
 cd ..
 echo =========================================
 echo
