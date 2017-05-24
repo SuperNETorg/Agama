@@ -7,6 +7,7 @@ const electron = require('electron'),
 			path = require('path'),
 			url = require('url'),
 			os = require('os'),
+			md5 = require('md5'),
 			spawn = require('child_process').spawn,
 			exec = require('child_process').exec,
 			{ Menu } = require('electron'),
@@ -28,7 +29,7 @@ Promise = require('bluebird');
 
 const appBasicInfo = {
 	name: 'Agama',
-	version: '0.1.6.2e-beta'
+	version: '0.1.7.77a-beta'
 };
 
 app.setName(appBasicInfo.name);
@@ -41,9 +42,13 @@ if (os.platform() === 'linux') {
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd'),
-		guiapp = express();
+	guiapp = express();
 
-shepherd.writeLog('app init');
+shepherd.createIguanaDirs();
+
+const appSessionHash = md5(new Date(Date.now()).toLocaleString);
+
+shepherd.writeLog('app init ' + appSessionHash);
 shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
 shepherd.writeLog('sys info:');
 shepherd.writeLog('totalmem_readable: ' + formatBytes(os.totalmem()));
@@ -168,6 +173,7 @@ io.on('connection', function(client) {
 
 shepherd.setIO(io); // pass sockets object to shepherd router
 shepherd.setVar('appBasicInfo', appBasicInfo);
+shepherd.setVar('appSessionHash', appSessionHash);
 
 module.exports = guiapp;
 // END GUI App Settings
