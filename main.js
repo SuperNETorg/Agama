@@ -148,12 +148,12 @@ guiapp.use('/shepherd', shepherd);
 var server = require('http').createServer(guiapp),
 		io = require('socket.io').listen(server);
 
-server.listen(appConfig.iguanaAppPort, function() {
-	console.log('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');
-	shepherd.writeLog('guiapp and sockets.io are listening on port ' + appConfig.iguanaAppPort + '!');
+server.listen(appConfig.agamaPort, function() {
+	console.log('guiapp and sockets.io are listening on port ' + appConfig.agamaPort + '!');
+	shepherd.writeLog('guiapp and sockets.io are listening on port ' + appConfig.agamaPort + '!');
 });
 
-io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : 'http://127.0.0.1:' + appConfig.iguanaAppPort); // set origin
+io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : 'http://127.0.0.1:' + appConfig.agamaPort); // set origin
 
 io.on('connection', function(client) {
 	console.log('EDEX GUI is connected...');
@@ -252,7 +252,7 @@ function createLoadingWindow() {
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
 
 	// load our index.html (i.e. easyDEX GUI)
-	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/');
+	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/');
 	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
@@ -366,13 +366,14 @@ function createWindow (status) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL('http://127.0.0.1:3000');
-				//mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/react/build');
+				mainWindow.appConfig = appConfig;
+				//mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/react/build');
 			} else {
 				shepherd.writeLog('show edex gui');
-				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/EasyDEX-GUI/');
+				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/');
 			}
 		} else {
-			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.iguanaAppPort + '/gui/main.html');
+			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/main.html');
 		}
 
 		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params
