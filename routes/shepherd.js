@@ -93,7 +93,8 @@ shepherd.appConfig = {
   "killIguanaOnStart": true,
   "dev": false,
   "v2": true,
-  "useBasiliskInstance": true
+  "useBasiliskInstance": true,
+  "debug": true,
 };
 
 shepherd.writeLog = function(data) {
