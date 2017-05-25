@@ -475,7 +475,7 @@ shepherd.getSyncOnlyForksInfo = function() {
     if (iguanaInstanceRegistry[port].mode.indexOf('/sync') > -1) {
       syncOnlyIguanaInstanceInfo[port] = {};
       request({
-        url: 'http://localhost:' + port + '/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@1234',
+        url: 'http://localhost:' + port + '/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@' + shepherd.appSessionHash,
         method: 'GET'
       }, function (error, response, body) {
         if (response && response.statusCode && response.statusCode === 200) {
@@ -488,7 +488,7 @@ shepherd.getSyncOnlyForksInfo = function() {
         }
       });
       request({
-        url: 'http://localhost:' + port + '/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234',
+        url: 'http://localhost:' + port + '/api/SuperNET/activehandle?userpass=' + shepherd.appSessionHash,
         method: 'GET'
       }, function (error, response, body) {
         if (response && response.statusCode && response.statusCode === 200) {
