@@ -26,7 +26,7 @@ $(document).ready(function() {
           if (result !== 'error') {
             stopcheck();
 
-            if (appConf && appConf.forks && appConf.forks.basilisk) {
+            if (appConf && appConf.useBasiliskInstance) {
               StartIguana_Cache();
             }
 
