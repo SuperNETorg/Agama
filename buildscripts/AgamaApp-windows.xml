@@ -115,9 +115,6 @@
                             <origin>../build/Agama-win32-ia32/node.dll</origin>
                         </distributionFile>
                         <distributionFile>
-                            <origin>../build/Agama-win32-ia32/xinput1_3.dll</origin>
-                        </distributionFile>
-                        <distributionFile>
                             <origin>../build/Agama-win32-ia32/LICENSE</origin>
                         </distributionFile>
                         <distributionFile>
