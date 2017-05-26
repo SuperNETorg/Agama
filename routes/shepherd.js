@@ -43,20 +43,19 @@ if (os.platform() === 'darwin') {
       iguanaConfsDir = iguanaDir + '/confs',
       komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/osx/komodod'),
       komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/osx/komodo-cli'),
-      komodoDir = process.env.HOME + '/Library/Application Support/Komodo';
-
+      komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
       zcashDir = process.env.HOME + '/Library/Application Support/Zcash';
 }
 
 if (os.platform() === 'linux') {
-  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux64/iguana'),
+  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/iguana'),
       iguanaDir = process.env.HOME + '/.iguana',
       iguanaConfsDir = iguanaDir + '/confs',
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
-      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux64/komodod'),
-      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux64/komodo-cli'),
+      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/komodod'),
+      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/komodo-cli'),
       komodoDir = process.env.HOME + '/.komodo';
 }
 
@@ -69,7 +68,7 @@ if (os.platform() === 'win32') {
       iguanaConfsDir = path.normalize(iguanaConfsDir);
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
       iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc),
-      komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
+      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/komodod.exe'),
       komododBin = path.normalize(komododBin),
       komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/komodo-cli.exe'),
       komodocliBin = path.normalize(komodocliBin),
@@ -478,7 +477,9 @@ shepherd.getSyncOnlyForksInfo = function() {
         url: 'http://localhost:' + port + '/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@' + shepherd.appSessionHash,
         method: 'GET'
       }, function (error, response, body) {
-        if (response && response.statusCode && response.statusCode === 200) {
+        if (response &&
+            response.statusCode &&
+            response.statusCode === 200) {
           // console.log(body);
           try {
             syncOnlyIguanaInstanceInfo[port].getinfo = JSON.parse(body);
@@ -491,7 +492,9 @@ shepherd.getSyncOnlyForksInfo = function() {
         url: 'http://localhost:' + port + '/api/SuperNET/activehandle?userpass=' + shepherd.appSessionHash,
         method: 'GET'
       }, function (error, response, body) {
-        if (response && response.statusCode && response.statusCode === 200) {
+        if (response &&
+            response.statusCode &&
+            response.statusCode === 200) {
           // console.log(body);
           try {
             syncOnlyIguanaInstanceInfo[port].activehandle = JSON.parse(body);
@@ -844,8 +847,10 @@ shepherd.post('/setconf', function(req, res) {
   console.log('======= req.body =======');
   console.log(req.body);
 
-  if (os.platform() === 'win32' && req.body.chain == 'komodod') {
+  if (os.platform() === 'win32' &&
+      req.body.chain == 'komodod') {
     setkomodoconf = spawn(path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
+    setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
   } else {
     setConf(req.body.chain);
   }
@@ -981,7 +986,8 @@ shepherd.get('/kick', function(req, res, next) {
     ]
   };
 
-  if (_coin && _type) {
+  if (_coin &&
+      _type) {
     for (var i = 0; i < kickStartDirs[_type].length; i++) {
       var currentKickItem = kickStartDirs[_type][i];
 
@@ -995,7 +1001,8 @@ shepherd.get('/kick', function(req, res, next) {
       } else if (currentKickItem.type === 'pattern') {
         var dirItems = fs.readdirSync(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
 
-        if (dirItems && dirItems.length) {
+        if (dirItems &&
+            dirItems.length) {
           for (var j = 0; j < dirItems.length; j++) {
             if (dirItems[j].indexOf(currentKickItem.match) > -1) {
               rimraf(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin) + '/' + dirItems[j], function(err) {
@@ -1048,7 +1055,7 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 };
 
 function herder(flock, data) {
-  if (data == undefined) {
+  if (data === undefined) {
     data = 'none';
     console.log('it is undefined');
   }
@@ -1295,7 +1302,7 @@ shepherd.setConfKMD = function() {
   _fs.access(komodoDir + '/komodo.conf', fs.constants.R_OK, function(err) {
     if (err) {
       console.log('creating komodo conf');
-      shepherd.writeLog('creating komodo conf in  ' + komodoDir + '/komodo.conf');
+      shepherd.writeLog('creating komodo conf in ' + komodoDir + '/komodo.conf');
       setConf('komodod');
     } else {
       shepherd.writeLog('komodo conf exists');

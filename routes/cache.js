@@ -252,13 +252,6 @@ checkCallStack = function() {
 
   if (total / Object.keys(callStack).length === 1) {
     cache.dumpCacheBeforeExit();
-    /*fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', JSON.stringify(inMemCache), function(err) {
-      if (err) {
-        return console.log(err);
-      }
-
-      console.log('file ' + cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json is updated');
-    });*/
     cacheCallInProgress = false;
     cache.io.emit('messages', {
       'message': {
@@ -269,8 +262,6 @@ checkCallStack = function() {
         }
       }
     });
-    // add timestamp to cache file
-    // writeCache(Date.now());
   }
 };
 
@@ -279,7 +270,8 @@ checkCallStack = function() {
  *  params: userpass, pubkey, coin, address, skip
  */
 cache.one = function(req, res, next) {
-  if (req.query.pubkey && !fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+  if (req.query.pubkey &&
+      !fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
     cacheCallInProgress = false;
   }
 
@@ -394,7 +386,8 @@ cache.one = function(req, res, next) {
         outObj = fixJSON(_file);
       }
 
-      if (!outObj || !outObj.basilisk) {
+      if (!outObj ||
+          !outObj.basilisk) {
         console.log('no local basilisk info');
         outObj['basilisk'] = {};
         outObj['basilisk'][coin] = {};
@@ -503,7 +496,9 @@ cache.one = function(req, res, next) {
               url: mock ? 'http://localhost:17777/shepherd/mock?url=' + dexUrl : dexUrl,
               method: 'GET'
             }, function (error, response, body) {
-              if (response && response.statusCode && response.statusCode === 200) {
+              if (response &&
+                  response.statusCode &&
+                  response.statusCode === 200) {
                 cache.io.emit('messages', {
                   'message': {
                     'shepherd': {
@@ -542,7 +537,9 @@ cache.one = function(req, res, next) {
 
                 writeCache();
               }
-              if (error || !body || !response) {
+              if (error ||
+                  !body ||
+                  !response) {
                 outObj.basilisk[coin][address][key] = {};
                 outObj.basilisk[coin][address][key].data = { 'error': 'request failed' };
                 outObj.basilisk[coin][address][key].timestamp = 1471620867 // add timestamp
@@ -635,12 +632,14 @@ cache.one = function(req, res, next) {
         if (addresses) {
           parseAddresses(coin, addresses);
         } else {
-          const tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort /*iguanaCorePort*/ + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
+          const tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
           request({
             url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
             method: 'GET'
           }, function (error, response, body) {
-            if (response && response.statusCode && response.statusCode === 200) {
+            if (response &&
+                response.statusCode &&
+                response.statusCode === 200) {
               parseAddresses(coin, JSON.parse(body).result);
             } else {
               // TODO: error
@@ -666,12 +665,14 @@ cache.one = function(req, res, next) {
         });
 
         if (coin === 'all') {
-          const tempUrl = 'http://' + cache.appConfig.host + ':' + /*iguanaCorePort*/ cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
+          const tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
           request({
             url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
             method: 'GET'
           }, function (error, response, body) {
-            if (response && response.statusCode && response.statusCode === 200) {
+            if (response &&
+                response.statusCode &&
+                response.statusCode === 200) {
               console.log(JSON.parse(body).basilisk);
               cache.io.emit('messages', {
                 'message': {
@@ -688,7 +689,8 @@ cache.one = function(req, res, next) {
               });
               body = JSON.parse(body);
               // basilisk coins
-              if (body.basilisk && body.basilisk.length) {
+              if (body.basilisk &&
+                  body.basilisk.length) {
                 // get coin addresses
                 async.each(body.basilisk, function(coin) {
                   callStack[coin] = 1;
