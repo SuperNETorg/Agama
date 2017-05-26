@@ -29,7 +29,7 @@ Promise = require('bluebird');
 
 const appBasicInfo = {
 	name: 'Agama',
-	version: '0.1.7.77a-beta'
+	version: '0.2.0.1a-beta'
 };
 
 app.setName(appBasicInfo.name);
@@ -42,11 +42,11 @@ if (os.platform() === 'linux') {
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd'),
-	guiapp = express();
+		guiapp = express();
 
 shepherd.createIguanaDirs();
 
-const appSessionHash = md5(new Date(Date.now()).toLocaleString);
+const appSessionHash = md5(Date.now());
 
 shepherd.writeLog('app init ' + appSessionHash);
 shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
@@ -365,10 +365,10 @@ function createWindow (status) {
 		if (appConfig.edexGuiOnly) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
-				mainWindow.loadURL('http://127.0.0.1:3000');
+				// mainWindow.loadURL('http://127.0.0.1:3000');
 				mainWindow.appConfig = appConfig;
 				mainWindow.appSessionHash = appSessionHash;
-				//mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/react/build');
+				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/react/build');
 			} else {
 				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/');
