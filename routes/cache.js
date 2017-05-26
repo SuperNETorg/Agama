@@ -429,7 +429,7 @@ cache.one = function(req, res, next) {
           'listunspent': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
           'listtransactions': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
           'getbalance': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'refresh': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&timeout=600000&symbol=' + coin + '&address=' + address
+          'refresh': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address
         },
         _dexUrls = {};
 

@@ -23,11 +23,12 @@ const fixPath = require('fix-path');
 var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
     //coincli = require('../private/coincli.js'),
-    assetChainPorts = require('./ports.js')
+    assetChainPorts = require('./ports.js'),
     shepherd = express.Router(),
     iguanaInstanceRegistry = {},
     syncOnlyIguanaInstanceInfo = {},
-    syncOnlyInstanceInterval = -1;
+    syncOnlyInstanceInterval = -1,
+    guiLog = {};
 
 // IGUANA FILES AND CONFIG SETTINGS
 var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
@@ -80,10 +81,10 @@ shepherd.appConfig = {
   "edexGuiOnly": true,
   "iguanaGuiOnly": false,
   "manualIguanaStart": false,
-  "skipBasiliskNetworkCheck": false,
+  "skipBasiliskNetworkCheck": true,
   "minNotaries": 8,
   "host": "127.0.0.1",
-  "iguanaAppPort": 17777,
+  "agamaPort": 17777,
   "iguanaCorePort": 7778,
   "maxDescriptors": {
     "darwin": 90000,
@@ -91,16 +92,14 @@ shepherd.appConfig = {
   },
   "killIguanaOnStart": true,
   "dev": false,
-  "v2": false,
-  "forks": {
-    "basilisk": false,
-    "all": false
-  }
+  "v2": true,
+  "useBasiliskInstance": true,
+  "debug": true,
 };
 
 shepherd.writeLog = function(data) {
   const logLocation = iguanaDir + '/shepherd';
-  const timeFormatted = new Date(Date.now()).toLocaleString().replace('AM', '').replace('PM', '');
+  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
 
   if (fs.existsSync(logLocation + '/agamalog.txt')) {
     fs.appendFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
@@ -114,6 +113,28 @@ shepherd.writeLog = function(data) {
         console.log('error writing log file');
       }
     });
+  }
+}
+
+shepherd.createIguanaDirs = function() {
+  if (!fs.existsSync(iguanaDir)) {
+    fs.mkdirSync(iguanaDir);
+    if (fs.existsSync(iguanaDir)) {
+      console.log('created iguana folder at ' + iguanaDir);
+      shepherd.writeLog('created iguana folder at ' + iguanaDir);
+    }
+  } else {
+    console.log('iguana folder already exists');
+  }
+
+  if (!fs.existsSync(iguanaDir + '/shepherd')) {
+    fs.mkdirSync(iguanaDir + '/shepherd');
+    if (fs.existsSync(iguanaDir)) {
+      console.log('created shepherd folder at ' + iguanaDir + '/shepherd');
+      shepherd.writeLog('create shepherd folder at ' + iguanaDir + '/shepherd');
+    }
+  } else {
+    console.log('shepherd folder already exists');
   }
 }
 
@@ -140,6 +161,75 @@ shepherd.get('/coinslist', function(req, res, next) {
     const errorObj = {
       'msg': 'error',
       'result': 'coin list doesn\'t exist'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+});
+
+/*
+ *  type: POST
+ *  params: payload
+ */
+shepherd.post('/guilog', function(req, res, next) {
+  const logLocation = iguanaDir + '/shepherd';
+
+  if (!guiLog[shepherd.appSessionHash]) {
+    guiLog[shepherd.appSessionHash] = {};
+  }
+
+  if (guiLog[shepherd.appSessionHash][req.body.timestamp]) {
+    guiLog[shepherd.appSessionHash][req.body.timestamp].status = req.body.status;
+    guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
+  } else {
+    guiLog[shepherd.appSessionHash][req.body.timestamp] = {
+      'function': req.body.function,
+      'type': req.body.type,
+      'url': req.body.url,
+      'payload': req.body.payload,
+      'status': req.body.status,
+    };
+  }
+
+  fs.writeFile(logLocation + '/agamalog.json', JSON.stringify(guiLog), function (err) {
+    if (err) {
+      shepherd.writeLog('error writing gui log file');
+    }
+
+    const returnObj = {
+      'msg': 'success',
+      'result': 'gui log entry is added'
+    };
+
+    res.end(JSON.stringify(returnObj));
+  });
+});
+
+shepherd.get('/getlog', function(req, res, next) {
+  const logExt = req.query.type === 'txt' ? 'txt' : 'json';
+
+  if (fs.existsSync(iguanaDir + '/shepherd/agamalog.' + logExt)) {
+    fs.readFile(iguanaDir + '/shepherd/agamalog.' + logExt, 'utf8', function (err, data) {
+      if (err) {
+        const errorObj = {
+          'msg': 'error',
+          'result': err
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': data ? JSON.parse(data) : ''
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    });
+  } else {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'agama.' + logExt + ' doesn\'t exist'
     };
 
     res.end(JSON.stringify(errorObj));
@@ -184,6 +274,7 @@ shepherd.quitKomodod = function(chain) {
   exec(komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
     console.log('stdout: ' + stdout)
     console.log('stderr: ' + stderr)
+
     if (error !== null) {
       console.log('exec error: ' + error)
     }
@@ -217,46 +308,51 @@ shepherd.post('/appconf', function(req, res, next) {
 shepherd.saveLocalAppConf = function(appSettings) {
   var appConfFileName = iguanaDir + '/config.json';
 
-  var FixFilePermissions = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'config.json file permissions updated to Read/Write';
+  _fs.access(iguanaDir, fs.constants.R_OK, function(err) {
+    if (!err) {
 
-      fsnode.chmodSync(appConfFileName, '0666');
+      var FixFilePermissions = function() {
+        return new Promise(function(resolve, reject) {
+          var result = 'config.json file permissions updated to Read/Write';
 
-      setTimeout(function() {
-        console.log(result);
-        shepherd.writeLog(result);
-        resolve(result);
-      }, 1000);
-    });
-  }
+          fsnode.chmodSync(appConfFileName, '0666');
 
-  var FsWrite = function() {
-    return new Promise(function(resolve, reject) {
-      var result = 'config.json write file is done'
+          setTimeout(function() {
+            console.log(result);
+            shepherd.writeLog(result);
+            resolve(result);
+          }, 1000);
+        });
+      }
 
-      fs.writeFile(appConfFileName,
-                   JSON.stringify(appSettings)
-                   .replace(/,/g, ',\n') // format json in human readable form
-                   .replace(/:/g, ': ')
-                   .replace(/{/g, '{\n')
-                   .replace(/}/g, '\n}'), 'utf8', function(err) {
-        if (err)
-          return console.log(err);
-      });
+      var FsWrite = function() {
+        return new Promise(function(resolve, reject) {
+          var result = 'config.json write file is done'
 
-      fsnode.chmodSync(appConfFileName, '0666');
-      setTimeout(function() {
-        console.log(result);
-        console.log('app conf.json file is created successfully at: ' + iguanaConfsDir);
-        shepherd.writeLog('app conf.json file is created successfully at: ' + iguanaConfsDir);
-        resolve(result);
-      }, 2000);
-    });
-  }
+          fs.writeFile(appConfFileName,
+                      JSON.stringify(appSettings)
+                      .replace(/,/g, ',\n') // format json in human readable form
+                      .replace(/:/g, ': ')
+                      .replace(/{/g, '{\n')
+                      .replace(/}/g, '\n}'), 'utf8', function(err) {
+            if (err)
+              return console.log(err);
+          });
 
-  FsWrite()
-  .then(FixFilePermissions());
+          fsnode.chmodSync(appConfFileName, '0666');
+          setTimeout(function() {
+            console.log(result);
+            console.log('app conf.json file is created successfully at: ' + iguanaConfsDir);
+            shepherd.writeLog('app conf.json file is created successfully at: ' + iguanaConfsDir);
+            resolve(result);
+          }, 2000);
+        });
+      }
+
+      FsWrite()
+      .then(FixFilePermissions());
+    }
+  });
 }
 
 shepherd.loadLocalConfig = function() {
@@ -1070,8 +1166,8 @@ function herder(flock, data) {
             exec(komododBin + ' ' + data.ac_options.join(' '), {
               maxBuffer: 1024 * 10000 // 10 mb
             }, function(error, stdout, stderr) {
-              console.log('stdout: ' + stdout);
-              console.log('stderr: ' + stderr);
+              // console.log('stdout: ' + stdout);
+              // console.log('stderr: ' + stderr);
               shepherd.writeLog('stdout: ' + stdout);
               shepherd.writeLog('stderr: ' + stderr);
 
@@ -1560,6 +1656,7 @@ shepherd.appInfo = function() {
     sysInfo,
     releaseInfo,
     dirs,
+    appSession: shepherd.appSessionHash
   };
 }
 
