@@ -51,12 +51,12 @@ if (os.platform() === 'darwin') {
 }
 
 if (os.platform() === 'linux') {
-  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux64/iguana'),
+  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/iguana'),
       iguanaDir = process.env.HOME + '/.iguana',
       iguanaConfsDir = iguanaDir + '/confs',
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
-      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux64/komodod'),
-      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux64/komodo-cli'),
+      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/komodod'),
+      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/komodo-cli'),
       komodoDir = process.env.HOME + '/.komodo';
 }
 
