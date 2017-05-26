@@ -105,7 +105,7 @@ guiapp.use(function(req, res, next) {
 	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
 	res.header('Access-Control-Allow-Credentials', 'true');
 	res.header('Access-Control-Allow-Headers', 'Content-Type');
-	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS'); // TODO: limit allowed methods
+	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
 	next();
 });
 
@@ -176,34 +176,6 @@ shepherd.setVar('appBasicInfo', appBasicInfo);
 shepherd.setVar('appSessionHash', appSessionHash);
 
 module.exports = guiapp;
-// END GUI App Settings
-
-//require('./assets/js/iguana.js'); //below code shall be separated into asset js for public version
-/*
-// SELECTING IGUANA BUILD TO RUN AS PER OS DETECTED BY DESKTOP APP
-var iguanaOSX = path.join(__dirname, '/assets/bin/osx/iguana');
-var iguanaLinux = path.join(__dirname, '/assets/bin/linux64/iguana');
-var iguanaWin = path.join(__dirname, '/assets/bin/win64/iguana.exe'); iguanaWin = path.normalize(iguanaWin);
-var iguanaConfsDirSrc = path.join(__dirname, '/assets/deps/confs');
-
-// SETTING OS DIR TO RUN IGUANA FROM
-// SETTING APP ICON FOR LINUX AND WINDOWS
-if (os.platform() === 'darwin') {
-	var iguanaDir = process.env.HOME + '/Library/Application Support/iguana';
-	var iguanaConfsDir = iguanaDir + '/confs';
-}
-if (os.platform() === 'linux') {
-	var iguanaDir = process.env.HOME + '/.iguana'
-	var iguanaConfsDir = iguanaDir + '/confs';
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon_png/128x128.png')
-}
-if (os.platform() === 'win32') {
-	var iguanaDir = process.env.APPDATA + '/iguana'; iguanaDir = path.normalize(iguanaDir)
-	var iguanaConfsDir = process.env.APPDATA + '/iguana/confs'; iguanaConfsDir = path.normalize(iguanaConfsDir)
-	var iguanaIcon = path.join(__dirname, '/assets/icons/iguana_app_icon.ico')
-	iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc);
-}
-*/
 
 if (os.platform() === 'linux') {
 	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
@@ -212,26 +184,6 @@ if (os.platform() === 'win32') {
 	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
 
-//console.log(iguanaDir);
-/*
-// MAKE SURE IGUANA DIR IS THERE FOR USER
-mkdirp(iguanaDir, function (err) {
-	if (err)
-		console.error(err)
-	else
-		fs.readdir(iguanaDir, (err, files) => {
-			files.forEach(file => {
-				//console.log(file);
-			});
-		})
-});
-
-// COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
-fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function (err) {
-	if (err) return console.error(err)
-	console.log('confs files copied successfully at: '+ iguanaConfsDir )
-})
-*/
 
 let mainWindow;
 let loadingWindow;
@@ -256,7 +208,7 @@ function createLoadingWindow() {
 	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
-	//loadingWindow.webContents.openDevTools()
+	// loadingWindow.webContents.openDevTools()
 
 	// if window closed we kill iguana proc
 	loadingWindow.on('hide', function () {
@@ -304,25 +256,6 @@ function createLoadingWindow() {
 			});
 		}
 	});
-
-	//ca333 todo - add os detector to use correct binary - so we can use the same bundle on ALL OS platforms
-	/*if (os.platform() === 'win32') {
-		process.chdir(iguanaDir);
-		//exec(iguanaWin, {cwd: iguanaDir}); //specify binary in startup
-		ig = spawn(iguanaWin);
-	}
-	if (os.platform() === 'linux') {
-		process.chdir(iguanaDir);
-		ig = spawn(iguanaLinux);
-		//corsproxy_process = spawn('corsproxy');
-	}
-	if (os.platform() === 'darwin') {
-		//process.chdir(iguanaDir);
-		//ig = spawn(iguanaOSX);
-		//corsproxy_process = spawn('corsproxy');
-	}*/
-
-	//if (os.platform() !== 'win32') { ig.stderr.on( 'error: ', data => { console.log( `stderr: ${data}` ); }); }
 }
 
 app.on('ready', createLoadingWindow);
@@ -365,7 +298,7 @@ function createWindow (status) {
 		if (appConfig.edexGuiOnly) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
-				// mainWindow.loadURL('http://127.0.0.1:3000');
+				//mainWindow.loadURL('http://127.0.0.1:3000');
 				mainWindow.appConfig = appConfig;
 				mainWindow.appSessionHash = appSessionHash;
 				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/react/build');
@@ -388,7 +321,7 @@ function createWindow (status) {
 		});
 
 		// DEVTOOLS - only for dev purposes - ca333
-		//mainWindow.webContents.openDevTools()
+		// mainWindow.webContents.openDevTools()
 
 		function pm2Exit() {
 			var ConnectToPm2 = function() {
