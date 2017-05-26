@@ -2,10 +2,10 @@
     <shortName>AgamaApp</shortName>
     <fullName>Agama</fullName>
     <version>${PKG_VERSION}</version>
-    <licenseFile>../../LICENSE</licenseFile>
-    <leftImage>../installer_imgs/Agama_installer_wizard_image.png</leftImage>
-    <logoImage>../installer_imgs/supernet-agama-logo.png</logoImage>
-    <splashImage>../installer_imgs/Agama_installer_splash_image.png</splashImage>
+    <licenseFile>../LICENSE</licenseFile>
+    <leftImage>../assets/installer_imgs/Agama_installer_wizard_image.png</leftImage>
+    <logoImage>../assets/installer_imgs/supernet-agama-logo.png</logoImage>
+    <splashImage>../assets/installer_imgs/Agama_installer_splash_image.png</splashImage>
     <allowLanguageSelection>1</allowLanguageSelection>
     <componentList>
         <component>
@@ -41,7 +41,7 @@
                     <platforms>osx</platforms>
                     <distributionFileList>
                         <distributionFile>
-                            <origin>../../build/Agama-darwin-x64/Agama.app</origin>
+                            <origin>../build/Agama-darwin-x64/Agama.app</origin>
                         </distributionFile>
                     </distributionFileList>
                 </folder>
