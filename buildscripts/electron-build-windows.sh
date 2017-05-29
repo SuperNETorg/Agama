@@ -3,6 +3,7 @@
 ### Created by mmaxian, 3/2017
 
 [ -z $AGAMA_VERSION ] && echo "AGAMA_VERSION variable is not set." && exit 0
+[ ! -d build ] && mkdir build
 
 echo
 echo "Build script for Iguana application for Windows x64 platform."
