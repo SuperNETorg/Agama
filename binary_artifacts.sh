@@ -2,9 +2,9 @@ echo Refreshing binaries from artifacts.supernet.org
 echo =========================================
 echo Step: Removing old binaries
 pwd
-[ ! -d build ] && \
-  mkdir -p build
-cd build
+[ ! -d assets ] && \
+  mkdir -p assets
+cd assets
 [ -d artifacts.supernet.org ] && \
   echo Removing old artifacts. && \
   rm -rvf artifacts.supernet.org
@@ -18,21 +18,21 @@ pwd
 echo =========================================
 echo Step: Copying osx binaries from artifacts to assets/bin/osx/
 echo 
-chmod +x build/artifacts.supernet.org/latest/osx/iguana \
-  build/artifacts.supernet.org/latest/osx/komodo*
-cp -rvf build/artifacts.supernet.org/latest/osx/* assets/bin/osx/
+chmod +x assets/artifacts.supernet.org/latest/osx/iguana \
+  assets/artifacts.supernet.org/latest/osx/komodo*
+cp -rvf assets/artifacts.supernet.org/latest/osx/* assets/bin/osx/
 echo 
 echo =========================================
 echo Step: Copying Win64 binaries from artifacts to assets/bin/win64/
 echo 
-cp -rvf build/artifacts.supernet.org/latest/windows/* assets/bin/win64/
+#cp -rvf assets/artifacts.supernet.org/latest/windows/* assets/bin/win64/
 echo 
 echo =========================================
 echo Step: Copying linux64 binaries from artifacts to assets/bin/linux64
 echo 
-chmod +x build/artifacts.supernet.org/latest/linux/iguana \
-  build/artifacts.supernet.org/latest/linux/komodo*
-cp -rvf build/artifacts.supernet.org/latest/linux/* assets/bin/linux64/
+chmod +x assets/artifacts.supernet.org/latest/linux/iguana \
+  assets/artifacts.supernet.org/latest/linux/komodo*
+#cp -rvf assets/artifacts.supernet.org/latest/linux/* assets/bin/linux64/
 echo 
 echo =========================================
 echo Step: Finished Updating binaries from artifacts
