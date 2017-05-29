@@ -2,9 +2,12 @@ echo Refreshing binaries from artifacts.supernet.org
 echo =========================================
 echo Step: Removing old binaries
 pwd
-[ ! -d build ] && mkdir -p build
+[ ! -d build ] && \
+  mkdir -p build
 cd build
-rm -rvf artifacts.supernet.org
+[ -d artifacts.supernet.org ] && \
+  echo Removing old artifacts. && \
+  rm -rvf artifacts.supernet.org
 echo
 echo Step: Cloning latest binaries for build
 wget --recursive --no-parent https://artifacts.supernet.org/latest/
