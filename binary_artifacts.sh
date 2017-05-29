@@ -13,19 +13,19 @@ echo =========================================
 echo
 pwd 
 echo =========================================
-echo Step: Moving osx binaries from artifacts to assets/bin/osx/
+echo Step: Copying osx binaries from artifacts to assets/bin/osx/
 echo 
 chmod +x build/artifacts.supernet.org/latest/osx/iguana \
   build/artifacts.supernet.org/latest/osx/komodo*
 cp -rvf build/artifacts.supernet.org/latest/osx/* assets/bin/osx/
 echo 
 echo =========================================
-echo Step: Moving Win64 binaries from artifacts to assets/bin/win64/
+echo Step: Copying Win64 binaries from artifacts to assets/bin/win64/
 echo 
 cp -rvf build/artifacts.supernet.org/latest/windows/* assets/bin/win64/
 echo 
 echo =========================================
-echo Step: Moving linux64 binaries from artifacts to assets/bin/linux64
+echo Step: Copying linux64 binaries from artifacts to assets/bin/linux64
 echo 
 chmod +x build/artifacts.supernet.org/latest/linux/iguana \
   build/artifacts.supernet.org/latest/linux/komodo*
