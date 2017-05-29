@@ -38,11 +38,11 @@ var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'darwin') {
   fixPath();
-  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/osx/iguana'),
+  var iguanaBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/osx/iguana'),
       iguanaDir = process.env.HOME + '/Library/Application Support/iguana',
       iguanaConfsDir = iguanaDir + '/confs',
-      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/osx/komodod'),
-      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/osx/komodo-cli'),
+      komododBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/osx/komodod'),
+      komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/osx/komodo-cli'),
       komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
@@ -50,17 +50,17 @@ if (os.platform() === 'darwin') {
 }
 
 if (os.platform() === 'linux') {
-  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/iguana'),
+  var iguanaBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/linux/iguana'),
       iguanaDir = process.env.HOME + '/.iguana',
       iguanaConfsDir = iguanaDir + '/confs',
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
-      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/komodod'),
-      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/linux/komodo-cli'),
+      komododBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/linux/komodod'),
+      komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/linux/komodo-cli'),
       komodoDir = process.env.HOME + '/.komodo';
 }
 
 if (os.platform() === 'win32') {
-  var iguanaBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/iguana.exe');
+  var iguanaBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/windows/iguana.exe');
       iguanaBin = path.normalize(iguanaBin);
       iguanaDir = process.env.APPDATA + '/iguana';
       iguanaDir = path.normalize(iguanaDir);
@@ -68,9 +68,9 @@ if (os.platform() === 'win32') {
       iguanaConfsDir = path.normalize(iguanaConfsDir);
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
       iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc),
-      komododBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/komodod.exe'),
+      komododBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/windows/komodod.exe'),
       komododBin = path.normalize(komododBin),
-      komodocliBin = path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/komodo-cli.exe'),
+      komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/windows/komodo-cli.exe'),
       komodocliBin = path.normalize(komodocliBin),
       komodoDir = process.env.APPDATA + '/Komodo',
       komodoDir = path.normalize(komodoDir);
@@ -849,8 +849,8 @@ shepherd.post('/setconf', function(req, res) {
 
   if (os.platform() === 'win32' &&
       req.body.chain == 'komodod') {
-    setkomodoconf = spawn(path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
-    setkomodoconf = spawn(path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
+    setkomodoconf = spawn(path.join(__dirname, '../assets/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
+    setkomodoconf = spawn(path.join(__dirname, '../assets/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
   } else {
     setConf(req.body.chain);
   }
