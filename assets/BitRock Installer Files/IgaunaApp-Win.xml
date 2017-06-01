@@ -218,6 +218,28 @@
             </ruleList>
         </deleteFile>
         <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${windows_folder_appdata}/Iguana</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${delete_user_data}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
             <explanation>Deleting zcash params</explanation>
             <path>${windows_folder_appdata}/ZcashParams/</path>
             <progressText>Deleting zcash-params</progressText>
@@ -494,8 +516,8 @@
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
-                <labelParameter name="reinstall" description="Re-install current version">
-                    <title>Re-install</title>
+                <labelParameter name="reinstall" description="Upgrade current version">
+                    <title>Upgrade</title>
                     <explanation></explanation>
                     <image></image>
                 </labelParameter>
