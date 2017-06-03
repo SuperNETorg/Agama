@@ -277,6 +277,16 @@
                 </compareValues>
             </ruleList>
         </exit>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${windows_folder_appdata}/Iguana/shepherd</path>
+            <progressText>Deleting user data</progressText>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${windows_folder_appdata}/Iguana/config.json</path>
+            <progressText>Deleting user data</progressText>
+        </deleteFile>
         <showProgressDialog>
             <title>Downloading files</title>
             <actionList>

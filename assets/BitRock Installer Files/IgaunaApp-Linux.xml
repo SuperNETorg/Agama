@@ -248,6 +248,16 @@
                 </compareValues>
             </ruleList>
         </exit>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.iguana/shepherd</path>
+            <progressText>Deleting user data</progressText>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.iguana/config.json</path>
+            <progressText>Deleting user data</progressText>
+        </deleteFile>
         <createDirectory>
             <abortOnError>0</abortOnError>
             <explanation>Creating ZcashParam directory</explanation>
