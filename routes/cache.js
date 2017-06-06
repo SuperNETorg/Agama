@@ -514,6 +514,16 @@ cache.one = function(req, res, next) {
                     }
                   }
                 });
+
+                // basilisk balance fallback
+                const _parsedJSON = JSON.parse(body);
+                if (key === 'getbalance' &&
+                  coin === 'KMD'/* &&
+                  ((_parsedJSON && _parsedJSON.balance === 0) || _parsedJSON === [])*/) {
+                  console.log('fallback to kmd explorer');
+                  //http://kmd.explorer.supernet.org/api/addr/RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd/?noTxList=1
+                }
+
                 outObj.basilisk[coin][address][key] = {};
                 outObj.basilisk[coin][address][key].data = JSON.parse(body);
                 outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp

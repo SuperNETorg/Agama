@@ -319,7 +319,7 @@ shepherd.post('/cli', function(req, res, next) {
         };
       }
 
-      res.end(JSON.stringify(responseObj));      
+      res.end(JSON.stringify(responseObj));
     });
   }
 });
