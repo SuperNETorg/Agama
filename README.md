@@ -24,6 +24,38 @@ Then start Agama App
 npm start
 ```
 
+### Important dev notes
+**Use the following config.json for dev **
+Place it in ./iguana folder
+```
+{
+"edexGuiOnly": true,
+"iguanaGuiOnly": false,
+"manualIguanaStart": false,
+"skipBasiliskNetworkCheck": true,
+"minNotaries": 8,
+"host": "127.0.0.1",
+"agamaPort": 17777,
+"iguanaCorePort": 7778,
+"maxDescriptors": {
+"darwin": 90000,
+"linux": 1000000
+},
+"killIguanaOnStart": true,
+"dev": true,
+"v2": true,
+"useBasiliskInstance": true,
+"debug": true,
+"iguanaAppPort": 17777,
+"forks": {
+"basilisk": false,
+"all": false
+}
+}
+```
+**Sockets.io**
+In dev mode backend is configured to send/receive messages from/to http://127.0.0.1:3000 address. If you open it as http://localhost:3000 sockets server will reject any messages.
+
 #### For end users
 The instructions to make production build of Agama App will be updated soon.
 
