@@ -25,8 +25,8 @@ npm start
 ```
 
 ### Important dev notes
-**Use the following config.json for dev **
-Place it in ./iguana folder
+#### Use the following config.json for dev
+Place it in ./iguana folder.
 ```
 {
 "edexGuiOnly": true,
@@ -53,7 +53,7 @@ Place it in ./iguana folder
 }
 }
 ```
-**Sockets.io**
+#### Sockets.io
 In dev mode backend is configured to send/receive messages from/to http://127.0.0.1:3000 address. If you open it as http://localhost:3000 sockets server will reject any messages.
 
 #### For end users
