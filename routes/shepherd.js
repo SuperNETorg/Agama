@@ -269,8 +269,8 @@ shepherd.post('/coinslist', function(req, res, next) {
 // TODO: check if komodod is running
 shepherd.quitKomodod = function(chain) {
   // exit komodod gracefully
-  console.log('exec ' + komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop');
-  exec(komodocliBin + (chain ? ' ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
+  console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
+  exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
     console.log('stdout: ' + stdout)
     console.log('stderr: ' + stderr)
 
@@ -292,12 +292,20 @@ shepherd.post('/cli', function(req, res, next) {
     };
 
     res.end(JSON.stringify(errorObj));
+  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z \[\]"'/\\]+$/g)) {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'wrong cli string format'
+    };
+
+    res.end(JSON.stringify(errorObj));
   } else {
     const _mode = req.body.payload.mode === 'passthru' ? 'passthru' : 'default';
     const _chain = req.body.payload.chain ? req.body.payload.chain : '';
     const _cmd = req.body.payload.cmd;
+    const _params = req.body.payload.params ? ' ' + req.body.payload.params : '';
 
-    exec(komodocliBin + (_chain ? ' ac_name=' + _chain : '') + ' ' + _cmd, function(error, stdout, stderr) {
+    exec(komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params, function(error, stdout, stderr) {
       console.log('stdout: ' + stdout)
       console.log('stderr: ' + stderr)
 
