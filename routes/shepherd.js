@@ -94,6 +94,10 @@ shepherd.appConfig = {
   "v2": true,
   "useBasiliskInstance": true,
   "debug": true,
+  "cli": {
+    "passthru": false,
+    "default": false
+  }
 };
 
 shepherd.writeLog = function(data) {
@@ -1219,10 +1223,24 @@ function herder(flock, data) {
         if (status === 'closed') {
           // start komodod via exec
           if (data.ac_name === 'komodod') {
-            console.log('exec' + komododBin + ' ' + data.ac_options.join(' '));
-            shepherd.writeLog('exec' + komododBin + ' ' + data.ac_options.join(' '));
+            const _customParamDict = {
+              'silent': '&',
+              'reindex': '-reindex',
+              'change': '-pubkey='
+            };
+            const _customParam;
 
-            exec(komododBin + ' ' + data.ac_options.join(' '), {
+            if (data.ac_custom_param === 'silent' ||
+              data.ac_custom_param === 'reindex') {
+              _customParam = ' ' + _customParamDict[data.ac_custom_param];
+            } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
+              _customParam = ' ' + _customParamDict[data.ac_custom_param] + data.ac_custom_param_value;
+            }
+
+            console.log('exec' + komododBin + ' ' + data.ac_options.join(' ') + _customParam);
+            shepherd.writeLog('exec' + komododBin + ' ' + data.ac_options.join(' ') + _customParam);
+
+            exec(komododBin + ' ' + data.ac_options.join(' ') + _customParam, {
               maxBuffer: 1024 * 10000 // 10 mb
             }, function(error, stdout, stderr) {
               // console.log('stdout: ' + stdout);
