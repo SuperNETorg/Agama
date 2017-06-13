@@ -305,7 +305,7 @@ shepherd.post('/cli', function(req, res, next) {
     res.end(JSON.stringify(errorObj));
   } else {
     const _mode = req.body.payload.mode === 'passthru' ? 'passthru' : 'default';
-    const _chain = req.body.payload.chain ? req.body.payload.chain : '';
+    const _chain = req.body.payload.chain === 'KMD' ? null : req.body.payload.chain;
     const _cmd = req.body.payload.cmd;
     const _params = req.body.payload.params ? ' ' + req.body.payload.params : '';
 
@@ -1228,7 +1228,7 @@ function herder(flock, data) {
               'reindex': '-reindex',
               'change': '-pubkey='
             };
-            const _customParam;
+            let _customParam;
 
             if (data.ac_custom_param === 'silent' ||
               data.ac_custom_param === 'reindex') {
