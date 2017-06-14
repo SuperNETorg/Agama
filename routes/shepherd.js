@@ -17,6 +17,7 @@ const electron = require('electron'),
       async = require('async'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
+      btoa = require('btoa'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
@@ -296,7 +297,7 @@ shepherd.post('/cli', function(req, res, next) {
     };
 
     res.end(JSON.stringify(errorObj));
-  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z \[\]"'/\\]+$/g)) {
+  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z _\[\]"'/\\]+$/g)) {
     const errorObj = {
       'msg': 'error',
       'result': 'wrong cli string format'
@@ -309,30 +310,64 @@ shepherd.post('/cli', function(req, res, next) {
     const _cmd = req.body.payload.cmd;
     const _params = req.body.payload.params ? ' ' + req.body.payload.params : '';
 
-    exec(komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params, function(error, stdout, stderr) {
-      console.log('stdout: ' + stdout)
-      console.log('stderr: ' + stderr)
 
-      if (error !== null) {
-        console.log('exec error: ' + error)
-      }
+    if (_mode === 'default') {
+      const auth = {
+        user: 'user2492216534',
+        pass: 'pass343c4e8953af5eafda16bdd65054fc7aac276c8bcbede1fdfdf44fb43dce95cd20',
+        port: 12167
+      };
 
-      let responseObj;
+      const options = {
+        url: 'http://localhost:' + auth.port,
+        method: 'POST',
+        auth: {
+          'user': auth.user,
+          'pass': auth.pass
+        },
+        body: JSON.stringify({
+          'agent': 'bitcoinrpc',
+          'method': _cmd
+          /*'params': [
+          ]*/
+        })
+      };
 
-      if (stderr) {
-        responseObj = {
-          'msg': 'error',
-          'result': stderr
-        };
-      } else {
-        responseObj = {
-          'msg': 'success',
-          'result': stdout
-        };
-      }
+      request(options, function (error, response, body) {
+        if (response &&
+            response.statusCode &&
+            response.statusCode === 200) {
+          res.end(body);
+        } else {
+          // TODO: error
+        }
+      });
+    } else {
+      exec(komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params, function(error, stdout, stderr) {
+        console.log('stdout: ' + stdout);
+        console.log('stderr: ' + stderr);
 
-      res.end(JSON.stringify(responseObj));
-    });
+        if (error !== null) {
+          console.log('exec error: ' + error);
+        }
+
+        let responseObj;
+
+        if (stderr) {
+          responseObj = {
+            'msg': 'error',
+            'result': stderr
+          };
+        } else {
+          responseObj = {
+            'msg': 'success',
+            'result': stdout
+          };
+        }
+
+        res.end(JSON.stringify(responseObj));
+      });
+    }
   }
 });
 
