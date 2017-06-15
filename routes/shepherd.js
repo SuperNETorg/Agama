@@ -17,6 +17,7 @@ const electron = require('electron'),
       async = require('async'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
+      aes256 = require('nodejs-aes256'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
@@ -136,6 +137,46 @@ shepherd.createIguanaDirs = function() {
     console.log('shepherd folder already exists');
   }
 }
+
+shepherd.get('/encryptkey', function(req, res, next) {
+  if (req.query.ckey &&
+      req.query.string) {
+    const encryptedKey = aes256.encrypt(req.query.ckey, req.query.string);
+    const successObj = {
+      'msg': 'success',
+      'result': encryptedKey
+    };
+
+    res.end(JSON.stringify(successObj));
+  } else {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'missing ckey or string to encrypt param'
+    };
+
+    res.end(JSON.stringify(errorObj)); 
+  }
+});
+
+shepherd.get('/decryptkey', function(req, res, next) {
+  if (req.query.ckey &&
+      req.query.string) {
+    const encryptedKey = aes256.decrypt(req.query.ckey, req.query.string);
+    const successObj = {
+      'msg': 'success',
+      'result': encryptedKey
+    };
+
+    res.end(JSON.stringify(successObj));
+  } else {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'missing ckey or string to encrypt param'
+    };
+
+    res.end(JSON.stringify(errorObj)); 
+  }
+});
 
 shepherd.get('/coinslist', function(req, res, next) {
   if (fs.existsSync(iguanaDir + '/shepherd/coinslist.json')) {
