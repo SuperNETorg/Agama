@@ -285,6 +285,10 @@ shepherd.quitKomodod = function(chain) {
   });
 }
 
+shepherd.getConf = function(chain) {
+  // get komodod user and pass
+}
+
 /*
  *  type: POST
  *  params: payload
@@ -309,7 +313,6 @@ shepherd.post('/cli', function(req, res, next) {
     const _chain = req.body.payload.chain === 'KMD' ? null : req.body.payload.chain;
     const _cmd = req.body.payload.cmd;
     const _params = req.body.payload.params ? ' ' + req.body.payload.params : '';
-
 
     if (_mode === 'default') {
       const auth = {
