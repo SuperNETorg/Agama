@@ -277,13 +277,13 @@ function createWindow (status) {
 			pm2Exit();
 		}
 
-		const staticMenu = Menu.buildFromTemplate([ //if static
+		const staticMenu = Menu.buildFromTemplate([ // if static
 			{ role: 'copy' },
 			{ type: 'separator' },
 			{ role: 'selectall' },
 		]);
 
-		const editMenu = Menu.buildFromTemplate([ //if editable
+		const editMenu = Menu.buildFromTemplate([ // if editable
 			{ role: 'undo' },
 			{ role: 'redo' },
 			{ type: 'separator' },

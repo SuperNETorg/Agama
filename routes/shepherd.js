@@ -29,7 +29,8 @@ var ps = require('ps-node'),
     iguanaInstanceRegistry = {},
     syncOnlyIguanaInstanceInfo = {},
     syncOnlyInstanceInterval = -1,
-    guiLog = {};
+    guiLog = {},
+    rpcConf = {};
 
 // IGUANA FILES AND CONFIG SETTINGS
 var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
@@ -276,17 +277,46 @@ shepherd.quitKomodod = function(chain) {
   // exit komodod gracefully
   console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
   exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
-    console.log('stdout: ' + stdout)
-    console.log('stderr: ' + stderr)
+    console.log('stdout: ' + stdout);
+    console.log('stderr: ' + stderr);
 
     if (error !== null) {
-      console.log('exec error: ' + error)
+      console.log('exec error: ' + error);
     }
   });
 }
 
 shepherd.getConf = function(chain) {
-  // get komodod user and pass
+  const _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
+
+  if (fs.existsSync(_confLocation)) {
+    const _port = assetChainPorts[chain];
+    const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
+
+    if (_rpcConf.length) {
+      let _match;
+      let parsedRpcConfig = {
+        user: '',
+        pass: '',
+        port: _port
+      };
+
+      if (_match = _rpcConf.match(/rpcuser=\s*(.*)/)) {
+        parsedRpcConfig.user = _match[1];
+      }
+
+      if ((_match = _rpcConf.match(/rpcpass=\s*(.*)/)) ||
+          (_match = _rpcConf.match(/rpcpassword=\s*(.*)/))) {
+        parsedRpcConfig.pass = _match[1];
+      }
+
+      rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
+    } else {
+      console.log(`${_confLocation} is empty`);
+    }
+  } else {
+    console.log(`${_confLocation} doesnt exist`);
+  }
 }
 
 /*
@@ -314,26 +344,32 @@ shepherd.post('/cli', function(req, res, next) {
     const _cmd = req.body.payload.cmd;
     const _params = req.body.payload.params ? ' ' + req.body.payload.params : '';
 
+    if (!rpcConf[_chain]) {
+      shepherd.getConf(req.body.payload.chain === 'KMD' ? 'komodod' : req.body.payload.chain);
+    }
+
     if (_mode === 'default') {
-      const auth = {
-        user: 'user2492216534',
-        pass: 'pass343c4e8953af5eafda16bdd65054fc7aac276c8bcbede1fdfdf44fb43dce95cd20',
-        port: 12167
+      const _body = {
+        'agent': 'bitcoinrpc',
+        'method': _cmd
       };
 
+      if (_params) {
+        const _body = {
+          'agent': 'bitcoinrpc',
+          'method': _cmd,
+          'params': _params
+        };
+      }
+
       const options = {
-        url: 'http://localhost:' + auth.port,
+        url: 'http://localhost:' + rpcConf[_chain].port,
         method: 'POST',
         auth: {
-          'user': auth.user,
-          'pass': auth.pass
+          'user': rpcConf[_chain].user,
+          'pass': rpcConf[_chain].pass
         },
-        body: JSON.stringify({
-          'agent': 'bitcoinrpc',
-          'method': _cmd
-          /*'params': [
-          ]*/
-        })
+        body: JSON.stringify(_body)
       };
 
       request(options, function (error, response, body) {
@@ -342,6 +378,8 @@ shepherd.post('/cli', function(req, res, next) {
             response.statusCode === 200) {
           res.end(body);
         } else {
+          console.log(error);
+          console.log(body);
           // TODO: error
         }
       });

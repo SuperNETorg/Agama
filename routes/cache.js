@@ -519,9 +519,35 @@ cache.one = function(req, res, next) {
                 const _parsedJSON = JSON.parse(body);
                 if (key === 'getbalance' &&
                   coin === 'KMD'/* &&
-                  ((_parsedJSON && _parsedJSON.balance === 0) || _parsedJSON === [])*/) {
-                  console.log('fallback to kmd explorer');
-                  //http://kmd.explorer.supernet.org/api/addr/RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd/?noTxList=1
+                  ((_parsedJSON && _parsedJSON.balance === 0) || body === [])*/) {
+                  console.log('fallback to kmd explorer ======>');
+                  request({
+                    url: 'http://kmd.explorer.supernet.org/api/addr/' + address + '/?noTxList=1',
+                    method: 'GET'
+                  }, function (error, response, body) {
+                    if (response &&
+                        response.statusCode &&
+                        response.statusCode === 200) {
+                      console.log(JSON.stringify(body));
+                      /*cache.io.emit('messages', {
+                        'message': {
+                          'shepherd': {
+                            'method': 'cache-one',
+                            'status': 'in progress',
+                            'iguanaAPI': {
+                              'method': key,
+                              'coin': coin,
+                              'address': address,
+                              'status': 'done',
+                              'resp': body
+                            }
+                          }
+                        }
+                      });*/
+                    } else {
+
+                    }
+                  });
                 }
 
                 outObj.basilisk[coin][address][key] = {};
