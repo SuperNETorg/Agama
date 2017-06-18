@@ -363,11 +363,11 @@ shepherd.post('/cli', function(req, res, next) {
       }
 
       const options = {
-        url: `http://localhost:${rpcConf[_chain].port}`,
+        url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
         method: 'POST',
         auth: {
-          'user': rpcConf[_chain].user,
-          'pass': rpcConf[_chain].pass
+          'user': rpcConf[req.body.payload.chain].user,
+          'pass': rpcConf[req.body.payload.chain].pass
         },
         body: JSON.stringify(_body)
       };
@@ -1266,7 +1266,7 @@ function herder(flock, data) {
   }
 
   if (flock === 'komodod') {
-    var kmdDebugLogLocation = ( data.ac_name ? komodoDir + '/' + data.ac_name : komodoDir ) + '/debug.log';
+    var kmdDebugLogLocation = ( data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir ) + '/debug.log';
     console.log('komodod flock selected...');
     console.log('selected data: ' + data);
     shepherd.writeLog('komodod flock selected...');
