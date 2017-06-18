@@ -22,7 +22,6 @@ var express = require('express'),
 		pm2 = require('pm2'),
 		cluster = require('cluster'),
 		numCPUs = require('os').cpus().length,
-		//coincli = require('./private/coincli.js'),
 		ipc = require('electron').ipcMain;
 
 Promise = require('bluebird');
@@ -37,7 +36,7 @@ app.setVersion(appBasicInfo.version);
 
 if (os.platform() === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
-	console.log(process.env);
+	// console.log(process.env);
 }
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
@@ -48,25 +47,25 @@ shepherd.createIguanaDirs();
 
 const appSessionHash = md5(Date.now());
 
-shepherd.writeLog('app init ' + appSessionHash);
-shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
+shepherd.writeLog(`app init ${appSessionHash}`);
+shepherd.writeLog(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
 shepherd.writeLog('sys info:');
-shepherd.writeLog('totalmem_readable: ' + formatBytes(os.totalmem()));
-shepherd.writeLog('arch: ' + os.arch());
-shepherd.writeLog('cpu: ' + os.cpus()[0].model);
-shepherd.writeLog('cpu_cores: ' + os.cpus().length);
-shepherd.writeLog('platform: ' + os.platform());
-shepherd.writeLog('os_release: ' + os.release());
-shepherd.writeLog('os_type: ' + os.type());
+shepherd.writeLog(`totalmem_readable: ${formatBytes(os.totalmem())}`);
+shepherd.writeLog(`arch: ${os.arch()}`);
+shepherd.writeLog(`cpu: ${os.cpus()[0].model}`);
+shepherd.writeLog(`cpu_cores: ${os.cpus().length}`);
+shepherd.writeLog(`platform: ${os.platform()}`);
+shepherd.writeLog(`os_release: ${os.release()}`);
+shepherd.writeLog(`os_type: ${os.type()}`);
 
 var appConfig = shepherd.loadLocalConfig(); // load app config
 
-shepherd.writeLog('app started in ' + (appConfig.dev ? 'dev mode' : ' user mode'));
+shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
 shepherd.setConfKMD();
 
 if (appConfig.killIguanaOnStart) {
-	var iguanaGrep;
+	let iguanaGrep;
 
 	if (os.platform() === 'darwin') {
 		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
@@ -79,23 +78,25 @@ if (appConfig.killIguanaOnStart) {
 	}
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
-			console.log('found another iguana process(es)');
-			shepherd.writeLog('found another iguana process(es)');
 			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
 
+			console.log('found another iguana process(es)');
+			shepherd.writeLog('found another iguana process(es)');
+
 			exec(pkillCmd, function(error, stdout, stderr) {
-				console.log(pkillCmd + ' is issued');
-				shepherd.writeLog(pkillCmd + ' is issued');
+				console.log(`${pkillCmd} is issued`);
+				shepherd.writeLog(`${pkillCmd} is issued`);
+
 				if (error !== null) {
-					console.log(pkillCmd + ' exec error: ' + error);
-					shepherd.writeLog(pkillCmd + ' exec error: ' + error);
+					console.log(`${pkillCmd} exec error: ${error}`);
+					shepherd.writeLog(`${pkillCmd} exec error: ${error}`);
 				};
 			});
 		}
 
 		if (error !== null) {
-			console.log(iguanaGrep + ' exec error: ' + error);
-			shepherd.writeLog(iguanaGrep + ' exec error: ' + error);
+			console.log(`${iguanaGrep} exec error: ${error}`);
+			shepherd.writeLog(`${iguanaGrep} exec error: ${error}`);
 		};
 	});
 }
@@ -138,7 +139,7 @@ guiapp.use(bodyParser.urlencoded({
 })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
-	res.send('Iguana app server');
+	res.send('Agama app server');
 });
 
 var guipath = path.join(__dirname, '/gui');
@@ -149,11 +150,11 @@ var server = require('http').createServer(guiapp),
 		io = require('socket.io').listen(server);
 
 server.listen(appConfig.agamaPort, function() {
-	console.log('guiapp and sockets.io are listening on port ' + appConfig.agamaPort + '!');
-	shepherd.writeLog('guiapp and sockets.io are listening on port ' + appConfig.agamaPort + '!');
+	console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+	shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
 });
 
-io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : 'http://127.0.0.1:' + appConfig.agamaPort); // set origin
+io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
 
 io.on('connection', function(client) {
 	console.log('EDEX GUI is connected...');
@@ -184,7 +185,6 @@ if (os.platform() === 'win32') {
 	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
 
-
 let mainWindow;
 let loadingWindow;
 let willQuitApp = false;
@@ -204,7 +204,7 @@ function createLoadingWindow() {
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
 
 	// load our index.html (i.e. easyDEX GUI)
-	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/');
+	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
 	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
@@ -304,14 +304,14 @@ function createWindow (status) {
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
 				} else {
-					mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/react/build');
+					mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
 				}
 			} else {
 				shepherd.writeLog('show edex gui');
-				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/');
+				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
 			}
 		} else {
-			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/main.html');
+			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/main.html`);
 		}
 
 		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params

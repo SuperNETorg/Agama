@@ -17,13 +17,11 @@ const electron = require('electron'),
       async = require('async'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
-      btoa = require('btoa'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
 var ps = require('ps-node'),
     setconf = require('../private/setconf.js'),
-    //coincli = require('../private/coincli.js'),
     assetChainPorts = require('./ports.js'),
     shepherd = express.Router(),
     iguanaInstanceRegistry = {},
@@ -41,32 +39,32 @@ var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
 if (os.platform() === 'darwin') {
   fixPath();
   var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
-      iguanaDir = process.env.HOME + '/Library/Application Support/iguana',
-      iguanaConfsDir = iguanaDir + '/confs',
+      iguanaDir = `${process.env.HOME}/Library/Application Support/iguana`,
+      iguanaConfsDir = `${iguanaDir}/confs`,
       komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
-      komodoDir = process.env.HOME + '/Library/Application Support/Komodo',
+      komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`,
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
-      zcashDir = process.env.HOME + '/Library/Application Support/Zcash';
+      zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
 }
 
 if (os.platform() === 'linux') {
   var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
-      iguanaDir = process.env.HOME + '/.iguana',
-      iguanaConfsDir = iguanaDir + '/confs',
+      iguanaDir = `${process.env.HOME}/.iguana`,
+      iguanaConfsDir = `${iguanaDir}/confs`,
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
-      komodoDir = process.env.HOME + '/.komodo';
+      komodoDir = `${process.env.HOME}/.komodo`;
 }
 
 if (os.platform() === 'win32') {
   var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe');
       iguanaBin = path.normalize(iguanaBin);
-      iguanaDir = process.env.APPDATA + '/iguana';
+      iguanaDir = `${process.env.APPDATA}/iguana`;
       iguanaDir = path.normalize(iguanaDir);
-      iguanaConfsDir = process.env.APPDATA + '/iguana/confs';
+      iguanaConfsDir = `${process.env.APPDATA}/iguana/confs`;
       iguanaConfsDir = path.normalize(iguanaConfsDir);
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
       iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc),
@@ -74,7 +72,7 @@ if (os.platform() === 'win32') {
       komododBin = path.normalize(komododBin),
       komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
       komodocliBin = path.normalize(komodocliBin),
-      komodoDir = process.env.APPDATA + '/Komodo',
+      komodoDir = `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
 }
 
@@ -103,17 +101,17 @@ shepherd.appConfig = {
 };
 
 shepherd.writeLog = function(data) {
-  const logLocation = iguanaDir + '/shepherd';
+  const logLocation = `${iguanaDir}/shepherd`;
   const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
 
-  if (fs.existsSync(logLocation + '/agamalog.txt')) {
-    fs.appendFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
+  if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
+    fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
       if (err) {
         console.log('error writing log file');
       }
     });
   } else {
-    fs.writeFile(logLocation + '/agamalog.txt', timeFormatted + '  ' + data + '\r\n', function (err) {
+    fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
       if (err) {
         console.log('error writing log file');
       }
@@ -124,19 +122,21 @@ shepherd.writeLog = function(data) {
 shepherd.createIguanaDirs = function() {
   if (!fs.existsSync(iguanaDir)) {
     fs.mkdirSync(iguanaDir);
+
     if (fs.existsSync(iguanaDir)) {
-      console.log('created iguana folder at ' + iguanaDir);
-      shepherd.writeLog('created iguana folder at ' + iguanaDir);
+      console.log(`created iguana folder at ${iguanaDir}`);
+      shepherd.writeLog(`created iguana folder at ${iguanaDir}`);
     }
   } else {
     console.log('iguana folder already exists');
   }
 
-  if (!fs.existsSync(iguanaDir + '/shepherd')) {
-    fs.mkdirSync(iguanaDir + '/shepherd');
+  if (!fs.existsSync(`${iguanaDir}/shepherd`)) {
+    fs.mkdirSync(`${iguanaDir}/shepherd`);
+
     if (fs.existsSync(iguanaDir)) {
-      console.log('created shepherd folder at ' + iguanaDir + '/shepherd');
-      shepherd.writeLog('create shepherd folder at ' + iguanaDir + '/shepherd');
+      console.log(`created shepherd folder at ${iguanaDir}/shepherd`);
+      shepherd.writeLog(`create shepherd folder at ${iguanaDir}/shepherd`);
     }
   } else {
     console.log('shepherd folder already exists');
@@ -144,8 +144,8 @@ shepherd.createIguanaDirs = function() {
 }
 
 shepherd.get('/coinslist', function(req, res, next) {
-  if (fs.existsSync(iguanaDir + '/shepherd/coinslist.json')) {
-    fs.readFile(iguanaDir + '/shepherd/coinslist.json', 'utf8', function (err, data) {
+  if (fs.existsSync(`${iguanaDir}/shepherd/coinslist.json`)) {
+    fs.readFile(`${iguanaDir}/shepherd/coinslist.json`, 'utf8', function (err, data) {
       if (err) {
         const errorObj = {
           'msg': 'error',
@@ -177,7 +177,7 @@ shepherd.get('/coinslist', function(req, res, next) {
  *  params: payload
  */
 shepherd.post('/guilog', function(req, res, next) {
-  const logLocation = iguanaDir + '/shepherd';
+  const logLocation = `${iguanaDir}/shepherd`;
 
   if (!guiLog[shepherd.appSessionHash]) {
     guiLog[shepherd.appSessionHash] = {};
@@ -196,7 +196,7 @@ shepherd.post('/guilog', function(req, res, next) {
     };
   }
 
-  fs.writeFile(logLocation + '/agamalog.json', JSON.stringify(guiLog), function (err) {
+  fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(guiLog), function (err) {
     if (err) {
       shepherd.writeLog('error writing gui log file');
     }
@@ -213,8 +213,8 @@ shepherd.post('/guilog', function(req, res, next) {
 shepherd.get('/getlog', function(req, res, next) {
   const logExt = req.query.type === 'txt' ? 'txt' : 'json';
 
-  if (fs.existsSync(iguanaDir + '/shepherd/agamalog.' + logExt)) {
-    fs.readFile(iguanaDir + '/shepherd/agamalog.' + logExt, 'utf8', function (err, data) {
+  if (fs.existsSync(`${iguanaDir}/shepherd/agamalog.${logExt}`)) {
+    fs.readFile(`${iguanaDir}/shepherd/agamalog.${logExt}`, 'utf8', function (err, data) {
       if (err) {
         const errorObj = {
           'msg': 'error',
@@ -234,7 +234,7 @@ shepherd.get('/getlog', function(req, res, next) {
   } else {
     const errorObj = {
       'msg': 'error',
-      'result': 'agama.' + logExt + ' doesn\'t exist'
+      'result': `agama.${logExt} doesnt exist`
     };
 
     res.end(JSON.stringify(errorObj));
@@ -252,7 +252,7 @@ shepherd.post('/coinslist', function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   } else {
-    fs.writeFile(cache.iguanaDir + '/shepherd/coinslist.json', JSON.stringify(_payload), function (err) {
+    fs.writeFile(`${cache.iguanaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), function (err) {
       if (err) {
         const errorObj = {
           'msg': 'error',
@@ -277,11 +277,11 @@ shepherd.quitKomodod = function(chain) {
   // exit komodod gracefully
   console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
   exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
-    console.log('stdout: ' + stdout);
-    console.log('stderr: ' + stderr);
+    console.log(`stdout: ${stdout}`);
+    console.log(`stderr: ${stderr}`);
 
     if (error !== null) {
-      console.log('exec error: ' + error);
+      console.log(`exec error: ${error}`);
     }
   });
 }
@@ -349,21 +349,21 @@ shepherd.post('/cli', function(req, res, next) {
     }
 
     if (_mode === 'default') {
-      const _body = {
+      let _body = {
         'agent': 'bitcoinrpc',
         'method': _cmd
       };
 
-      if (_params) {
-        const _body = {
+      if (req.body.payload.params) {
+        _body = {
           'agent': 'bitcoinrpc',
           'method': _cmd,
-          'params': _params
+          'params': req.body.payload.params === ' ' ? [''] : req.body.payload.params
         };
       }
 
       const options = {
-        url: 'http://localhost:' + rpcConf[_chain].port,
+        url: `http://localhost:${rpcConf[_chain].port}`,
         method: 'POST',
         auth: {
           'user': rpcConf[_chain].user,
@@ -372,24 +372,24 @@ shepherd.post('/cli', function(req, res, next) {
         body: JSON.stringify(_body)
       };
 
+      // send back body on both success and error
+      // this bit replicates iguana core's behaviour
       request(options, function (error, response, body) {
         if (response &&
             response.statusCode &&
             response.statusCode === 200) {
           res.end(body);
         } else {
-          console.log(error);
-          console.log(body);
-          // TODO: error
+          res.end(body);
         }
       });
     } else {
       exec(komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params, function(error, stdout, stderr) {
-        console.log('stdout: ' + stdout);
-        console.log('stderr: ' + stderr);
+        console.log(`stdout: ${stdout}`);
+        console.log(`stderr: ${stderr}`);
 
         if (error !== null) {
-          console.log('exec error: ' + error);
+          console.log(`exec error: ${error}`);
         }
 
         let responseObj;
@@ -437,14 +437,14 @@ shepherd.post('/appconf', function(req, res, next) {
 });
 
 shepherd.saveLocalAppConf = function(appSettings) {
-  var appConfFileName = iguanaDir + '/config.json';
+  let appConfFileName = `${iguanaDir}/config.json`;
 
   _fs.access(iguanaDir, fs.constants.R_OK, function(err) {
     if (!err) {
 
       var FixFilePermissions = function() {
         return new Promise(function(resolve, reject) {
-          var result = 'config.json file permissions updated to Read/Write';
+          const result = 'config.json file permissions updated to Read/Write';
 
           fsnode.chmodSync(appConfFileName, '0666');
 
@@ -458,7 +458,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
 
       var FsWrite = function() {
         return new Promise(function(resolve, reject) {
-          var result = 'config.json write file is done'
+          const result = 'config.json write file is done';
 
           fs.writeFile(appConfFileName,
                       JSON.stringify(appSettings)
@@ -473,8 +473,8 @@ shepherd.saveLocalAppConf = function(appSettings) {
           fsnode.chmodSync(appConfFileName, '0666');
           setTimeout(function() {
             console.log(result);
-            console.log('app conf.json file is created successfully at: ' + iguanaConfsDir);
-            shepherd.writeLog('app conf.json file is created successfully at: ' + iguanaConfsDir);
+            console.log(`app conf.json file is created successfully at: ${iguanaConfsDir}`);
+            shepherd.writeLog(`app conf.json file is created successfully at: ${iguanaConfsDir}`);
             resolve(result);
           }, 2000);
         });
@@ -487,15 +487,15 @@ shepherd.saveLocalAppConf = function(appSettings) {
 }
 
 shepherd.loadLocalConfig = function() {
-  if (fs.existsSync(iguanaDir + '/config.json')) {
-    var localAppConfig = fs.readFileSync(iguanaDir + '/config.json', 'utf8');
+  if (fs.existsSync(`${iguanaDir}/config.json`)) {
+    let localAppConfig = fs.readFileSync(`${iguanaDir}/config.json`, 'utf8');
     console.log('app config set from local file');
     shepherd.writeLog('app config set from local file');
 
     // find diff between local and hardcoded configs
     // append diff to local config
     var compareJSON = function(obj1, obj2) {
-      var result = {};
+      let result = {};
 
       for (var i in obj1) {
         if (!obj2.hasOwnProperty(i)) {
@@ -537,15 +537,15 @@ shepherd.loadLocalConfig = function() {
 
 shepherd.appConfig = shepherd.loadLocalConfig();
 
-console.log('iguana dir: ' + iguanaDir);
-console.log('iguana bin: ' + iguanaBin);
+console.log(`iguana dir: ${iguanaDir}`);
+console.log(`iguana bin: ${iguanaBin}`);
 console.log('--------------------------')
-console.log('iguana dir: ' + komododBin);
-console.log('iguana bin: ' + komodoDir);
-shepherd.writeLog('iguana dir: ' + iguanaDir);
-shepherd.writeLog('iguana bin: ' + iguanaBin);
-shepherd.writeLog('iguana dir: ' + komododBin);
-shepherd.writeLog('iguana bin: ' + komodoDir);
+console.log(`iguana dir: ${komododBin}`);
+console.log(`iguana bin: ${komodoDir}`);
+shepherd.writeLog(`iguana dir: ${iguanaDir}`);
+shepherd.writeLog(`iguana bin: ${iguanaBin}`);
+shepherd.writeLog(`iguana dir: ${komododBin}`);
+shepherd.writeLog(`iguana bin: ${komodoDir}`);
 
 // END IGUANA FILES AND CONFIG SETTINGS
 // default route
@@ -606,7 +606,7 @@ shepherd.getSyncOnlyForksInfo = function() {
     if (iguanaInstanceRegistry[port].mode.indexOf('/sync') > -1) {
       syncOnlyIguanaInstanceInfo[port] = {};
       request({
-        url: 'http://localhost:' + port + '/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@' + shepherd.appSessionHash,
+        url: `http://localhost:${port}/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@${shepherd.appSessionHash}`,
         method: 'GET'
       }, function (error, response, body) {
         if (response &&
@@ -621,7 +621,7 @@ shepherd.getSyncOnlyForksInfo = function() {
         }
       });
       request({
-        url: 'http://localhost:' + port + '/api/SuperNET/activehandle?userpass=' + shepherd.appSessionHash,
+        url: `http://localhost:${port}/api/SuperNET/activehandle?userpass=${shepherd.appSessionHash}`,
         method: 'GET'
       }, function (error, response, body) {
         if (response &&
@@ -689,7 +689,7 @@ shepherd.get('/forks/restart', function(req, res, next) {
         'msg': 'success',
         'result': 'restarted'
       };
-      shepherd.writeLog('iguana fork pmid ' + _pmid + ' restarted');
+      shepherd.writeLog(`iguana fork pmid ${_pmid} restarted`);
 
       res.end(JSON.stringify(successObj));
     });
