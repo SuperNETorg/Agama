@@ -3,14 +3,14 @@ const fs = require('fs-extra'),
       async = require('async'),
       url = require('url');
 
-var mock = {};
+let mock = {};
 
 mock.setVar = function(variable, value) {
   mock[variable] = value;
 }
 
 mock.get = function(req, res, next) {
-	var _url = req.query.url;
+	const _url = req.query.url;
 
 	if (_url.indexOf('/InstantDEX/allcoins') > -1) {
 	  res.end(JSON.stringify({
