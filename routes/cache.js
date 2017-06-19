@@ -16,7 +16,7 @@ cache.setVar = function(variable, value) {
 cache.dumpCacheBeforeExit = function() {
   if (inMemCache) {
     console.log('dumping cache before exit');
-    fs.writeFileSync(cache.iguanaDir + '/shepherd/cache-' + inMemPubkey + '.json', JSON.stringify(inMemCache), 'utf8');
+    fs.writeFileSync(`${cache.iguanaDir}/shepherd/cache-${inMemPubkey}.json`, JSON.stringify(inMemCache), 'utf8');
   }
 }
 
@@ -29,8 +29,8 @@ cache.get = function(req, res, next) {
     if (!inMemCache) {
       console.log('serving cache from disk');
 
-      if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json')) {
-        fs.readFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8', function (err, data) {
+      if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`)) {
+        fs.readFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8', function (err, data) {
           if (err) {
             const errorObj = {
               'msg': 'error',
@@ -54,10 +54,10 @@ cache.get = function(req, res, next) {
               if (e.toString().indexOf('at position') > -1) {
                 const errorPos = e.toString().split(' ');
 
-                console.log('JSON error ---> ' + data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20) + ' | error sequence: ' + data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1));
+                console.log(`JSON error ---> ${data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20)} | error sequence: ${data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1)}`);
                 console.log('attempting to recover JSON data');
 
-                fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', data.substring(0, errorPos[errorPos.length - 1]), function(err) {
+                fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, data.substring(0, errorPos[errorPos.length - 1]), function(err) {
                   const successObj = {
                     'msg': 'success',
                     'result': data.substring(0, errorPos[errorPos.length - 1])
@@ -73,7 +73,7 @@ cache.get = function(req, res, next) {
       } else {
         const errorObj = {
           'msg': 'error',
-          'result': 'no file with handle ' + pubkey
+          'result': `no file with handle ${pubkey}`
         };
 
         res.end(JSON.stringify(errorObj));
@@ -100,8 +100,8 @@ cache.groomGet = function(req, res, next) {
   const _filename = req.query.filename;
 
   if (_filename) {
-    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
-      fs.readFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', 'utf8', function (err, data) {
+    if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`)) {
+      fs.readFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, 'utf8', function (err, data) {
         if (err) {
           const errorObj = {
             'msg': 'error',
@@ -121,7 +121,7 @@ cache.groomGet = function(req, res, next) {
     } else {
       const errorObj = {
         'msg': 'error',
-        'result': 'no file with name ' + _filename
+        'result': `no file with name ${_filename}`
       };
 
       res.end(JSON.stringify(errorObj));
@@ -140,10 +140,10 @@ cache.groomDelete = function(req, res, next) {
   const _filename = req.body.filename;
 
   if (_filename) {
-    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json')) {
+    if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`)) {
       inMemCache = null;
 
-      fs.unlink(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', function(err) {
+      fs.unlink(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, function(err) {
         if (err) {
           const errorObj = {
             'msg': 'error',
@@ -163,7 +163,7 @@ cache.groomDelete = function(req, res, next) {
     } else {
       const errorObj = {
         'msg': 'error',
-        'result': 'no file with name ' + _filename
+        'result': `no file with name ${_filename}`
       };
 
       res.end(JSON.stringify(errorObj));
@@ -198,7 +198,7 @@ cache.groomPost = function(req, res) {
         console.log('appending groom post to in mem cache');
         console.log('appending groom post to on disk cache');
 
-        fs.writeFile(cache.iguanaDir + '/shepherd/cache-' + _filename + '.json', _payload, function (err) {
+        fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, _payload, function (err) {
           if (err) {
             const errorObj = {
               'msg': 'error',
@@ -271,7 +271,7 @@ checkCallStack = function() {
  */
 cache.one = function(req, res, next) {
   if (req.query.pubkey &&
-      !fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
+      !fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${req.query.pubkey}.json`)) {
     cacheCallInProgress = false;
   }
 
@@ -282,8 +282,8 @@ cache.one = function(req, res, next) {
   if (!cacheCallInProgress) {
     cache.dumpCacheBeforeExit();
 
-    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json')) {
-      let _data = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + req.query.pubkey + '.json', 'utf8');
+    if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${req.query.pubkey}.json`)) {
+      let _data = fs.readFileSync(`${cache.iguanaDir}/shepherd/cache-${req.query.pubkey}.json`, 'utf8');
       if (_data) {
           inMemCache = JSON.parse(_data);
           _data = _data.replace('waiting', 'failed');
@@ -327,7 +327,7 @@ cache.one = function(req, res, next) {
     inMemPubkey = pubkey;
     callStack[coin] = 1;
     console.log(callsArray);
-    console.log('iguana core port ' + iguanaCorePort);
+    console.log(`iguana core port ${iguanaCorePort}`);
 
     if (!sessionKey) {
       const errorObj = {
@@ -354,7 +354,7 @@ cache.one = function(req, res, next) {
     function fixJSON(data) {
       if (data && data.length) {
         try {
-          var parsedJSON = JSON.parse(data);
+          const parsedJSON = JSON.parse(data);
 
           return parsedJSON;
         } catch (e) {
@@ -362,7 +362,7 @@ cache.one = function(req, res, next) {
           if (e.toString().indexOf('at position') > -1) {
             const errorPos = e.toString().split(' ');
 
-            console.log('JSON error ---> ' + data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20) + ' | error sequence: ' + data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1));
+            console.log(`JSON error ---> ${data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20)} | error sequence: ${data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1)}`);
             console.log('attempting to recover JSON data');
             return JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
           }
@@ -375,14 +375,13 @@ cache.one = function(req, res, next) {
       }
     }
 
-    if (fs.existsSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json') && coin !== 'all') {
+    if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`) && coin !== 'all') {
       if (inMemCache) {
         console.log('cache one from mem');
         outObj = inMemCache;
       } else {
-        var _file = fs.readFileSync(cache.iguanaDir + '/shepherd/cache-' + pubkey + '.json', 'utf8');
+        const _file = fs.readFileSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8');
         console.log('cache one from disk');
-        //outObj = _file ? JSON.parse(_file) : {};
         outObj = fixJSON(_file);
       }
 
@@ -419,23 +418,24 @@ cache.one = function(req, res, next) {
 
       function execDEXRequests(coin, address) {
         let dexUrls = {
-          'listunspent': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listunspent?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'listtransactions': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/listtransactions?userpass=' + sessionKey + '&count=100&skip=0&symbol=' + coin + '&address=' + address,
-          'getbalance': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/dex/getbalance?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address,
-          'refresh': 'http://' + cache.appConfig.host + ':' + iguanaCorePort + '/api/basilisk/refresh?userpass=' + sessionKey + '&symbol=' + coin + '&address=' + address
+          'listunspent': `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/listunspent?userpass=${sessionKey}&symbol=${coin}&address=${address}`,
+          'listtransactions': `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/listtransactions?userpass=${sessionKey}&count=100&skip=0&symbol=${coin}&address=${address}`,
+          'getbalance': `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/getbalance?userpass=${sessionKey}&symbol=${coin}&address=${address}`,
+          'refresh': `http://${cache.appConfig.host}:${iguanaCorePort}/api/basilisk/refresh?userpass=${sessionKey}&symbol=${coin}&address=${address}`
         },
         _dexUrls = {};
 
-        for (var a = 0; a < callsArray.length; a++) {
+        for (let a = 0; a < callsArray.length; a++) {
           _dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
         }
 
-        if (coin === 'BTC' || coin === 'SYS') {
+        if (coin === 'BTC' ||
+            coin === 'SYS') {
           delete _dexUrls.refresh;
           delete _dexUrls.getbalance;
         }
 
-        console.log(coin + ' address ' + address);
+        console.log(`${coin} address ${address}`);
 
         if (!outObj.basilisk[coin][address]) {
           outObj.basilisk[coin][address] = {};
@@ -493,7 +493,7 @@ cache.one = function(req, res, next) {
             });
             outObj.basilisk[coin][address][key].status = 'in progress';
             request({
-              url: mock ? 'http://localhost:17777/shepherd/mock?url=' + dexUrl : dexUrl,
+              url: mock ? `http://localhost:17777/shepherd/mock?url=${dexUrl}` : dexUrl,
               method: 'GET'
             }, function (error, response, body) {
               if (response &&
@@ -519,9 +519,35 @@ cache.one = function(req, res, next) {
                 const _parsedJSON = JSON.parse(body);
                 if (key === 'getbalance' &&
                   coin === 'KMD'/* &&
-                  ((_parsedJSON && _parsedJSON.balance === 0) || _parsedJSON === [])*/) {
-                  console.log('fallback to kmd explorer');
-                  //http://kmd.explorer.supernet.org/api/addr/RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd/?noTxList=1
+                  ((_parsedJSON && _parsedJSON.balance === 0) || body === [])*/) {
+                  console.log('fallback to kmd explorer ======>');
+                  request({
+                    url: `http://kmd.explorer.supernet.org/api/addr/${address}/?noTxList=1`,
+                    method: 'GET'
+                  }, function (error, response, body) {
+                    if (response &&
+                        response.statusCode &&
+                        response.statusCode === 200) {
+                      console.log(JSON.stringify(body));
+                      /*cache.io.emit('messages', {
+                        'message': {
+                          'shepherd': {
+                            'method': 'cache-one',
+                            'status': 'in progress',
+                            'iguanaAPI': {
+                              'method': key,
+                              'coin': coin,
+                              'address': address,
+                              'status': 'done',
+                              'resp': body
+                            }
+                          }
+                        }
+                      });*/
+                    } else {
+
+                    }
+                  });
                 }
 
                 outObj.basilisk[coin][address][key] = {};
@@ -531,7 +557,7 @@ cache.one = function(req, res, next) {
                 console.log(dexUrl);
                 console.log(body);
                 callStack[coin]--;
-                console.log(coin + ' _stack len ' + callStack[coin]);
+                console.log(`${coin} _stack len ${callStack[coin]}`);
                 cache.io.emit('messages', {
                   'message': {
                     'shepherd': {
@@ -555,7 +581,7 @@ cache.one = function(req, res, next) {
                 outObj.basilisk[coin][address][key].timestamp = 1471620867 // add timestamp
                 outObj.basilisk[coin][address][key].status = 'done';
                 callStack[coin]--;
-                console.log(coin + ' _stack len ' + callStack[coin]);
+                console.log(`${coin} _stack len ${callStack[coin]}`);
                 cache.io.emit('messages', {
                   'message': {
                     'shepherd': {
@@ -572,9 +598,9 @@ cache.one = function(req, res, next) {
               }
             });
           } else {
-            console.log(key + ' is fresh, check back in ' + (cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp)) + 's');
+            console.log(`${key} is fresh, check back in ${(cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp))}s`);
             callStack[coin]--;
-            console.log(coin + ' _stack len ' + callStack[coin]);
+            console.log(`${coin} _stack len ${callStack[coin]}`);
             cache.io.emit('messages', {
               'message': {
                 'shepherd': {
@@ -611,7 +637,7 @@ cache.one = function(req, res, next) {
         writeCache();
 
         const addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
-        var callsArrayBTC = callsArray.length;
+        let callsArrayBTC = callsArray.length;
 
         if (callsArray.indexOf('getbalance') > - 1) {
           callsArrayBTC--;
@@ -620,7 +646,7 @@ cache.one = function(req, res, next) {
           callsArrayBTC--;
         }
         callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
-        console.log(coin + ' stack len ' + callStack[coin]);
+        console.log(`${coin} stack len ${callStack[coin]}`);
 
         cache.io.emit('messages', {
           'message': {
@@ -642,9 +668,9 @@ cache.one = function(req, res, next) {
         if (addresses) {
           parseAddresses(coin, addresses);
         } else {
-          const tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/bitcoinrpc/getaddressesbyaccount?userpass=' + sessionKey + '&coin=' + coin + '&account=*';
+          const tempUrl = `http://${cache.appConfig.host}:${cache.appConfig.iguanaCorePort}/api/bitcoinrpc/getaddressesbyaccount?userpass=${sessionKey}&coin=${coin}&account=*`;
           request({
-            url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
+            url: mock ? `http://localhost:17777/shepherd/mock?url=${tempUrl}` : tempUrl,
             method: 'GET'
           }, function (error, response, body) {
             if (response &&
@@ -675,9 +701,9 @@ cache.one = function(req, res, next) {
         });
 
         if (coin === 'all') {
-          const tempUrl = 'http://' + cache.appConfig.host + ':' + cache.appConfig.iguanaCorePort + '/api/InstantDEX/allcoins?userpass=' + sessionKey;
+          const tempUrl = `http://${cache.appConfig.host}:${cache.appConfig.iguanaCorePort}/api/InstantDEX/allcoins?userpass=${sessionKey}`;
           request({
-            url: mock ? 'http://localhost:17777/shepherd/mock?url=' + tempUrl : tempUrl,
+            url: mock ? `http://localhost:17777/shepherd/mock?url=${tempUrl}` : tempUrl,
             method: 'GET'
           }, function (error, response, body) {
             if (response &&
@@ -737,15 +763,17 @@ cache.one = function(req, res, next) {
           getAddresses(coin);
         }
       } else {
-        var callsArrayBTC = callsArray.length; // restrict BTC and SYS only to listunspent and listtransactions calls
+        let callsArrayBTC = callsArray.length; // restrict BTC and SYS only to listunspent and listtransactions calls
+
         if (callsArray.indexOf('getbalance') > - 1) {
           callsArrayBTC--;
         }
         if (callsArray.indexOf('refresh') > - 1) {
           callsArrayBTC--;
         }
+
         callStack[coin] = callStack[coin] + (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
-        console.log(coin + ' stack len ' + callStack[coin]);
+        console.log(`${coin} stack len ${callStack[coin]}`);
 
         cache.io.emit('messages', {
           'message': {

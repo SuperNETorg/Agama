@@ -2,7 +2,7 @@ const assetChainPorts = {
   'komodod': '7771',
   'SUPERNET': '11341',
   'REVS': '10196',
-  'WLC': '11667',
+  'WLC': '12167',
   'PANGEA': '10074',
   'DEX': '9503',
   'JUMBLR': '10789',

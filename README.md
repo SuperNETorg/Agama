@@ -53,8 +53,12 @@ Place it in ./iguana folder.
 }
 }
 ```
+
 #### Sockets.io
 In dev mode backend is configured to send/receive messages from/to http://127.0.0.1:3000 address. If you open it as http://localhost:3000 sockets server will reject any messages.
+
+#### Coin daemon binaries
+Run binary_artifacts.sh from under agama folder you cloned previously. The script will fetch
 
 #### For end users
 The instructions to make production build of Agama App will be updated soon.

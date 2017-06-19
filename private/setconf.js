@@ -41,9 +41,8 @@ var coind_conf = module.exports = {
  *
  */
 function parse_status_block(block) {
-  var match;
-
-  var parsed = {
+  let match;
+  let parsed = {
     settings: 'exists'
   };
 
@@ -98,45 +97,17 @@ function parse_status(callback) {
     } else {
       callback(error,
       stdout.trim().split('\n\n').map(parse_status_block));
-      //stdout.trim().split(/\s\*-usb:/g).map(parse_status_block));
-      //console.log(stdout.trim().split(/\s\*-usb:/g))
     }
   };
 }
 
-/**
- * The **coind_conf status** command is used to query the status of all
- * configured interfaces.
- *
- * @static
- * @category coind_conf
- * @param {function} callback The callback function.
- * @example
- *
- * var coind_conf = require('./coind_conf');
- *
- * coind_conf.status(function(err, status) {
- *   console.log(status);
- * });
- *
- * // =>
- * [
- *  {
- *    "rpcuser": "pi",
- *    "rpcpass": "c892f76fc45365d50cb744ec1d5cdde659c98e0b",
- *    "rpcport": "8336",
- *    "server": "1"
- *  }
- * ]
- *
- */
 function status(confPath, callback) {
-  //console.log(confPath);
-  if (os.platform() === 'darwin' || os.platform() === 'linux') {
-    this.exec('cat "' + confPath + '"', parse_status(callback));
+  if (os.platform() === 'darwin' ||
+      os.platform() === 'linux') {
+    this.exec(`cat "${confPath}"`, parse_status(callback));
   }
 
   if (os.platform() === 'win32') {
-    this.exec('type "' + confPath + '"', parse_status(callback));
+    this.exec(`type "${confPath}"`, parse_status(callback));
   }
 }
