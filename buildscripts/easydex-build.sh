@@ -14,7 +14,6 @@ git pull origin redux
 
 [ -d react ] && cd react || echo "!!! I can't find react"
 echo "Actual directory is: ${PWD}"
-
 echo "Installing nodejs modules."
 npm install 
 npm install webpack

@@ -110,11 +110,22 @@
         </component>
     </componentList>
     <preInstallationActionList>
+        <setInstallerVariableFromScriptOutput>
+            <exec>xdg-user-dir</exec>
+            <execArgs>DESKTOP</execArgs>
+            <name>desktopDir</name>
+            <ruleList>
+                <programTest>
+                    <condition>is_in_path</condition>
+                    <name>xdg-user-dir</name>
+                </programTest>
+            </ruleList>
+        </setInstallerVariableFromScriptOutput>
         <setInstallerVariable>
             <name>previous_installation_exists</name>
             <value>1</value>
             <ruleList>
-                <fileTest condition="exists" path="/etc/${project.vendor}-${project.shortName}.ini"/>
+                <fileTest condition="exists" path="${user_home_directory}/.${project.vendor}-${project.shortName}.ini"/>
             </ruleList>
         </setInstallerVariable>
 
@@ -125,7 +136,7 @@
             <actionList>
                 <setInstallerVariable name="${variable}" value=""/>
                 <iniFileGet>
-                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <file>${user_home_directory}/.${project.vendor}-${project.shortName}.ini</file>
                     <key>${name}</key>
                     <section>details</section>
                     <variable>${variable}</variable>
@@ -158,6 +169,28 @@
         <deleteFile>
             <explanation>Deleting user data</explanation>
             <path>${user_home_directory}/.iguana</path>
+            <progressText>Deleting user data</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${delete_user_data}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.config/Agama</path>
             <progressText>Deleting user data</progressText>
             <ruleList>
                 <compareValues>
@@ -215,6 +248,16 @@
                 </compareValues>
             </ruleList>
         </exit>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.iguana/shepherd</path>
+            <progressText>Deleting user data</progressText>
+        </deleteFile>
+        <deleteFile>
+            <explanation>Deleting user data</explanation>
+            <path>${user_home_directory}/.iguana/config.json</path>
+            <progressText>Deleting user data</progressText>
+        </deleteFile>
         <createDirectory>
             <abortOnError>0</abortOnError>
             <explanation>Creating ZcashParam directory</explanation>
@@ -279,23 +322,18 @@
     <postInstallationActionList>
         <createSymLink>
             <abortOnError>0</abortOnError>
-            <linkName>/bin/Agama</linkName>
+            <linkName>${user_home_directory}/bin/Agama</linkName>
             <target>${installdir}/Agama</target>
         </createSymLink>
         <iniFileSet>
-            <file>${user_home_directory}/Desktop/Agama Desktop.desktop</file>
+            <file>${desktopDir}/Agama Desktop.desktop</file>
             <key>Categories</key>
             <section>Desktop Entry</section>
             <value>Office;</value>
         </iniFileSet>
-        <changeOwnerAndGroup>
-            <files>${user_home_directory}/Desktop/Agama Desktop.desktop</files>
-            <group>users</group>
-            <owner>nobody</owner>
-        </changeOwnerAndGroup>
         <copyFile>
-            <destination>/usr/share/applications/Agama Desktop.desktop</destination>
-            <origin>${user_home_directory}/Desktop/Agama Desktop.desktop</origin>
+            <destination>${user_home_directory}/.local/share/applications/Agama Desktop.desktop</destination>
+            <origin>${desktopDir}/Agama Desktop.desktop</origin>
         </copyFile>
 
         <!-- Store values of current installer in etc folder so we can find for uninstal -->
@@ -304,7 +342,7 @@
             <variables>name variable</variables>
             <actionList>
                 <iniFileSet>
-                    <file>/etc/${project.vendor}-${project.shortName}.ini</file>
+                    <file>${user_home_directory}/.${project.vendor}-${project.shortName}.ini</file>
                     <key>${name}</key>
                     <section>details</section>
                     <value>${variable}</value>
@@ -314,7 +352,7 @@
                 <platformTest negate="1" type="windows"/>
             </ruleList>
         </foreach>
-        <addFilesToUninstaller files="/etc/${project.vendor}-${project.shortName}.ini"/>
+        <addFilesToUninstaller files="${user_home_directory}/.${project.vendor}-${project.shortName}.ini"/>
     </postInstallationActionList>
     <postUninstallationActionList>
         <deleteFile>
@@ -328,16 +366,14 @@
     <enableRollback>0</enableRollback>
     <enableSslSupport>1</enableSslSupport>
     <enableTimestamp>1</enableTimestamp>
-    <requireInstallationByRootUser>1</requireInstallationByRootUser>
     <saveRelativePaths>1</saveRelativePaths>
     <uninstallerName>Uninstall-Agama</uninstallerName>
     <vendor>SuperNETOrg</vendor>
     <finalPageActionList>
         <runProgram>
-            <program>/bin/Agama</program>
+            <program>${user_home_directory}/bin/Agama</program>
             <programArguments>&amp;</programArguments>
             <progressText>Do you want to launch ${project.fullName} now?</progressText>
-            <runAs>$USER</runAs>
         </runProgram>
     </finalPageActionList>
     <parameterList>
@@ -346,7 +382,7 @@
             <description>Installer.Parameter.installdir.description</description>
             <explanation>Installer.Parameter.installdir.explanation</explanation>
             <value></value>
-            <default>/opt/AgamaApp</default>
+            <default>${user_home_directory}/.AgamaApp</default>
             <allowEmptyValue>0</allowEmptyValue>
             <cliOptionName>prefix</cliOptionName>
             <mustBeWritable>1</mustBeWritable>
@@ -393,8 +429,8 @@
                         </booleanParameter>
                     </parameterList>
                 </parameterGroup>
-                <labelParameter name="reinstall" description="Re-install current version">
-                    <title>Re-install</title>
+                <labelParameter name="reinstall" description="Upgrade current version">
+                    <title>Upgrade</title>
                     <explanation></explanation>
                     <image></image>
                 </labelParameter>

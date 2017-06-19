@@ -284,6 +284,50 @@ shepherd.quitKomodod = function(chain) {
  *  type: POST
  *  params: payload
  */
+shepherd.post('/cli', function(req, res, next) {
+  if (!req.body.payload) {
+    const errorObj = {
+      'msg': 'error',
+      'result': 'no payload provided'
+    };
+
+    res.end(JSON.stringify(errorObj));
+  } else {
+    const _mode = req.body.payload.mode === 'passthru' ? 'passthru' : 'default';
+    const _chain = req.body.payload.chain ? req.body.payload.chain : '';
+    const _cmd = req.body.payload.cmd;
+
+    exec(komodocliBin + (_chain ? ' ac_name=' + _chain : '') + ' ' + _cmd, function(error, stdout, stderr) {
+      console.log('stdout: ' + stdout)
+      console.log('stderr: ' + stderr)
+
+      if (error !== null) {
+        console.log('exec error: ' + error)
+      }
+
+      let responseObj;
+
+      if (stderr) {
+        responseObj = {
+          'msg': 'error',
+          'result': stderr
+        };
+      } else {
+        responseObj = {
+          'msg': 'success',
+          'result': stdout
+        };
+      }
+
+      res.end(JSON.stringify(responseObj));
+    });
+  }
+});
+
+/*
+ *  type: POST
+ *  params: payload
+ */
 shepherd.post('/appconf', function(req, res, next) {
   if (!req.body.payload) {
     const errorObj = {
