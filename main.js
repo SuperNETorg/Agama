@@ -142,12 +142,12 @@ guiapp.get('/', function (req, res) {
 	res.send('Agama app server');
 });
 
-var guipath = path.join(__dirname, '/gui');
+const guipath = path.join(__dirname, '/gui');
 guiapp.use('/gui', express.static(guipath));
 guiapp.use('/shepherd', shepherd);
 
-var server = require('http').createServer(guiapp),
-		io = require('socket.io').listen(server);
+const server = require('http').createServer(guiapp);
+const io = require('socket.io').listen(server);
 
 server.listen(appConfig.agamaPort, function() {
 	console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
@@ -177,12 +177,13 @@ shepherd.setVar('appBasicInfo', appBasicInfo);
 shepherd.setVar('appSessionHash', appSessionHash);
 
 module.exports = guiapp;
+var iguanaIcon;
 
 if (os.platform() === 'linux') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
+	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
 }
 if (os.platform() === 'win32') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
+	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
 
 let mainWindow;
@@ -227,35 +228,6 @@ function createLoadingWindow() {
       e.preventDefault();
     }
   });
-
-	/*
-	* var ipc = require('electron').ipcRenderer;
-	* ipc.once('coincliReply', function(event, response){
-	* 		console.log(response);
-	* 	});
-	* ipc.send('InvokeCoinCliAction', '{"cli":"kmd","command":"getinfo"}');
-	*/
-
-	ipc.on('InvokeCoinCliAction', function(event, data){
-		console.log(JSON.stringify(data));
-		console.log(data.cli)
-		console.log(data.command)
-
-		if (data.cli == 'kmd') {
-			coincli.kmdcommand(data.command, function(err, command) {
-				//console.log(command);
-				var result = command;
-				event.sender.send('coincliReply', result);
-			});
-		}
-		if (data.cli == 'zec') {
-			coincli.zeccommand(data.command, function(err, command) {
-				//console.log(command);
-				var result = command;
-				event.sender.send('coincliReply', result);
-			});
-		}
-	});
 }
 
 app.on('ready', createLoadingWindow);
@@ -314,8 +286,8 @@ function createWindow (status) {
 			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/main.html`);
 		}
 
-		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params
-			const { selectionText, isEditable } = params; //params obj
+		mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
+			const { selectionText, isEditable } = params; // params obj
 
 			if (isEditable) {
 				editMenu.popup(mainWindow);
@@ -328,7 +300,7 @@ function createWindow (status) {
 		// mainWindow.webContents.openDevTools()
 
 		function pm2Exit() {
-			var ConnectToPm2 = function() {
+			const ConnectToPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Closing Main Window...');
 					shepherd.writeLog('exiting app...');
@@ -349,7 +321,7 @@ function createWindow (status) {
 						}
 					});
 
-					var result = 'Connecting To Pm2: done';
+					const result = 'Connecting To Pm2: done';
 
 					console.log(result);
 					shepherd.writeLog(result);
@@ -357,7 +329,7 @@ function createWindow (status) {
 				})
 			}
 
-			var KillPm2 = function() {
+			const KillPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('killing to pm2...');
 					shepherd.writeLog('killing to pm2...');
@@ -371,7 +343,7 @@ function createWindow (status) {
 							throw err;
 					});
 
-					var result = 'Killing Pm2: done';
+					const result = 'Killing Pm2: done';
 
 					setTimeout(function() {
 						console.log(result);
@@ -382,21 +354,21 @@ function createWindow (status) {
 				})
 			}
 
-			var HideMainWindow = function() {
+			const HideMainWindow = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Exiting App...');
 					mainWindow = null;
 
-					var result = 'Hiding Main Window: done';
+					const result = 'Hiding Main Window: done';
 					console.log(result);
 					resolve(result);
 				});
 			}
 
-			var QuitApp = function() {
+			const QuitApp = function() {
 				return new Promise(function(resolve, reject) {
 					app.quit();
-					var result = 'Quiting App: done';
+					const result = 'Quiting App: done';
 					console.log(result);
 					resolve(result);
 				});
@@ -471,20 +443,20 @@ function formatBytes(bytes, decimals) {
   if (bytes === 0)
     return '0 Bytes';
 
-  var k = 1000,
-      dm = decimals + 1 || 3,
-      sizes = [
-        'Bytes',
-        'KB',
-        'MB',
-        'GB',
-        'TB',
-        'PB',
-        'EB',
-        'ZB',
-        'YB'
-      ],
-      i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1000,
+	      dm = decimals + 1 || 3,
+	      sizes = [
+	        'Bytes',
+	        'KB',
+	        'MB',
+	        'GB',
+	        'TB',
+	        'PB',
+	        'EB',
+	        'ZB',
+	        'YB'
+	      ],
+	      i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
