@@ -22,7 +22,6 @@ var express = require('express'),
 		pm2 = require('pm2'),
 		cluster = require('cluster'),
 		numCPUs = require('os').cpus().length,
-		//coincli = require('./private/coincli.js'),
 		ipc = require('electron').ipcMain;
 
 Promise = require('bluebird');
@@ -37,7 +36,7 @@ app.setVersion(appBasicInfo.version);
 
 if (os.platform() === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
-	console.log(process.env);
+	// console.log(process.env);
 }
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
@@ -48,25 +47,25 @@ shepherd.createIguanaDirs();
 
 const appSessionHash = md5(Date.now());
 
-shepherd.writeLog('app init ' + appSessionHash);
-shepherd.writeLog('app info: ' + appBasicInfo.name + ' ' + appBasicInfo.version);
+shepherd.writeLog(`app init ${appSessionHash}`);
+shepherd.writeLog(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
 shepherd.writeLog('sys info:');
-shepherd.writeLog('totalmem_readable: ' + formatBytes(os.totalmem()));
-shepherd.writeLog('arch: ' + os.arch());
-shepherd.writeLog('cpu: ' + os.cpus()[0].model);
-shepherd.writeLog('cpu_cores: ' + os.cpus().length);
-shepherd.writeLog('platform: ' + os.platform());
-shepherd.writeLog('os_release: ' + os.release());
-shepherd.writeLog('os_type: ' + os.type());
+shepherd.writeLog(`totalmem_readable: ${formatBytes(os.totalmem())}`);
+shepherd.writeLog(`arch: ${os.arch()}`);
+shepherd.writeLog(`cpu: ${os.cpus()[0].model}`);
+shepherd.writeLog(`cpu_cores: ${os.cpus().length}`);
+shepherd.writeLog(`platform: ${os.platform()}`);
+shepherd.writeLog(`os_release: ${os.release()}`);
+shepherd.writeLog(`os_type: ${os.type()}`);
 
 var appConfig = shepherd.loadLocalConfig(); // load app config
 
-shepherd.writeLog('app started in ' + (appConfig.dev ? 'dev mode' : ' user mode'));
+shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
 shepherd.setConfKMD();
 
 if (appConfig.killIguanaOnStart) {
-	var iguanaGrep;
+	let iguanaGrep;
 
 	if (os.platform() === 'darwin') {
 		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
@@ -79,23 +78,25 @@ if (appConfig.killIguanaOnStart) {
 	}
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
-			console.log('found another iguana process(es)');
-			shepherd.writeLog('found another iguana process(es)');
 			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
 
+			console.log('found another iguana process(es)');
+			shepherd.writeLog('found another iguana process(es)');
+
 			exec(pkillCmd, function(error, stdout, stderr) {
-				console.log(pkillCmd + ' is issued');
-				shepherd.writeLog(pkillCmd + ' is issued');
+				console.log(`${pkillCmd} is issued`);
+				shepherd.writeLog(`${pkillCmd} is issued`);
+
 				if (error !== null) {
-					console.log(pkillCmd + ' exec error: ' + error);
-					shepherd.writeLog(pkillCmd + ' exec error: ' + error);
+					console.log(`${pkillCmd} exec error: ${error}`);
+					shepherd.writeLog(`${pkillCmd} exec error: ${error}`);
 				};
 			});
 		}
 
 		if (error !== null) {
-			console.log(iguanaGrep + ' exec error: ' + error);
-			shepherd.writeLog(iguanaGrep + ' exec error: ' + error);
+			console.log(`${iguanaGrep} exec error: ${error}`);
+			shepherd.writeLog(`${iguanaGrep} exec error: ${error}`);
 		};
 	});
 }
@@ -138,22 +139,22 @@ guiapp.use(bodyParser.urlencoded({
 })); // support encoded bodies
 
 guiapp.get('/', function (req, res) {
-	res.send('Iguana app server');
+	res.send('Agama app server');
 });
 
-var guipath = path.join(__dirname, '/gui');
+const guipath = path.join(__dirname, '/gui');
 guiapp.use('/gui', express.static(guipath));
 guiapp.use('/shepherd', shepherd);
 
-var server = require('http').createServer(guiapp),
-		io = require('socket.io').listen(server);
+const server = require('http').createServer(guiapp);
+const io = require('socket.io').listen(server);
 
 server.listen(appConfig.agamaPort, function() {
-	console.log('guiapp and sockets.io are listening on port ' + appConfig.agamaPort + '!');
-	shepherd.writeLog('guiapp and sockets.io are listening on port ' + appConfig.agamaPort + '!');
+	console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+	shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
 });
 
-io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : 'http://127.0.0.1:' + appConfig.agamaPort); // set origin
+io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
 
 io.on('connection', function(client) {
 	console.log('EDEX GUI is connected...');
@@ -176,14 +177,14 @@ shepherd.setVar('appBasicInfo', appBasicInfo);
 shepherd.setVar('appSessionHash', appSessionHash);
 
 module.exports = guiapp;
+var iguanaIcon;
 
 if (os.platform() === 'linux') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
+	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
 }
 if (os.platform() === 'win32') {
-	var iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
+	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
-
 
 let mainWindow;
 let loadingWindow;
@@ -204,7 +205,7 @@ function createLoadingWindow() {
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
 
 	// load our index.html (i.e. easyDEX GUI)
-	loadingWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/');
+	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
 	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
@@ -227,35 +228,6 @@ function createLoadingWindow() {
       e.preventDefault();
     }
   });
-
-	/*
-	* var ipc = require('electron').ipcRenderer;
-	* ipc.once('coincliReply', function(event, response){
-	* 		console.log(response);
-	* 	});
-	* ipc.send('InvokeCoinCliAction', '{"cli":"kmd","command":"getinfo"}');
-	*/
-
-	ipc.on('InvokeCoinCliAction', function(event, data){
-		console.log(JSON.stringify(data));
-		console.log(data.cli)
-		console.log(data.command)
-
-		if (data.cli == 'kmd') {
-			coincli.kmdcommand(data.command, function(err, command) {
-				//console.log(command);
-				var result = command;
-				event.sender.send('coincliReply', result);
-			});
-		}
-		if (data.cli == 'zec') {
-			coincli.zeccommand(data.command, function(err, command) {
-				//console.log(command);
-				var result = command;
-				event.sender.send('coincliReply', result);
-			});
-		}
-	});
 }
 
 app.on('ready', createLoadingWindow);
@@ -277,13 +249,13 @@ function createWindow (status) {
 			pm2Exit();
 		}
 
-		const staticMenu = Menu.buildFromTemplate([ //if static
+		const staticMenu = Menu.buildFromTemplate([ // if static
 			{ role: 'copy' },
 			{ type: 'separator' },
 			{ role: 'selectall' },
 		]);
 
-		const editMenu = Menu.buildFromTemplate([ //if editable
+		const editMenu = Menu.buildFromTemplate([ // if editable
 			{ role: 'undo' },
 			{ role: 'redo' },
 			{ type: 'separator' },
@@ -304,18 +276,18 @@ function createWindow (status) {
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
 				} else {
-					mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/react/build');
+					mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
 				}
 			} else {
 				shepherd.writeLog('show edex gui');
-				mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/EasyDEX-GUI/');
+				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
 			}
 		} else {
-			mainWindow.loadURL('http://' + appConfig.host + ':' + appConfig.agamaPort + '/gui/main.html');
+			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/main.html`);
 		}
 
-		mainWindow.webContents.on('context-menu', (e, params) => { //context-menu returns params
-			const { selectionText, isEditable } = params; //params obj
+		mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
+			const { selectionText, isEditable } = params; // params obj
 
 			if (isEditable) {
 				editMenu.popup(mainWindow);
@@ -328,7 +300,7 @@ function createWindow (status) {
 		// mainWindow.webContents.openDevTools()
 
 		function pm2Exit() {
-			var ConnectToPm2 = function() {
+			const ConnectToPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Closing Main Window...');
 					shepherd.writeLog('exiting app...');
@@ -349,7 +321,7 @@ function createWindow (status) {
 						}
 					});
 
-					var result = 'Connecting To Pm2: done';
+					const result = 'Connecting To Pm2: done';
 
 					console.log(result);
 					shepherd.writeLog(result);
@@ -357,7 +329,7 @@ function createWindow (status) {
 				})
 			}
 
-			var KillPm2 = function() {
+			const KillPm2 = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('killing to pm2...');
 					shepherd.writeLog('killing to pm2...');
@@ -371,7 +343,7 @@ function createWindow (status) {
 							throw err;
 					});
 
-					var result = 'Killing Pm2: done';
+					const result = 'Killing Pm2: done';
 
 					setTimeout(function() {
 						console.log(result);
@@ -382,21 +354,21 @@ function createWindow (status) {
 				})
 			}
 
-			var HideMainWindow = function() {
+			const HideMainWindow = function() {
 				return new Promise(function(resolve, reject) {
 					console.log('Exiting App...');
 					mainWindow = null;
 
-					var result = 'Hiding Main Window: done';
+					const result = 'Hiding Main Window: done';
 					console.log(result);
 					resolve(result);
 				});
 			}
 
-			var QuitApp = function() {
+			const QuitApp = function() {
 				return new Promise(function(resolve, reject) {
 					app.quit();
-					var result = 'Quiting App: done';
+					const result = 'Quiting App: done';
 					console.log(result);
 					resolve(result);
 				});
@@ -471,20 +443,20 @@ function formatBytes(bytes, decimals) {
   if (bytes === 0)
     return '0 Bytes';
 
-  var k = 1000,
-      dm = decimals + 1 || 3,
-      sizes = [
-        'Bytes',
-        'KB',
-        'MB',
-        'GB',
-        'TB',
-        'PB',
-        'EB',
-        'ZB',
-        'YB'
-      ],
-      i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1000,
+	      dm = decimals + 1 || 3,
+	      sizes = [
+	        'Bytes',
+	        'KB',
+	        'MB',
+	        'GB',
+	        'TB',
+	        'PB',
+	        'EB',
+	        'ZB',
+	        'YB'
+	      ],
+	      i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
