@@ -135,55 +135,134 @@ shepherd.createIguanaDirs = function() {
   if (!fs.existsSync(`${iguanaDir}/shepherd`)) {
     fs.mkdirSync(`${iguanaDir}/shepherd`);
 
-    if (fs.existsSync(iguanaDir)) {
+    if (fs.existsSync(`${iguanaDir}/shepherd`)) {
       console.log(`created shepherd folder at ${iguanaDir}/shepherd`);
       shepherd.writeLog(`create shepherd folder at ${iguanaDir}/shepherd`);
     }
   } else {
-    console.log('shepherd folder already exists');
+    console.log('iguana/shepherd folder already exists');
+  }
+
+  if (!fs.existsSync(`${iguanaDir}/shepherd/pin`)) {
+    fs.mkdirSync(`${iguanaDir}/shepherd/pin`);
+
+    if (fs.existsSync(`${iguanaDir}/shepherd/pin`)) {
+      console.log(`created pin folder at ${iguanaDir}/shepherd/pin`);
+      shepherd.writeLog(`create pin folder at ${iguanaDir}/shepherd/pin`);
+    }
+  } else {
+    console.log('shepherd/pin folder already exists');
   }
 }
 
 shepherd.get('/encryptkey', function(req, res, next) {
-  if (req.query.ckey &&
-      req.query.string) {
-    const encryptedKey = aes256.encrypt(req.query.ckey, req.query.string);
-    const successObj = {
-      'msg': 'success',
-      'result': encryptedKey
-    };
+  if (req.query.key &&
+      req.query.string &&
+      req.query.pubkey) {
+    const encryptedString = aes256.encrypt(req.query.key, req.query.string);
 
-    res.end(JSON.stringify(successObj));
+    // test pin security
+    // - at least 1 char in upper case
+    // - at least 1 digit
+    // - at least one special character
+    // - min length 8
+
+    const _pin = req.query.key;
+    const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[!@#$&*_])(?=.*[0-9])(?=.*[a-z]).{8}$');
+
+    console.log(_pinTest);
+
+    fs.writeFile(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`, encryptedString, function (err) {
+      if (err) {
+        console.log('error writing pin file');
+      }
+
+      const returnObj = {
+        'msg': 'success',
+        'result': encryptedString
+      };
+
+      res.end(JSON.stringify(returnObj));
+    });
   } else {
-    const errorObj = {
+    let errorObj = {
       'msg': 'error',
-      'result': 'missing ckey or string to encrypt param'
+      'result': ''
     };
+    const _paramsList = [
+      'key',
+      'string',
+      'pubkey'
+    ];
+    let _errorParamsList = [];
 
+    for (let i = 0; i < _paramsList.length; i++) {
+      if (!req.query[_paramsList[i]]) {
+        _errorParamsList.push(_paramsList[i]);
+      }
+    }
+
+    errorObj.result = `missing param ${_errorParamsList.join(', ')}`;
     res.end(JSON.stringify(errorObj)); 
   }
 });
 
 shepherd.get('/decryptkey', function(req, res, next) {
-  if (req.query.ckey &&
-      req.query.string) {
-    const encryptedKey = aes256.decrypt(req.query.ckey, req.query.string);
-    const successObj = {
-      'msg': 'success',
-      'result': encryptedKey
-    };
+  if (req.query.key &&
+      req.query.pubkey) {
+    if (fs.existsSync(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`)) {
+      fs.readFile(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`, 'utf8', function (err, data) {
+        if (err) {
+          const errorObj = {
+            'msg': 'error',
+            'result': err
+          };
 
-    res.end(JSON.stringify(successObj));
+          res.end(JSON.stringify(errorObj));
+        } else {
+          const encryptedKey = aes256.decrypt(req.query.key, data);
+          // test if stored encrypted passphrase is decrypted correctly
+          // if not then the key is wrong
+          const _regexTest = encryptedKey.match(/^[0-9a-zA-Z ]+$/g);
+          let returnObj;
+
+          if (!_regexTest) {
+            returnObj = {
+              'msg': 'error',
+              'result': 'wrong key'
+            };
+          } else {
+            returnObj = {
+              'msg': 'success',
+              'result': encryptedKey
+            };
+          }
+
+          res.end(JSON.stringify(returnObj));
+        }
+      });
+    } else {
+      const errorObj = {
+        'msg': 'error',
+        'result': `file ${req.query.pubkey}.pin doesnt exist`
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   } else {
     const errorObj = {
       'msg': 'error',
-      'result': 'missing ckey or string to encrypt param'
+      'result': 'missing key or pubkey param'
     };
 
     res.end(JSON.stringify(errorObj)); 
   }
 });
 
+/*
+ *  type: GET
+ *  params: none
+ */
 shepherd.get('/coinslist', function(req, res, next) {
   if (fs.existsSync(`${iguanaDir}/shepherd/coinslist.json`)) {
     fs.readFile(`${iguanaDir}/shepherd/coinslist.json`, 'utf8', function (err, data) {
@@ -251,6 +330,10 @@ shepherd.post('/guilog', function(req, res, next) {
   });
 });
 
+/*
+ *  type: GET
+ *  params: type
+ */
 shepherd.get('/getlog', function(req, res, next) {
   const logExt = req.query.type === 'txt' ? 'txt' : 'json';
 
@@ -282,6 +365,10 @@ shepherd.get('/getlog', function(req, res, next) {
   }
 });
 
+/*
+ *  type: POST
+ *  params: payload
+ */
 shepherd.post('/coinslist', function(req, res, next) {
   const _payload = req.body.payload;
 
