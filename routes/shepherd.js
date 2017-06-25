@@ -342,7 +342,7 @@ shepherd.post('/cli', function(req, res, next) {
     const _mode = req.body.payload.mode === 'passthru' ? 'passthru' : 'default';
     const _chain = req.body.payload.chain === 'KMD' ? null : req.body.payload.chain;
     const _cmd = req.body.payload.cmd;
-    const _params = req.body.payload.params ? ' ' + req.body.payload.params : '';
+    const _params = req.body.payload.params ? ` ${req.body.payload.params}` : '';
 
     if (!rpcConf[_chain]) {
       shepherd.getConf(req.body.payload.chain === 'KMD' ? 'komodod' : req.body.payload.chain);
@@ -442,7 +442,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
   _fs.access(iguanaDir, fs.constants.R_OK, function(err) {
     if (!err) {
 
-      var FixFilePermissions = function() {
+      const FixFilePermissions = function() {
         return new Promise(function(resolve, reject) {
           const result = 'config.json file permissions updated to Read/Write';
 
@@ -762,9 +762,9 @@ shepherd.post('/forks', function(req, res, next) {
 
       pm2.start({
         script: iguanaBin, // path to binary
-        name: 'IGUANA ' + _port + ' ' + mode + ' / ' + coin,
+        name: `IGUANA ${_port} ${mode} / ${coin}`,
         exec_mode : 'fork',
-        args: ['-port=' + _port],
+        args: [`-port=${_port}`],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         iguanaInstanceRegistry[_port] = {
@@ -1296,7 +1296,7 @@ function herder(flock, data) {
     }
 
     // get komodod instance port
-    var _port = assetChainPorts[data.ac_name];
+    const _port = assetChainPorts[data.ac_name];
 
     try {
       // check if komodod instance is already running
@@ -1314,9 +1314,9 @@ function herder(flock, data) {
 
             if (data.ac_custom_param === 'silent' ||
                 data.ac_custom_param === 'reindex') {
-              _customParam = ' ' + _customParamDict[data.ac_custom_param];
+              _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
             } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
-              _customParam = ' ' + _customParamDict[data.ac_custom_param] + data.ac_custom_param_value;
+              _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
             }
 
             console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
@@ -1576,7 +1576,7 @@ function setConf(flock) {
     });
   }
 
-  var CheckConf = function() {
+  const CheckConf = function() {
     return new Promise(function(resolve, reject) {
       const result = 'CheckConf is done';
 
@@ -1654,7 +1654,7 @@ function setConf(flock) {
           });
         }
 
-        var addnode = function() {
+        const addnode = function() {
           return new Promise(function(resolve, reject) {
             const result = 'checking addnode...';
 
@@ -1699,7 +1699,7 @@ function setConf(flock) {
     });
   }
 
-  var MakeConfReadOnly = function() {
+  const MakeConfReadOnly = function() {
     return new Promise(function(resolve, reject) {
       const result = 'Conf file permissions updated to Read Only';
 
