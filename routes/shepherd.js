@@ -155,7 +155,7 @@ shepherd.createIguanaDirs = function() {
   }
 }
 
-shepherd.get('/encryptkey', function(req, res, next) {
+shepherd.post('/encryptkey', function(req, res, next) {
   if (req.query.key &&
       req.query.string &&
       req.query.pubkey) {
@@ -168,7 +168,7 @@ shepherd.get('/encryptkey', function(req, res, next) {
     // - min length 8
 
     const _pin = req.query.key;
-    const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[!@#$&*_])(?=.*[0-9])(?=.*[a-z]).{8}$');
+    const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
 
     console.log(_pinTest);
 
@@ -207,7 +207,7 @@ shepherd.get('/encryptkey', function(req, res, next) {
   }
 });
 
-shepherd.get('/decryptkey', function(req, res, next) {
+shepherd.post('/decryptkey', function(req, res, next) {
   if (req.query.key &&
       req.query.pubkey) {
     if (fs.existsSync(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`)) {
