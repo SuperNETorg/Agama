@@ -7,42 +7,46 @@ $(document).ready(function() {
     animation: 'pulse'
   });
 
-  $('#loading_status_text').text('Starting Iguana daemon...');
-
   GetAppConf(inititalWalletLoading);
 
+  $('#loading_status_text').text('Starting Wallet. Please wait...');
+
   function inititalWalletLoading(appConf) {
-    if (appConf && !appConf.manualIguanaStart) {
-      StartIguana();
-    }
+    // run iguana-less mode with no daemons startup
+    if (appConf && appConf.iguanaLessMode) {
+      window.createWindow('open');
+      window.hide();
+    } else { // run normal mode with 2 iguana instances started prior loading GUI
+      if (appConf && !appConf.manualIguanaStart) {
+        StartIguana();
+      }
 
-    var portcheck;
+      var portcheck;
 
-    function startcheck() {
-      portcheck = setInterval(function(){
-        Iguana_activehandle(appConf).then(function(result){
-          console.log(result);
+      function startcheck() {
+        portcheck = setInterval(function(){
+          Iguana_activehandle(appConf).then(function(result){
+            console.log(result);
 
-          if (result !== 'error') {
-            stopcheck();
+            if (result !== 'error') {
+              stopcheck();
 
-            if (appConf && appConf.useBasiliskInstance) {
-              StartIguana_Cache();
+              if (appConf && appConf.useBasiliskInstance) {
+                StartIguana_Cache();
+              }
+
+              $('#loading_status_text').text('Connecting to Basilisk Network...');
+              EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries, appConf);
             }
+          })
+        }, 2000);
+      }
 
-            $('#loading_status_text').text('Connecting to Basilisk Network...');
-            EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries, appConf);
-          }
-        })
-        //var check = Iguana_activehandle();
-        //console.log(check[0])
-      }, 2000);
+      function stopcheck() {
+        clearInterval(portcheck);
+      }
+
+      startcheck();
     }
-
-    function stopcheck() {
-      clearInterval(portcheck);
-    }
-
-    startcheck();
   }
 });

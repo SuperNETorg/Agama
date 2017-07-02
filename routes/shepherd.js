@@ -25,6 +25,7 @@ var ps = require('ps-node'),
     assetChainPorts = require('./ports.js'),
     shepherd = express.Router(),
     iguanaInstanceRegistry = {},
+    coindInstanceRegistry = {},
     syncOnlyIguanaInstanceInfo = {},
     syncOnlyInstanceInterval = -1,
     guiLog = {},
@@ -97,7 +98,8 @@ shepherd.appConfig = {
   "cli": {
     "passthru": false,
     "default": false
-  }
+  },
+  "iguanaLessMode": false
 };
 
 shepherd.writeLog = function(data) {
@@ -273,17 +275,30 @@ shepherd.post('/coinslist', function(req, res, next) {
 });
 
 // TODO: check if komodod is running
-shepherd.quitKomodod = function(chain) {
+shepherd.quitKomodod = function() {
+  // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
-  console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
-  exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
-    console.log(`stdout: ${stdout}`);
-    console.log(`stderr: ${stderr}`);
+  let coindExitInterval = {};
 
-    if (error !== null) {
-      console.log(`exec error: ${error}`);
-    }
-  });
+  for (let key in coindInstanceRegistry) {
+    const chain = key !== 'komodod' ? key : null;
+
+    coindExitInterval[key] = setInterval(function() {
+      console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
+      exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
+        console.log(`stdout: ${stdout}`);
+        console.log(`stderr: ${stderr}`);
+
+        if (stdout.indexOf('stopping') > -1) {
+          clearInterval(coindExitInterval[key]);
+        }
+
+        if (error !== null) {
+          console.log(`exec error: ${error}`);
+        }
+      });
+    }, 100);
+  }
 }
 
 shepherd.getConf = function(chain) {
@@ -489,7 +504,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
 shepherd.loadLocalConfig = function() {
   if (fs.existsSync(`${iguanaDir}/config.json`)) {
     let localAppConfig = fs.readFileSync(`${iguanaDir}/config.json`, 'utf8');
-    
+
     console.log('app config set from local file');
     shepherd.writeLog('app config set from local file');
 
@@ -509,7 +524,7 @@ shepherd.loadLocalConfig = function() {
 
     if (localAppConfig) {
       const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-      
+
       if (Object.keys(compareConfigs).length) {
         const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
 
@@ -801,6 +816,56 @@ shepherd.post('/forks', function(req, res, next) {
       });
     });
   });
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
+  // TODO: if only native return obj
+  //       else query main iguana instance and return combined response
+  // http://localhost:7778/api/InstantDEX/allcoins?userpass=tmpIgRPCUser@1234
+  let successObj;
+
+  if (Object.keys(iguanaInstanceRegistry).length) {
+    // call to iguana
+  } else {
+    let nativeCoindList = [];
+
+    for (let key in coindInstanceRegistry) {
+      nativeCoindList.push(key === 'komodod' ? 'KMD' : key);
+    }
+
+    successObj = {
+      'native': nativeCoindList,
+      'basilisk': [],
+      'full': []
+    };
+  }
+
+  console.log(successObj);
+
+  res.end(JSON.stringify(successObj));
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/SuperNET/activehandle', function(req, res, next) {
+  // TODO: if only native return obj
+  //       else query main iguana instance and return combined response
+  // http://localhost:7778/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234
+  const successObj = {
+    'pubkey': 'nativeonly',
+    'result': 'success',
+    'handle': '',
+    'status': Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
+    'duration': 2507830
+  };
+
+  res.end(JSON.stringify(successObj));
 });
 
 /*
@@ -1179,7 +1244,7 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 
               const lines = data.trim().split('\n');
               const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
-              
+
               resolve(lastLine);
             });
           }
@@ -1272,7 +1337,7 @@ function herder(flock, data) {
 
   if (flock === 'komodod') {
     let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir) + '/debug.log';
-    
+
     console.log('komodod flock selected...');
     console.log(`selected data: ${data}`);
     shepherd.writeLog('komodod flock selected...');
@@ -1304,11 +1369,12 @@ function herder(flock, data) {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
-          if (data.ac_name === 'komodod') {
+          //if (data.ac_name === 'komodod') {
             const _customParamDict = {
               'silent': '&',
               'reindex': '-reindex',
-              'change': '-pubkey='
+              'change': '-pubkey=',
+              'datadir': '-datadir='
             };
             let _customParam = '';
 
@@ -1322,7 +1388,12 @@ function herder(flock, data) {
             console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
             shepherd.writeLog(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
 
-            exec(`${komododBin} ${data.ac_options.join(' ')}${_customParam}`, {
+            const isChain = data.ac_name.match(/^[A-Z]*$/);
+            const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
+            console.log('coindAC ' + coindACParam);
+
+            coindInstanceRegistry[data.ac_name] = true;
+            exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
               maxBuffer: 1024 * 10000 // 10 mb
             }, function(error, stdout, stderr) {
               // console.log('stdout: ' + stdout);
@@ -1335,7 +1406,7 @@ function herder(flock, data) {
                 shepherd.writeLog(`exec error: ${error}`);
               }
             });
-          } else {
+          /*} else {
             pm2.connect(true, function(err) { // start up pm2 god
               if (err) {
                 console.error(err);
@@ -1356,7 +1427,7 @@ function herder(flock, data) {
                   throw err;
               });
             });
-          }
+          }*/
         } else {
           console.log(`port ${_port} (${data.ac_name}) is already in use`);
           shepherd.writeLog(`port ${_port} (${data.ac_name}) is already in use`);
@@ -1493,14 +1564,14 @@ function setConf(flock) {
   switch (flock) {
     case 'komodod':
       DaemonConfPath = `${komodoDir}/komodo.conf`;
-      
+
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
       break;
     case 'zcashd':
       DaemonConfPath = `${ZcashDir}/zcash.conf`;
-      
+
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
@@ -1554,7 +1625,7 @@ function setConf(flock) {
 
       fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
         if (err) {
-          shepherd.writeLog(`setconf error '${err}`);
+          shepherd.writeLog(`setconf error ${err}`);
           return console.log(err);
         }
 
@@ -1777,7 +1848,7 @@ function formatBytes(bytes, decimals) {
     return '0 Bytes';
 
   const k = 1000,
-        dm = decimals + 1 || 3,
+        dm = (decimals + 1) || 3,
         sizes = [
           'Bytes',
           'KB',

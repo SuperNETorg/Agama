@@ -196,8 +196,8 @@ function createLoadingWindow() {
 
 	// initialise window
 	loadingWindow = new BrowserWindow({
-		width: 500,
-		height: 300,
+		width: appConfig.iguanaLessMode ? 1 : 500,
+		height: appConfig.iguanaLessMode ? 1 : 300,
 		frame: false,
 		icon: iguanaIcon
 	});
@@ -307,10 +307,6 @@ function createWindow (status) {
 
 					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod();
-					// if komodod is under heavy load it may not respond to cli stop the first time
-					setInterval(function() {
-						shepherd.quitKomodod();
-					}, 100);
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
