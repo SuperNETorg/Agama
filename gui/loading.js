@@ -1,3 +1,53 @@
+  function closeMainWindow() {
+    const remote = require('electron').remote;
+    var window = remote.getCurrentWindow();
+
+    window.createWindow('open');
+    window.hide();
+  }
+
+  function normalStart() {
+    const remote = require('electron').remote;
+    var appConf = remote.getCurrentWindow().appConfig;
+    appConf.iguanaLessMode = false;
+
+    // run iguana-less mode with no daemons startup
+    if (appConf && appConf.iguanaLessMode) {
+      // do something
+    } else { // run normal mode with 2 iguana instances started prior loading GUI
+      if (appConf && !appConf.manualIguanaStart) {
+        StartIguana();
+      }
+
+      var portcheck;
+
+      function startcheck() {
+        portcheck = setInterval(function() {
+          Iguana_activehandle(appConf).then(function(result){
+            console.log(result);
+
+            if (result !== 'error') {
+              stopcheck();
+
+              if (appConf && appConf.useBasiliskInstance) {
+                StartIguana_Cache();
+              }
+
+              $('#loading_status_text').text('Connecting to Basilisk Network...');
+              EDEX_DEXgetinfoAll(appConf.skipBasiliskNetworkCheck, appConf.minNotaries, appConf);
+            }
+          })
+        }, 2000);
+      }
+
+      function stopcheck() {
+        clearInterval(portcheck);
+      }
+
+      startcheck();
+    }
+  }
+
 function IguanaAJAX(url, ajax_data, timeout) {
   return $.ajax({
     data: JSON.stringify(ajax_data),
@@ -44,6 +94,8 @@ function StartIguana() {
   var ajax_data = { 'herd': 'iguana'};
 
   console.log(ajax_data);
+  $('#agamaModeStatus').text('Starting main iguana instance...');
+
   $.ajax({
     type: 'POST',
     data: JSON.stringify(ajax_data),
@@ -66,6 +118,8 @@ function StartIguana() {
 }
 
 function StartIguana_Cache() {
+  $('#agamaModeStatus').text('Starting basilisk iguana instance...');
+
   var ajax_data = {
     'mode': 'basilisk',
     'coin': 'all'
@@ -81,34 +135,6 @@ function StartIguana_Cache() {
     console.log(_data.result);
     sessionStorage.setItem('IguanaCachePort', _data.result);
   });
-}
-
-function GetAppConf(cb) { // get iguana app conf
-  var ajax_data = { 'herd': 'iguana' },
-      data = false;
-
-  console.log(ajax_data);
-  $.ajax({
-    type: 'GET',
-    url: 'http://127.0.0.1:17777/shepherd/appconf'
-  })
-  .done(function(_data) {
-    console.log('== App Conf Data OutPut ==');
-    console.log(_data);
-    data = _data;
-    cb.call(this, data);
-  })
-  .fail(function(xhr, textStatus, error) {
-    // handle request failures
-    console.log(xhr.statusText);
-    if ( xhr.readyState == 0 ) {
-    }
-    console.log(textStatus);
-    console.log(error);
-    cb.call(this, data);
-  });
-
-  return data;
 }
 
 function EDEX_DEXgetinfoAll(skip, minNotaries, appConf) {

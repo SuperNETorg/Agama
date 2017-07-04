@@ -827,26 +827,39 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
   //       else query main iguana instance and return combined response
   // http://localhost:7778/api/InstantDEX/allcoins?userpass=tmpIgRPCUser@1234
   let successObj;
+  let nativeCoindList = [];
+
+  for (let key in coindInstanceRegistry) {
+    nativeCoindList.push(key === 'komodod' ? 'KMD' : key);
+  }
 
   if (Object.keys(iguanaInstanceRegistry).length) {
     // call to iguana
+    request({
+      url: `http://localhost:${shepherd.appConfig.iguanaCorePort}/api/InstantDEX/allcoins?userpass=${req.query.userpass}`,
+      method: 'GET'
+    }, function (error, response, body) {
+      if (response &&
+          response.statusCode &&
+          response.statusCode === 200) {
+        const _body = JSON.parse(body);
+        _body.native = nativeCoindList;
+        console.log(_body);
+      } else {
+        console.log('main iguana instance is not ready yet');
+      }
+
+      res.send(body);
+    });
   } else {
-    let nativeCoindList = [];
-
-    for (let key in coindInstanceRegistry) {
-      nativeCoindList.push(key === 'komodod' ? 'KMD' : key);
-    }
-
     successObj = {
       'native': nativeCoindList,
       'basilisk': [],
       'full': []
     };
+
+    res.end(JSON.stringify(successObj));
   }
-
-  console.log(successObj);
-
-  res.end(JSON.stringify(successObj));
 });
 
 /*
@@ -857,15 +870,35 @@ shepherd.get('/SuperNET/activehandle', function(req, res, next) {
   // TODO: if only native return obj
   //       else query main iguana instance and return combined response
   // http://localhost:7778/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234
-  const successObj = {
-    'pubkey': 'nativeonly',
-    'result': 'success',
-    'handle': '',
-    'status': Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
-    'duration': 2507830
-  };
+  let successObj;
 
-  res.end(JSON.stringify(successObj));
+  if (Object.keys(iguanaInstanceRegistry).length) {
+    // call to iguana
+    request({
+      url: `http://localhost:${shepherd.appConfig.iguanaCorePort}/api/SuperNET/activehandle?userpass=${req.query.userpass}`,
+      method: 'GET'
+    }, function (error, response, body) {
+      if (response &&
+          response.statusCode &&
+          response.statusCode === 200) {
+        console.log(body);
+      } else {
+        console.log('main iguana instance is not ready yet');
+      }
+
+      res.send(body);
+    });
+  } else {
+    successObj = {
+      'pubkey': 'nativeonly',
+      'result': 'success',
+      'handle': '',
+      'status': Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
+      'duration': 2507830
+    };
+
+    res.end(JSON.stringify(successObj));
+  }
 });
 
 /*
@@ -1374,7 +1407,8 @@ function herder(flock, data) {
               'silent': '&',
               'reindex': '-reindex',
               'change': '-pubkey=',
-              'datadir': '-datadir='
+              'datadir': '-datadir=',
+              'rescan': '-rescan'
             };
             let _customParam = '';
 
@@ -1404,6 +1438,14 @@ function herder(flock, data) {
               if (error !== null) {
                 console.log(`exec error: ${error}`)
                 shepherd.writeLog(`exec error: ${error}`);
+
+                if (error.toString().indexOf('using -reindex') > -1) {
+                  cache.io.emit('service', {
+                    'komodod': {
+                      'error': 'run -reindex'
+                    }
+                  });
+                }
               }
             });
           /*} else {

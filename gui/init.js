@@ -1,21 +1,21 @@
 $(document).ready(function() {
   const remote = require('electron').remote;
   var window = remote.getCurrentWindow();
+  var appConf = remote.getCurrentWindow().appConfig;
 
   $('#pulse').jRoll({
     radius: 100,
     animation: 'pulse'
   });
 
-  GetAppConf(inititalWalletLoading);
+  inititalWalletLoading();
 
   $('#loading_status_text').text('Starting Wallet. Please wait...');
 
-  function inititalWalletLoading(appConf) {
+  function inititalWalletLoading() {
     // run iguana-less mode with no daemons startup
     if (appConf && appConf.iguanaLessMode) {
-      window.createWindow('open');
-      window.hide();
+      // do something
     } else { // run normal mode with 2 iguana instances started prior loading GUI
       if (appConf && !appConf.manualIguanaStart) {
         StartIguana();

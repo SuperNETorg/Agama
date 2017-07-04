@@ -196,13 +196,14 @@ function createLoadingWindow() {
 
 	// initialise window
 	loadingWindow = new BrowserWindow({
-		width: appConfig.iguanaLessMode ? 1 : 500,
-		height: appConfig.iguanaLessMode ? 1 : 300,
+		width: 500,
+		height: 300,
 		frame: false,
 		icon: iguanaIcon
 	});
 
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
+	loadingWindow.appConfig = appConfig;
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
