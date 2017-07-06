@@ -17,6 +17,7 @@ const electron = require('electron'),
       async = require('async'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
+      AdmZip = require('adm-zip'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
@@ -142,6 +143,158 @@ shepherd.createIguanaDirs = function() {
     console.log('shepherd folder already exists');
   }
 }
+
+/**
+ * Promise based download file method
+ */
+function downloadFile(configuration) {
+  return new Promise(function(resolve, reject) {
+    // Save variable to know progress
+    let receivedBytes = 0;
+    let totalBytes = 0;
+
+    let req = request({
+      method: 'GET',
+      uri: configuration.remoteFile
+    });
+
+    let out = fs.createWriteStream(configuration.localFile);
+    req.pipe(out);
+
+    req.on('response', function(data) {
+      // Change the total bytes value to get progress later.
+      totalBytes = parseInt(data.headers['content-length']);
+    });
+
+    // Get progress if callback exists
+    if (configuration.hasOwnProperty('onProgress')) {
+      req.on('data', function(chunk) {
+        // Update the received bytes
+        receivedBytes += chunk.length;
+        configuration.onProgress(receivedBytes, totalBytes);
+      });
+    } else {
+      req.on('data', function(chunk) {
+        // Update the received bytes
+        receivedBytes += chunk.length;
+      });
+    }
+
+    req.on('end', function() {
+      resolve();
+    });
+  });
+}
+
+/*
+ *  DL app patch
+ *  type:
+ *  params: patchList
+ */
+shepherd.get('/patch', function(req, res, next) {
+  const dlLocation = path.join(__dirname, '../');
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'dl started'
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  shepherd.updateAgama();
+});
+
+shepherd.updateAgama = function() {
+  downloadFile({
+    remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
+    localFile: dlLocation + 'patch.zip',
+    onProgress: function(received, total) {
+      const percentage = (received * 100) / total;
+      // console.log(percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+      cache.io.emit('service', {
+        'patch': {
+          'status': 'dl',
+          'progress': percentage,
+          'bytesTotal': total,
+          'bytesReceived': received
+        }
+      });
+    }
+  })
+  .then(function() {
+    console.log('File succesfully downloaded');
+    console.log('extracting contents');
+
+    var zip = new AdmZip(dlLocation + 'patch.zip');
+    zip.extractAllTo(/*target path*/dlLocation + '/patch/unpack', /*overwrite*/true);
+    // TODO: extract files in chunks
+    cache.io.emit('service', {
+      'patch': {
+        'status': 'done'
+      }
+    });
+  });
+}
+
+/*
+ *  check latest version
+ *  type:
+ *  params:
+ */
+shepherd.get('/update-check', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+  const options = {
+    url: 'https://github.com/pbca26/dl-test/raw/master/version',
+    method: 'GET'
+  };
+
+  request(options, function (error, response, body) {
+    if (response &&
+        response.statusCode &&
+        response.statusCode === 200) {
+      const remoteVersion = body.split('\n');
+      const localVersion = fs.readFileSync(rootLocation + 'version', 'utf8').split('\r\n');
+
+      if (remoteVersion[0] === localVersion[0]) {
+        const successObj = {
+          'msg': 'success',
+          'result': 'latest'
+        };
+
+        res.end(JSON.stringify(successObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': 'update'
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    } else {
+      res.end({
+        'err': 'error getting update'
+      });
+    }
+  });
+});
+
+/*
+ *  unpack zip
+ *  type:
+ *  params:
+ */
+shepherd.get('/unpack', function(req, res, next) {
+  const dlLocation = path.join(__dirname, '../');
+  var zip = new AdmZip(dlLocation + 'patch.zip');
+  zip.extractAllTo(/*target path*/dlLocation + '/patch/unpack', /*overwrite*/true);
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'unpack started'
+  };
+
+  res.end(JSON.stringify(successObj));
+});
 
 shepherd.get('/coinslist', function(req, res, next) {
   if (fs.existsSync(`${iguanaDir}/shepherd/coinslist.json`)) {

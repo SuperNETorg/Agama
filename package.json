@@ -23,6 +23,7 @@
     "electron": "^1.4.1"
   },
   "dependencies": {
+    "adm-zip": "^0.4.7",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
     "corsproxy": "^1.5.0",
