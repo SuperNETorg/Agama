@@ -234,7 +234,7 @@ function createLoadingWindow() {
 app.on('ready', createLoadingWindow);
 
 function createWindow (status) {
-	if ( status === 'open') {
+	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
 		// initialise window

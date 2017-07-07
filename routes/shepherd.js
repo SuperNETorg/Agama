@@ -809,9 +809,9 @@ shepherd.post('/forks', function(req, res, next) {
 
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
-            throw err;
             shepherd.writeLog(`iguana fork error: ${err}`);
             console.log(`iguana fork error: ${err}`);
+            throw err;
           }
       });
     });
@@ -1360,9 +1360,9 @@ function herder(flock, data) {
 
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
-            throw err;
             shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
             console.log(`iguana fork error: ${err}`);
+            throw err;
           }
       });
     });
@@ -1402,74 +1402,50 @@ function herder(flock, data) {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
-          //if (data.ac_name === 'komodod') {
-            const _customParamDict = {
-              'silent': '&',
-              'reindex': '-reindex',
-              'change': '-pubkey=',
-              'datadir': '-datadir=',
-              'rescan': '-rescan'
-            };
-            let _customParam = '';
+          const _customParamDict = {
+            'silent': '&',
+            'reindex': '-reindex',
+            'change': '-pubkey=',
+            'datadir': '-datadir=',
+            'rescan': '-rescan'
+          };
+          let _customParam = '';
 
-            if (data.ac_custom_param === 'silent' ||
-                data.ac_custom_param === 'reindex') {
-              _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
-            } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
-              _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
+          if (data.ac_custom_param === 'silent' ||
+              data.ac_custom_param === 'reindex' ||
+              data.ac_custom_param === 'rescan') {
+            _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
+          } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
+            _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
+          }
+
+          console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
+          shepherd.writeLog(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
+
+          const isChain = data.ac_name.match(/^[A-Z]*$/);
+          const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
+          console.log('coindAC ' + coindACParam);
+
+          coindInstanceRegistry[data.ac_name] = true;
+          exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
+            maxBuffer: 1024 * 10000 // 10 mb
+          }, function(error, stdout, stderr) {
+            shepherd.writeLog(`stdout: ${stdout}`);
+            shepherd.writeLog(`stderr: ${stderr}`);
+
+            if (error !== null) {
+              console.log(`exec error: ${error}`)
+              shepherd.writeLog(`exec error: ${error}`);
+
+              if (error.toString().indexOf('using -reindex') > -1) {
+                cache.io.emit('service', {
+                  'komodod': {
+                    'error': 'run -reindex'
+                  }
+                });
+              }
             }
-
-            console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
-            shepherd.writeLog(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
-
-            const isChain = data.ac_name.match(/^[A-Z]*$/);
-            const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
-            console.log('coindAC ' + coindACParam);
-
-            coindInstanceRegistry[data.ac_name] = true;
-            exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
-              maxBuffer: 1024 * 10000 // 10 mb
-            }, function(error, stdout, stderr) {
-              // console.log('stdout: ' + stdout);
-              // console.log('stderr: ' + stderr);
-              shepherd.writeLog(`stdout: ${stdout}`);
-              shepherd.writeLog(`stderr: ${stderr}`);
-
-              if (error !== null) {
-                console.log(`exec error: ${error}`)
-                shepherd.writeLog(`exec error: ${error}`);
-
-                if (error.toString().indexOf('using -reindex') > -1) {
-                  cache.io.emit('service', {
-                    'komodod': {
-                      'error': 'run -reindex'
-                    }
-                  });
-                }
-              }
-            });
-          /*} else {
-            pm2.connect(true, function(err) { // start up pm2 god
-              if (err) {
-                console.error(err);
-                process.exit(2);
-              }
-
-              pm2.start({
-                script: komododBin, // path to binary
-                name: data.ac_name, // REVS, USD, EUR etc.
-                exec_mode : 'fork',
-                cwd: komodoDir,
-                args: data.ac_options
-              }, function(err, apps) {
-                shepherd.writeLog(`komodod fork started ${data.ac_name} ${JSON.stringify(data.ac_options)}`);
-
-                pm2.disconnect(); // Disconnect from PM2
-                if (err)
-                  throw err;
-              });
-            });
-          }*/
+          });
         } else {
           console.log(`port ${_port} (${data.ac_name}) is already in use`);
           shepherd.writeLog(`port ${_port} (${data.ac_name}) is already in use`);
@@ -1504,30 +1480,6 @@ function herder(flock, data) {
       }, function(err, apps) {
         shepherd.writeLog(`zcashd fork started ${data.ac_name} ${JSON.stringify(data.ac_options)}`);
 
-        pm2.disconnect(); // Disconnect from PM2
-        if (err)
-          throw err;
-      });
-    });
-  }
-
-  // deprecated, to be removed
-  if (flock === 'corsproxy') {
-    console.log('corsproxy flock selected...');
-    console.log(`selected data: ${data}`);
-
-    pm2.connect(true,function(err) { //start up pm2 god
-      if (err) {
-        console.error(err);
-        process.exit(2);
-      }
-
-      pm2.start({
-        script: CorsProxyBin, // path to binary
-        name: 'CORSPROXY',
-        exec_mode : 'fork',
-        cwd: iguanaDir
-      }, function(err, apps) {
         pm2.disconnect(); // Disconnect from PM2
         if (err)
           throw err;
