@@ -1,6 +1,6 @@
   function closeMainWindow() {
     const remote = require('electron').remote;
-    var window = remote.getCurrentWindow();
+    const window = remote.getCurrentWindow();
 
     window.createWindow('open');
     window.hide();
@@ -8,7 +8,7 @@
 
   function normalStart() {
     const remote = require('electron').remote;
-    var appConf = remote.getCurrentWindow().appConfig;
+    let appConf = remote.getCurrentWindow().appConfig;
     appConf.iguanaLessMode = false;
 
     // run iguana-less mode with no daemons startup
