@@ -13,14 +13,22 @@
     <script type="text/javascript" src="jRoll.min.js"></script>
     <script>if (window.module) module = window.module;</script>
   </head>
-  <body>
+  <body class="agamaMode">
     <div class="text-center">
-      <div class="loader-block">
-        <div id="loading_status_text">Starting Wallet. Please wait...</div>
-        <div id="loading_sub_status_text"></div>
-        <div id="loading_sub_status_output_text"></div>
+      <!--div id="normalStart">
+        <div class="loader-block">
+          <div id="loading_status_text">Starting Wallet. Please wait...</div>
+          <div id="loading_sub_status_text"></div>
+          <div id="loading_sub_status_output_text"></div>
+        </div>
+        <div id="pulse" class="pulse-loader"></div>
+      </div-->
+      <div id="agamaMode">
+        <img src="agama-icon.svg" class="agama-logo" alt="Agama Wallet" width="80" height="100" />
+        <div id="agamaModeStatus">Choose Agama mode</div>
+        <button onClick="closeMainWindow()" class="btn btn-primary">Native only</button>
+        <button onClick="normalStart()" class="btn btn-primary">Normal start</button>
       </div>
-      <div id="pulse" class="pulse-loader"></div>
     </div>
     <script type="text/javascript" src="init.js"></script>
   </body>
