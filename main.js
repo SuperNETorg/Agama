@@ -203,6 +203,7 @@ function createLoadingWindow() {
 	});
 
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
+	loadingWindow.appConfig = appConfig;
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
@@ -233,7 +234,7 @@ function createLoadingWindow() {
 app.on('ready', createLoadingWindow);
 
 function createWindow (status) {
-	if ( status === 'open') {
+	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
 		// initialise window
@@ -307,10 +308,6 @@ function createWindow (status) {
 
 					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod();
-					// if komodod is under heavy load it may not respond to cli stop the first time
-					setInterval(function() {
-						shepherd.quitKomodod();
-					}, 100);
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
