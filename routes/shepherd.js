@@ -18,6 +18,7 @@ const electron = require('electron'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
       AdmZip = require('adm-zip'),
+      remoteFileSize = require('remote-file-size'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
@@ -187,6 +188,121 @@ function downloadFile(configuration) {
     });
   });
 }
+
+const remoteBinLocation = {
+  'win32': 'https://artifacts.supernet.org/latest/windows/',
+  'darwin': 'https://artifacts.supernet.org/latest/osx/',
+  'linux': 'https://artifacts.supernet.org/latest/linux/'
+};
+const localBinLocation = {
+  'win32': 'assets/bin/win64/',
+  'darwin': 'assets/bin/osx/',
+  'linux': 'assets/bin/linux64/'
+};
+const latestBins = {
+  'win32': [
+    'iguana.exe',
+    'komodo-cli.exe',
+    'komodo-tx.exe',
+    'komodod.exe',
+    'libcrypto-1_1.dll',
+    'libcurl-4.dll',
+    'libcurl.dll',
+    'libgcc_s_sjlj-1.dll',
+    'libnanomsg.dll',
+    'libssl-1_1.dll',
+    'libwinpthread-1.dll',
+    'nanomsg.dll',
+    'pthreadvc2.dll'
+  ],
+  'darwin': [
+    'iguana',
+    'komodo-cli',
+    'komodod',
+    'libgcc_s.1.dylib',
+    'libgomp.1.dylib',
+    'libnanomsg.5.0.0.dylib',
+    'libstdc++.6.dylib' // encode %2B
+  ],
+  'linux': [
+    'iguana',
+    'komodo-cli',
+    'komodod'
+  ]
+};
+
+let binsToUpdate = [];
+
+/*
+ *  Check bins file size
+ *  type:
+ *  params:
+ */
+shepherd.get('/check-bins', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'bins'
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  const _os = os.platform();
+  console.log('checking bins: ' + _os);
+
+  // get list of bins/dlls that can be updated to the latest
+  for (let i = 0; i < latestBins[_os].length; i++) {
+    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], function(err, remoteBinSize) {
+      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
+
+      console.log('remote url: ' + (remoteBinLocation[_os] + latestBins[_os][i]) + ' (' + remoteBinSize + ')');
+      console.log('local file: ' + (rootLocation + localBinLocation[_os] + latestBins[_os][i]) + ' (' + localBinSize + ')');
+
+      if (remoteBinSize !== localBinSize) {
+        console.log(latestBins[_os][i] + ' can be updated');
+        binsToUpdate.push({
+          'name': latestBins[_os][i],
+          'rSize': remoteBinSize,
+          'lSize': localBinSize
+        });
+      }
+    });
+  }
+});
+
+/*
+ *  Update bins
+ *  type:
+ *  params:
+ */
+shepherd.get('/update-bins', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+  const _os = os.platform();
+  const successObj = {
+    'msg': 'success',
+    'result': {
+      'filesCount': binsToUpdate.length,
+      'list': binsToUpdate
+    }
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  for (let i = 0; i < binsToUpdate.length; i++) {
+    downloadFile({
+      remoteFile: remoteBinLocation[_os] + binsToUpdate[i].name,
+      localFile: rootLocation + localBinLocation[_os] + 'new/' + binsToUpdate[i].name,
+      onProgress: function(received, total) {
+        const percentage = (received * 100) / total;
+        console.log(binsToUpdate[i].name + ' ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+      }
+    })
+    .then(function() {
+      console.log('File ' + binsToUpdate[i].name + ' succesfully downloaded');
+    });
+  }
+});
 
 /*
  *  DL app patch
