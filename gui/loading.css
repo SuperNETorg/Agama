@@ -45,9 +45,11 @@ body.agamaMode {
 
 .btn-primary.focus,
 .btn-primary:focus,
-.btn-primary:hover {
-  background-color: #ffa726;
-  border-color: #ffa726;
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary.active {
+  background-color: #ffa726 !important;
+  border-color: #ffa726 !important;
 }
 
 .btn.active.focus,
