@@ -289,7 +289,8 @@ shepherd.quitKomodod = function() {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
 
-        if (stdout.indexOf('stopping') > -1) {
+        if (stdout.indexOf('stopping') > -1 ||
+            stdout.indexOf('EOF reached') > -1) {
           clearInterval(coindExitInterval[key]);
         }
 
@@ -1368,6 +1369,7 @@ function herder(flock, data) {
     });
   }
 
+  // TODO: notify gui that reindex/rescan param is used to reflect on the screen
   if (flock === 'komodod') {
     let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir) + '/debug.log';
 
@@ -1424,7 +1426,7 @@ function herder(flock, data) {
 
           const isChain = data.ac_name.match(/^[A-Z]*$/);
           const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
-          console.log('coindAC ' + coindACParam);
+          console.log('daemon param ' + data.ac_custom_param);
 
           coindInstanceRegistry[data.ac_name] = true;
           exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
@@ -1434,7 +1436,7 @@ function herder(flock, data) {
             shepherd.writeLog(`stderr: ${stderr}`);
 
             if (error !== null) {
-              console.log(`exec error: ${error}`)
+              console.log(`exec error: ${error}`);
               shepherd.writeLog(`exec error: ${error}`);
 
               if (error.toString().indexOf('using -reindex') > -1) {
@@ -1474,7 +1476,7 @@ function herder(flock, data) {
       pm2.start({
         script: zcashdBin, // path to binary
         name: data.ac_name, // REVS, USD, EUR etc.
-        exec_mode : 'fork',
+        exec_mode: 'fork',
         cwd: zcashDir,
         args: data.ac_options
       }, function(err, apps) {
@@ -1615,7 +1617,7 @@ function setConf(flock) {
 
   const RemoveLines = function() {
     return new Promise(function(resolve, reject) {
-      const result = 'RemoveLines is done'
+      const result = 'RemoveLines is done';
 
       fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
         if (err) {
