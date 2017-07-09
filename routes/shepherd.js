@@ -158,7 +158,11 @@ function downloadFile(configuration) {
 
     let req = request({
       method: 'GET',
-      uri: configuration.remoteFile
+      uri: configuration.remoteFile,
+      agentOptions: {
+        keepAlive: true,
+        keepAliveMsecs: 15000
+      }
     });
 
     let out = fs.createWriteStream(configuration.localFile);
@@ -203,7 +207,6 @@ const latestBins = {
   'win32': [
     'iguana.exe',
     'komodo-cli.exe',
-    'komodo-tx.exe',
     'komodod.exe',
     'libcrypto-1_1.dll',
     'libcurl-4.dll',
@@ -292,14 +295,22 @@ shepherd.get('/update-bins', function(req, res, next) {
   for (let i = 0; i < binsToUpdate.length; i++) {
     downloadFile({
       remoteFile: remoteBinLocation[_os] + binsToUpdate[i].name,
-      localFile: rootLocation + localBinLocation[_os] + 'new/' + binsToUpdate[i].name,
+      localFile: rootLocation + localBinLocation[_os] + binsToUpdate[i].name,
       onProgress: function(received, total) {
         const percentage = (received * 100) / total;
         console.log(binsToUpdate[i].name + ' ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
       }
     })
     .then(function() {
-      console.log('File ' + binsToUpdate[i].name + ' succesfully downloaded');
+      // verify that remote file is matching to DL'ed file
+      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + binsToUpdate[i].name).size;
+      console.log('compare dl file size');
+      
+      if (localBinSize === binsToUpdate[i].rSize) {
+        console.log('file ' + binsToUpdate[i].name + ' succesfully downloaded');
+      } else {
+        console.log('error: ' + binsToUpdate[i].name + ' file size doesnt match remote!');
+      }
     });
   }
 });
@@ -310,8 +321,6 @@ shepherd.get('/update-bins', function(req, res, next) {
  *  params: patchList
  */
 shepherd.get('/patch', function(req, res, next) {
-  const dlLocation = path.join(__dirname, '../');
-
   const successObj = {
     'msg': 'success',
     'result': 'dl started'
@@ -323,12 +332,14 @@ shepherd.get('/patch', function(req, res, next) {
 });
 
 shepherd.updateAgama = function() {
+  const rootLocation = path.join(__dirname, '../');
+
   downloadFile({
     remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
-    localFile: dlLocation + 'patch.zip',
+    localFile: rootLocation + 'patch.zip',
     onProgress: function(received, total) {
       const percentage = (received * 100) / total;
-      // console.log(percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+      console.log('patch ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
       cache.io.emit('service', {
         'patch': {
           'status': 'dl',
@@ -340,15 +351,25 @@ shepherd.updateAgama = function() {
     }
   })
   .then(function() {
-    console.log('File succesfully downloaded');
-    console.log('extracting contents');
+    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', function(err, remotePatchSize) {
+      // verify that remote file is matching to DL'ed file
+      const localPatchSize = fs.statSync(rootLocation + 'patch.zip').size;
+      console.log('compare dl file size');
+      
+      if (localPatchSize === remotePatchSize) {
+        console.log('patch succesfully downloaded');
+        console.log('extracting contents');
 
-    var zip = new AdmZip(dlLocation + 'patch.zip');
-    zip.extractAllTo(/*target path*/dlLocation + '/patch/unpack', /*overwrite*/true);
-    // TODO: extract files in chunks
-    cache.io.emit('service', {
-      'patch': {
-        'status': 'done'
+        var zip = new AdmZip(rootLocation + 'patch.zip');
+        zip.extractAllTo(/*target path*/rootLocation + '/patch', /*overwrite*/true);
+        // TODO: extract files in chunks
+        cache.io.emit('service', {
+          'patch': {
+            'status': 'done'
+          }
+        });
+      } else {
+        console.log('patch file size doesnt match remote!');
       }
     });
   });
