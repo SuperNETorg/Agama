@@ -379,16 +379,19 @@ shepherd.updateAgama = function() {
     localFile: rootLocation + 'patch.zip',
     onProgress: function(received, total) {
       const percentage = (received * 100) / total;
-      console.log('patch ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
-      cache.io.emit('patch', {
-        'msg': {
-          'status': 'progress',
-          'type': 'ui',
-          'progress': percentage,
-          'bytesTotal': total,
-          'bytesReceived': received
-        }
-      });
+      if (Math.floor(percentage) % 5 === 0 ||
+          Math.floor(percentage) % 10 === 0) {
+        console.log('patch ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+        cache.io.emit('patch', {
+          'msg': {
+            'status': 'progress',
+            'type': 'ui',
+            'progress': percentage,
+            'bytesTotal': total,
+            'bytesReceived': received
+          }
+        });
+      }
     }
   })
   .then(function() {
@@ -402,7 +405,14 @@ shepherd.updateAgama = function() {
         console.log('extracting contents');
 
         const zip = new AdmZip(rootLocation + 'patch.zip');
-        zip.extractAllTo(/*target path*/rootLocation, /*overwrite*/true);
+
+        if (shepherd.appConfig.dev) {
+          if (!fs.existsSync(`${rootLocation}/patch`)) {
+            fs.mkdirSync(`${rootLocation}/patch`);
+          }
+        }
+
+        zip.extractAllTo(/*target path*/rootLocation + (shepherd.appConfig.dev ? '/patch' : ''), /*overwrite*/true);
         // TODO: extract files in chunks
         cache.io.emit('patch', {
           'msg': {
