@@ -26,3 +26,83 @@ body {
   margin: 80px 50px;
   width: 400px !important;
 }
+
+body.agamaMode {
+  background-color: rgba(33, 33, 33, 0.85);
+  padding-top: 40px;
+  color: #fff;
+}
+
+.agama-logo {
+  padding-bottom: 20px;
+}
+
+#agamaModeStatus {
+  padding-bottom: 25px;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.btn-primary.focus,
+.btn-primary:focus,
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary.active {
+  background-color: #ffa726 !important;
+  border-color: #ffa726 !important;
+}
+
+.btn.active.focus,
+.btn.active:focus,
+.btn.focus,
+.btn:active.focus,
+.btn:active:focus,
+.btn:focus {
+  outline: thin dotted;
+  outline: 5px auto -webkit-focus-ring-color;
+  outline-offset: -2px;
+}
+.btn {
+  padding: 6px 15px;
+  font-size: 14px;
+  line-height: 1.57142857;
+  border-radius: 3px;
+  -webkit-box-shadow: 0 1px 4px 0 rgba(0,0,0,.1);
+  box-shadow: 0 1px 4px 0 rgba(0,0,0,.1);
+  -webkit-transition: border .2s linear,color .2s linear,width .2s linear,background-color .2s linear;
+  -o-transition: border .2s linear,color .2s linear,width .2s linear,background-color .2s linear;
+  transition: border .2s linear,color .2s linear,width .2s linear,background-color .2s linear;
+  -webkit-font-smoothing: subpixel-antialiased;
+  font-weight: bold;
+  display: inline-block;
+  padding: 6px 15px;
+  margin-bottom: 0;
+  line-height: 1.57142857;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+  -ms-touch-action: manipulation;
+  touch-action: manipulation;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  background-image: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #FF6600;
+  border-color: #FF6600;
+}
+
+.btn:first-child {
+  margin-right: 20px;
+}
+
+.btn:last-child {
+  margin-left: 20px;
+}
