@@ -17,6 +17,8 @@ const electron = require('electron'),
       async = require('async'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
+      AdmZip = require('adm-zip'),
+      remoteFileSize = require('remote-file-size'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
@@ -144,6 +146,358 @@ shepherd.createIguanaDirs = function() {
     console.log('shepherd folder already exists');
   }
 }
+
+/**
+ * Promise based download file method
+ */
+function downloadFile(configuration) {
+  return new Promise(function(resolve, reject) {
+    // Save variable to know progress
+    let receivedBytes = 0;
+    let totalBytes = 0;
+
+    let req = request({
+      method: 'GET',
+      uri: configuration.remoteFile,
+      agentOptions: {
+        keepAlive: true,
+        keepAliveMsecs: 15000
+      }
+    });
+
+    let out = fs.createWriteStream(configuration.localFile);
+    req.pipe(out);
+
+    req.on('response', function(data) {
+      // Change the total bytes value to get progress later.
+      totalBytes = parseInt(data.headers['content-length']);
+    });
+
+    // Get progress if callback exists
+    if (configuration.hasOwnProperty('onProgress')) {
+      req.on('data', function(chunk) {
+        // Update the received bytes
+        receivedBytes += chunk.length;
+        configuration.onProgress(receivedBytes, totalBytes);
+      });
+    } else {
+      req.on('data', function(chunk) {
+        // Update the received bytes
+        receivedBytes += chunk.length;
+      });
+    }
+
+    req.on('end', function() {
+      resolve();
+    });
+  });
+}
+
+const remoteBinLocation = {
+  'win32': 'https://artifacts.supernet.org/latest/windows/',
+  'darwin': 'https://artifacts.supernet.org/latest/osx/',
+  'linux': 'https://artifacts.supernet.org/latest/linux/'
+};
+const localBinLocation = {
+  'win32': 'assets/bin/win64/',
+  'darwin': 'assets/bin/osx/',
+  'linux': 'assets/bin/linux64/'
+};
+const latestBins = {
+  'win32': [
+    'iguana.exe',
+    'komodo-cli.exe',
+    'komodod.exe',
+    'libcrypto-1_1.dll',
+    'libcurl-4.dll',
+    'libcurl.dll',
+    'libgcc_s_sjlj-1.dll',
+    'libnanomsg.dll',
+    'libssl-1_1.dll',
+    'libwinpthread-1.dll',
+    'nanomsg.dll',
+    'pthreadvc2.dll'
+  ],
+  'darwin': [
+    'iguana',
+    'komodo-cli',
+    'komodod',
+    'libgcc_s.1.dylib',
+    'libgomp.1.dylib',
+    'libnanomsg.5.0.0.dylib',
+    'libstdc++.6.dylib' // encode %2B
+  ],
+  'linux': [
+    'iguana',
+    'komodo-cli',
+    'komodod'
+  ]
+};
+
+let binsToUpdate = [];
+
+/*
+ *  Check bins file size
+ *  type:
+ *  params:
+ */
+shepherd.get('/update/bins/check', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'bins'
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  const _os = os.platform();
+  console.log('checking bins: ' + _os);
+
+  cache.io.emit('patch', {
+    'patch': {
+      'type': 'bins-check',
+      'status': 'progress',
+      'message': 'checking bins: ' + _os
+    }
+  });
+  // get list of bins/dlls that can be updated to the latest
+  for (let i = 0; i < latestBins[_os].length; i++) {
+    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], function(err, remoteBinSize) {
+      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
+
+      console.log('remote url: ' + (remoteBinLocation[_os] + latestBins[_os][i]) + ' (' + remoteBinSize + ')');
+      console.log('local file: ' + (rootLocation + localBinLocation[_os] + latestBins[_os][i]) + ' (' + localBinSize + ')');
+
+      if (remoteBinSize !== localBinSize) {
+        console.log(latestBins[_os][i] + ' can be updated');
+        binsToUpdate.push({
+          'name': latestBins[_os][i],
+          'rSize': remoteBinSize,
+          'lSize': localBinSize
+        });
+      }
+
+      if (i === latestBins[_os].length - 1) {
+        cache.io.emit('patch', {
+          'patch': {
+            'type': 'bins-check',
+            'status': 'done',
+            'fileList': binsToUpdate
+          }
+        });
+      }
+    });
+  }
+});
+
+/*
+ *  Update bins
+ *  type:
+ *  params:
+ */
+shepherd.get('/update/bins', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+  const _os = os.platform();
+  const successObj = {
+    'msg': 'success',
+    'result': {
+      'filesCount': binsToUpdate.length,
+      'list': binsToUpdate
+    }
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  for (let i = 0; i < binsToUpdate.length; i++) {
+    downloadFile({
+      remoteFile: remoteBinLocation[_os] + binsToUpdate[i].name,
+      localFile: rootLocation + localBinLocation[_os] + 'patch/' + binsToUpdate[i].name,
+      onProgress: function(received, total) {
+        const percentage = (received * 100) / total;
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'bins-update',
+            'status': 'progress',
+            'file': binsToUpdate[i].name,
+            'bytesTotal': total,
+            'bytesReceived': received
+          }
+        });
+        console.log(binsToUpdate[i].name + ' ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+      }
+    })
+    .then(function() {
+      // verify that remote file is matching to DL'ed file
+      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + 'patch/' + binsToUpdate[i].name).size;
+      console.log('compare dl file size');
+
+      if (localBinSize === binsToUpdate[i].rSize) {
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'bins-update',
+            'file': binsToUpdate[i].name,
+            'status': 'done'
+          }
+        });
+        console.log('file ' + binsToUpdate[i].name + ' succesfully downloaded');
+      } else {
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'bins-update',
+            'file': binsToUpdate[i].name,
+            'message': 'size mismatch'
+          }
+        });
+        console.log('error: ' + binsToUpdate[i].name + ' file size doesnt match remote!');
+      }
+    });
+  }
+});
+
+/*
+ *  DL app patch
+ *  type:
+ *  params: patchList
+ */
+shepherd.get('/update/patch', function(req, res, next) {
+  const successObj = {
+    'msg': 'success',
+    'result': 'dl started'
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  shepherd.updateAgama();
+});
+
+shepherd.updateAgama = function() {
+  const rootLocation = path.join(__dirname, '../');
+
+  downloadFile({
+    remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
+    localFile: rootLocation + 'patch.zip',
+    onProgress: function(received, total) {
+      const percentage = (received * 100) / total;
+      if (Math.floor(percentage) % 5 === 0 ||
+          Math.floor(percentage) % 10 === 0) {
+        console.log('patch ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+        cache.io.emit('patch', {
+          'msg': {
+            'status': 'progress',
+            'type': 'ui',
+            'progress': percentage,
+            'bytesTotal': total,
+            'bytesReceived': received
+          }
+        });
+      }
+    }
+  })
+  .then(function() {
+    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', function(err, remotePatchSize) {
+      // verify that remote file is matching to DL'ed file
+      const localPatchSize = fs.statSync(rootLocation + 'patch.zip').size;
+      console.log('compare dl file size');
+
+      if (localPatchSize === remotePatchSize) {
+        console.log('patch succesfully downloaded');
+        console.log('extracting contents');
+
+        const zip = new AdmZip(rootLocation + 'patch.zip');
+
+        if (shepherd.appConfig.dev) {
+          if (!fs.existsSync(`${rootLocation}/patch`)) {
+            fs.mkdirSync(`${rootLocation}/patch`);
+          }
+        }
+
+        zip.extractAllTo(/*target path*/rootLocation + (shepherd.appConfig.dev ? '/patch' : ''), /*overwrite*/true);
+        // TODO: extract files in chunks
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'ui',
+            'status': 'done'
+          }
+        });
+        fs.unlink(rootLocation + 'patch.zip');
+      } else {
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'ui',
+            'status': 'error',
+            'message': 'size mismatch'
+          }
+        });
+        console.log('patch file size doesnt match remote!');
+      }
+    });
+  });
+}
+
+/*
+ *  check latest version
+ *  type:
+ *  params:
+ */
+shepherd.get('/update/patch/check', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+  const options = {
+    url: 'https://github.com/pbca26/dl-test/raw/master/version',
+    method: 'GET'
+  };
+
+  request(options, function (error, response, body) {
+    if (response &&
+        response.statusCode &&
+        response.statusCode === 200) {
+      const remoteVersion = body.split('\n');
+      const localVersion = fs.readFileSync(rootLocation + 'version', 'utf8').split('\r\n');
+
+      if (remoteVersion[0] === localVersion[0]) {
+        const successObj = {
+          'msg': 'success',
+          'result': 'latest'
+        };
+
+        res.end(JSON.stringify(successObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': 'update',
+          'version': {
+            'local': localVersion[0],
+            'remote': remoteVersion[0],
+          }
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    } else {
+      res.end({
+        'err': 'error getting update'
+      });
+    }
+  });
+});
+
+/*
+ *  unpack zip
+ *  type:
+ *  params:
+ */
+shepherd.get('/unpack', function(req, res, next) {
+  const dlLocation = path.join(__dirname, '../');
+  var zip = new AdmZip(dlLocation + 'patch.zip');
+  zip.extractAllTo(/*target path*/dlLocation + '/patch/unpack', /*overwrite*/true);
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'unpack started'
+  };
+
+  res.end(JSON.stringify(successObj));
+});
 
 shepherd.get('/coinslist', function(req, res, next) {
   if (fs.existsSync(`${iguanaDir}/shepherd/coinslist.json`)) {
