@@ -364,6 +364,7 @@ function createWindow (status) {
 
 			const QuitApp = function() {
 				return new Promise(function(resolve, reject) {
+					KillPm2(); // required for normal app quit in iguana-less mode
 					app.quit();
 					const result = 'Quiting App: done';
 					console.log(result);
