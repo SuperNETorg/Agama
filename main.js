@@ -28,7 +28,7 @@ Promise = require('bluebird');
 
 const appBasicInfo = {
 	name: 'Agama',
-	version: '0.2.0.1a-beta'
+	version: '0.2.0.21a-beta'
 };
 
 app.setName(appBasicInfo.name);
