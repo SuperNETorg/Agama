@@ -452,7 +452,15 @@ shepherd.get('/update/patch/check', function(req, res, next) {
         response.statusCode &&
         response.statusCode === 200) {
       const remoteVersion = body.split('\n');
-      const localVersion = fs.readFileSync(rootLocation + 'version', 'utf8').split('\r\n');
+      const localVersionFile = fs.readFileSync(rootLocation + 'version', 'utf8');
+      let localVersion;
+
+      if (localVersionFile.indexOf('\r\n') > -1) {
+        localVersion = localVersionFile.split('\r\n');
+      } else {
+        localVersion = localVersionFile.split('\n');
+      }
+      console.log(localVersion);
 
       if (remoteVersion[0] === localVersion[0]) {
         const successObj = {

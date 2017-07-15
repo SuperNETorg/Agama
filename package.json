@@ -5,7 +5,8 @@
   "description": "Agama Desktop App",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "make-patch": "./make-patch.sh"
   },
   "repository": "https://github.com/SuperNETorg/Agama/",
   "keywords": [
