@@ -460,7 +460,6 @@ shepherd.get('/update/patch/check', function(req, res, next) {
       } else {
         localVersion = localVersionFile.split('\n');
       }
-      console.log(localVersion);
 
       if (remoteVersion[0] === localVersion[0]) {
         const successObj = {
@@ -709,7 +708,7 @@ shepherd.post('/cli', function(req, res, next) {
     };
 
     res.end(JSON.stringify(errorObj));
-  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z _\[\]"'/\\]+$/g)) {
+  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z _\,\.\[\]"'/\\]+$/g)) {
     const errorObj = {
       'msg': 'error',
       'result': 'wrong cli string format'
