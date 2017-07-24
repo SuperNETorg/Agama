@@ -11,6 +11,8 @@ const electron = require('electron'),
 			spawn = require('child_process').spawn,
 			exec = require('child_process').exec,
 			{ Menu } = require('electron'),
+			portscanner = require('portscanner'),
+			osPlatform = os.platform(),
 			fixPath = require('fix-path');
 
 var express = require('express'),
@@ -34,14 +36,14 @@ const appBasicInfo = {
 app.setName(appBasicInfo.name);
 app.setVersion(appBasicInfo.version);
 
-if (os.platform() === 'linux') {
+if (osPlatform === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
 	// console.log(process.env);
 }
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
-var shepherd = require('./routes/shepherd'),
-		guiapp = express();
+var shepherd = require('./routes/shepherd');
+var guiapp = express();
 
 shepherd.createIguanaDirs();
 
@@ -54,7 +56,7 @@ shepherd.writeLog(`totalmem_readable: ${formatBytes(os.totalmem())}`);
 shepherd.writeLog(`arch: ${os.arch()}`);
 shepherd.writeLog(`cpu: ${os.cpus()[0].model}`);
 shepherd.writeLog(`cpu_cores: ${os.cpus().length}`);
-shepherd.writeLog(`platform: ${os.platform()}`);
+shepherd.writeLog(`platform: ${osPlatform}`);
 shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
@@ -64,21 +66,25 @@ shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}
 
 shepherd.setConfKMD();
 
+// kill rogue iguana copies on start
 if (appConfig.killIguanaOnStart) {
 	let iguanaGrep;
 
-	if (os.platform() === 'darwin') {
-		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
+	switch (osPlatform) {
+		case 'darwin':
+			iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
+			break;
+		case 'linux':
+			iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
+			break;
+		case 'win32':
+			iguanaGrep = 'tasklist';
+			break;
 	}
-	if (os.platform() === 'linux') {
-		iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
-	}
-	if (os.platform() === 'win32') {
-		iguanaGrep = 'tasklist';
-	}
+	
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
-			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
+			const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
 
 			console.log('found another iguana process(es)');
 			shepherd.writeLog('found another iguana process(es)');
@@ -118,7 +124,7 @@ process.once('loaded', () => {
 	global.setImmediate = _setImmediate;
 	global.clearImmediate = _clearImmediate;
 
-	if (os.platform() === 'darwin') {
+	if (osPlatform === 'darwin') {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
 		app.setAboutPanelOptions({
 			applicationName: app.getName(),
@@ -127,7 +133,7 @@ process.once('loaded', () => {
 			credits: 'SuperNET Team'
 		})
 	}
-	if (os.platform() === 'linux') {
+	if (osPlatform === 'linux') {
 		process.setFdLimit(appConfig.maxDescriptors.linux);
 	}
 });
@@ -148,10 +154,25 @@ guiapp.use('/shepherd', shepherd);
 
 const server = require('http').createServer(guiapp);
 const io = require('socket.io').listen(server);
+let willQuitApp = false;
 
-server.listen(appConfig.agamaPort, function() {
-	console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
-	shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+// check if agama is already running
+portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', function(error, status) {
+	// Status is 'open' if currently in use or 'closed' if available
+	if (status === 'closed') {
+		server.listen(appConfig.agamaPort, function() {
+			console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+			shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+		});
+	} else {
+		willQuitApp = true;
+		server.listen(appConfig.agamaPort + 1, function() {
+			console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+			shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+		});
+		loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/agama-instance-error.html`);
+		console.log('another agama app is already running');
+	}
 });
 
 io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
@@ -188,7 +209,6 @@ if (os.platform() === 'win32') {
 
 let mainWindow;
 let loadingWindow;
-let willQuitApp = false;
 let closeAppAfterLoading = false;
 
 function createLoadingWindow() {
@@ -204,6 +224,7 @@ function createLoadingWindow() {
 
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
 	loadingWindow.appConfig = appConfig;
+	loadingWindow.forseCloseApp = forseCloseApp;
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
@@ -229,6 +250,13 @@ function createLoadingWindow() {
       e.preventDefault();
     }
   });
+}
+
+// close app
+function forseCloseApp() {
+	loadingWindow = null;
+	mainWindow = null;
+	app.quit();
 }
 
 app.on('ready', createLoadingWindow);
