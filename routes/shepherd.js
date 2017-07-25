@@ -101,7 +101,8 @@ shepherd.appConfig = {
     "passthru": false,
     "default": false
   },
-  "iguanaLessMode": false
+  "iguanaLessMode": false,
+  "roundValues": true,
 };
 
 shepherd.writeLog = function(data) {
