@@ -651,7 +651,8 @@ shepherd.quitKomodod = function() {
         console.log(`stderr: ${stderr}`);
 
         if (stdout.indexOf('stopping') > -1 ||
-            stdout.indexOf('EOF reached') > -1) {
+            stdout.indexOf('EOF reached') > -1 ||
+            stdout.indexOf("coundn't connect to server") > -1) {
           clearInterval(coindExitInterval[key]);
         }
 
