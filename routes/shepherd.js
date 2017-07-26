@@ -96,14 +96,16 @@ shepherd.appConfig = {
   "dev": false,
   "v2": true,
   "useBasiliskInstance": true,
-  "debug": true,
+  "debug": false,
   "cli": {
-    "passthru": false,
-    "default": false
+    "passthru": true,
+    "default": true
   },
-  "iguanaLessMode": false,
+  "iguanaLessMode": true,
   "roundValues": true,
 };
+
+shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 
 shepherd.writeLog = function(data) {
   const logLocation = `${iguanaDir}/shepherd`;
@@ -806,13 +808,28 @@ shepherd.post('/appconf', function(req, res, next) {
   } else {
     shepherd.saveLocalAppConf(req.body.payload);
 
-    const errorObj = {
+    const successObj = {
       'msg': 'success',
       'result': 'config saved'
     };
 
-    res.end(JSON.stringify(errorObj));
+    res.end(JSON.stringify(successObj));
   }
+});
+
+/*
+ *  type: POST
+ *  params: none
+ */
+shepherd.post('/appconf/reset', function(req, res, next) {
+  shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'config saved'
+  };
+
+  res.end(JSON.stringify(successObj));
 });
 
 shepherd.saveLocalAppConf = function(appSettings) {
