@@ -457,7 +457,7 @@ cache.one = function(req, res, next) {
           var tooEarly = false;
           if (outObj.basilisk[coin][address][key] &&
               outObj.basilisk[coin][address][key].timestamp &&
-              checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
+              (!skipTimeout && checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime)) {
             tooEarly = true;
             outObj.basilisk[coin][address][key].status = 'done';
             cache.io.emit('messages', {
