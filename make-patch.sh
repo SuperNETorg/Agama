@@ -4,7 +4,7 @@ rm -rf ./build
 mkdir build
 mkdir build/assets
 cp -R src/assets build/
-./node_modules/.bin/webpack --config ./webpack.prod.config.js
+NODE_ENV="production" webpack
 cd ../../../
 echo "copy patch files"
 rm -rf ./patch.zip
@@ -12,7 +12,9 @@ rm -rf ./patch
 mkdir patch
 mkdir patch/gui
 mkdir patch/gui/EasyDEX-GUI
-cp -R gui/EasyDEX-GUI/react/build patch/gui/EasyDEX-GUI/react
+mkdir patch/gui/EasyDEX-GUI/react
+mkdir patch/gui/EasyDEX-GUI/react
+cp -R gui/EasyDEX-GUI/react/build patch/gui/EasyDEX-GUI/react/build
 cp -R gui/EasyDEX-GUI/assets patch/gui/EasyDEX-GUI
 cp gui/index.html patch/gui/index.html
 cp ./main.js patch
