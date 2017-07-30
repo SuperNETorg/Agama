@@ -111,18 +111,20 @@ shepherd.writeLog = function(data) {
   const logLocation = `${iguanaDir}/shepherd`;
   const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
 
-  if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
-    fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
-      if (err) {
-        console.log('error writing log file');
-      }
-    });
-  } else {
-    fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
-      if (err) {
-        console.log('error writing log file');
-      }
-    });
+  if (shepherd.appConfig.debug) {
+    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
+      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
+        if (err) {
+          console.log('error writing log file');
+        }
+      });
+    } else {
+      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
+        if (err) {
+          console.log('error writing log file');
+        }
+      });
+    }
   }
 }
 
@@ -249,7 +251,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
 
   const successObj = {
     'msg': 'success',
-    'result': 'bins'
+    'result': 'bins',
   };
 
   res.end(JSON.stringify(successObj));
@@ -261,8 +263,8 @@ shepherd.get('/update/bins/check', function(req, res, next) {
     'patch': {
       'type': 'bins-check',
       'status': 'progress',
-      'message': 'checking bins: ' + _os
-    }
+      'message': 'checking bins: ' + _os,
+    },
   });
   // get list of bins/dlls that can be updated to the latest
   for (let i = 0; i < latestBins[_os].length; i++) {
@@ -277,7 +279,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
         binsToUpdate.push({
           'name': latestBins[_os][i],
           'rSize': remoteBinSize,
-          'lSize': localBinSize
+          'lSize': localBinSize,
         });
       }
 
@@ -286,7 +288,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
           'patch': {
             'type': 'bins-check',
             'status': 'done',
-            'fileList': binsToUpdate
+            'fileList': binsToUpdate,
           }
         });
       }
@@ -306,7 +308,7 @@ shepherd.get('/update/bins', function(req, res, next) {
     'msg': 'success',
     'result': {
       'filesCount': binsToUpdate.length,
-      'list': binsToUpdate
+      'list': binsToUpdate,
     }
   };
 
