@@ -1163,13 +1163,29 @@ shepherd.post('/forks', function(req, res, next) {
         args: [`-port=${_port}`],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
-        iguanaInstanceRegistry[_port] = {
-          'mode': mode,
-          'coin': coin,
-          'pid': apps[0].process && apps[0].process.pid,
-          'pmid': apps[0].pm2_env.pm_id
-        };
-        cache.setVar('iguanaInstances', iguanaInstanceRegistry);
+        if (apps && apps[0] && apps[0].process && apps[0].process.pid) {
+          iguanaInstanceRegistry[_port] = {
+            'mode': mode,
+            'coin': coin,
+            'pid': apps[0].process && apps[0].process.pid,
+            'pmid': apps[0].pm2_env.pm_id
+          };
+          cache.setVar('iguanaInstances', iguanaInstanceRegistry);
+
+          const successObj = {
+            'msg': 'success',
+            'result': _port
+          };
+
+          res.end(JSON.stringify(successObj));
+        } else {
+          const errorObj = {
+            'msg': 'success',
+            'error': 'iguana start error'
+          };
+
+          res.end(JSON.stringify(errorObj));
+        }
 
         // get sync only forks info
         if (syncOnlyInstanceInterval === -1) {
@@ -1180,13 +1196,6 @@ shepherd.post('/forks', function(req, res, next) {
             shepherd.getSyncOnlyForksInfo();
           }, 20000);
         }
-
-        const successObj = {
-          'msg': 'success',
-          'result': _port
-        };
-
-        res.end(JSON.stringify(successObj));
 
         pm2.disconnect(); // Disconnect from PM2
           if (err) {

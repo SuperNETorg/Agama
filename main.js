@@ -28,9 +28,19 @@ var express = require('express'),
 
 Promise = require('bluebird');
 
+// read app version
+const localVersionFile = fs.readFileSync(`version`, 'utf8');
+let localVersion;
+
+if (localVersionFile.indexOf('\r\n') > -1) {
+  localVersion = localVersionFile.split('\r\n');
+} else {
+  localVersion = localVersionFile.split('\n');
+}
+
 const appBasicInfo = {
 	name: 'Agama',
-	version: '0.2.0.21a-beta'
+	version: localVersion[0],
 };
 
 app.setName(appBasicInfo.name);
@@ -81,7 +91,7 @@ if (appConfig.killIguanaOnStart) {
 			iguanaGrep = 'tasklist';
 			break;
 	}
-	
+
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
 			const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
@@ -300,6 +310,7 @@ function createWindow (status) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
 				mainWindow.appConfig = appConfig;
+				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
 
 				if (appConfig.dev) {
