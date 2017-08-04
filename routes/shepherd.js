@@ -166,7 +166,7 @@ function downloadFile(configuration) {
       uri: configuration.remoteFile,
       agentOptions: {
         keepAlive: true,
-        keepAliveMsecs: 15000
+        keepAliveMsecs: 15000,
       }
     });
 
@@ -201,12 +201,12 @@ function downloadFile(configuration) {
 const remoteBinLocation = {
   'win32': 'https://artifacts.supernet.org/latest/windows/',
   'darwin': 'https://artifacts.supernet.org/latest/osx/',
-  'linux': 'https://artifacts.supernet.org/latest/linux/'
+  'linux': 'https://artifacts.supernet.org/latest/linux/',
 };
 const localBinLocation = {
   'win32': 'assets/bin/win64/',
   'darwin': 'assets/bin/osx/',
-  'linux': 'assets/bin/linux64/'
+  'linux': 'assets/bin/linux64/',
 };
 const latestBins = {
   'win32': [
@@ -221,7 +221,7 @@ const latestBins = {
     'libssl-1_1.dll',
     'libwinpthread-1.dll',
     'nanomsg.dll',
-    'pthreadvc2.dll'
+    'pthreadvc2.dll',
   ],
   'darwin': [
     'iguana',
@@ -230,12 +230,12 @@ const latestBins = {
     'libgcc_s.1.dylib',
     'libgomp.1.dylib',
     'libnanomsg.5.0.0.dylib',
-    'libstdc++.6.dylib' // encode %2B
+    'libstdc++.6.dylib', // encode %2B
   ],
   'linux': [
     'iguana',
     'komodo-cli',
-    'komodod'
+    'komodod',
   ]
 };
 
@@ -326,7 +326,7 @@ shepherd.get('/update/bins', function(req, res, next) {
             'status': 'progress',
             'file': binsToUpdate[i].name,
             'bytesTotal': total,
-            'bytesReceived': received
+            'bytesReceived': received,
           }
         });
         console.log(binsToUpdate[i].name + ' ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
@@ -342,7 +342,7 @@ shepherd.get('/update/bins', function(req, res, next) {
           'msg': {
             'type': 'bins-update',
             'file': binsToUpdate[i].name,
-            'status': 'done'
+            'status': 'done',
           }
         });
         console.log('file ' + binsToUpdate[i].name + ' succesfully downloaded');
@@ -351,7 +351,7 @@ shepherd.get('/update/bins', function(req, res, next) {
           'msg': {
             'type': 'bins-update',
             'file': binsToUpdate[i].name,
-            'message': 'size mismatch'
+            'message': 'size mismatch',
           }
         });
         console.log('error: ' + binsToUpdate[i].name + ' file size doesnt match remote!');
@@ -657,7 +657,7 @@ shepherd.quitKomodod = function() {
 
         if (stdout.indexOf('stopping') > -1 ||
             stdout.indexOf('EOF reached') > -1 ||
-            stdout.indexOf("coundn't connect to server") > -1) {
+            stdout.indexOf('connect to server: unknown (code -1)') > -1) {
           clearInterval(coindExitInterval[key]);
         }
 
