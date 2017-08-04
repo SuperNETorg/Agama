@@ -107,6 +107,14 @@ shepherd.appConfig = {
 
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 
+shepherd.readVersionFile = function() {
+  // read app version
+  const rootLocation = path.join(__dirname, '../');
+  const localVersionFile = fs.readFileSync(rootLocation + 'version', 'utf8');
+
+  return localVersionFile;
+}
+
 shepherd.writeLog = function(data) {
   const logLocation = `${iguanaDir}/shepherd`;
   const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
@@ -655,9 +663,10 @@ shepherd.quitKomodod = function() {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
 
-        if (stdout.indexOf('stopping') > -1 ||
-            stdout.indexOf('EOF reached') > -1 ||
-            stdout.indexOf('connect to server: unknown (code -1)') > -1) {
+        if (stdout.indexOf('EOF reached') > -1 ||
+            stderr.indexOf('EOF reached') > -1 ||
+            stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
+            stderr.indexOf('connect to server: unknown (code -1)') > -1) {
           clearInterval(coindExitInterval[key]);
         }
 

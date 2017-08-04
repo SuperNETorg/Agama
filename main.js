@@ -28,9 +28,17 @@ var express = require('express'),
 
 Promise = require('bluebird');
 
-// read app version
-const localVersionFile = fs.readFileSync(`version`, 'utf8');
+if (osPlatform === 'linux') {
+	process.env.ELECTRON_RUN_AS_NODE = true;
+	// console.log(process.env);
+}
+
+// GUI APP settings and starting gui on address http://120.0.0.1:17777
+var shepherd = require('./routes/shepherd');
+var guiapp = express();
+
 let localVersion;
+let localVersionFile = shepherd.readVersionFile();
 
 if (localVersionFile.indexOf('\r\n') > -1) {
   localVersion = localVersionFile.split('\r\n');
@@ -45,15 +53,6 @@ const appBasicInfo = {
 
 app.setName(appBasicInfo.name);
 app.setVersion(appBasicInfo.version);
-
-if (osPlatform === 'linux') {
-	process.env.ELECTRON_RUN_AS_NODE = true;
-	// console.log(process.env);
-}
-
-// GUI APP settings and starting gui on address http://120.0.0.1:17777
-var shepherd = require('./routes/shepherd');
-var guiapp = express();
 
 shepherd.createIguanaDirs();
 
@@ -229,7 +228,8 @@ function createLoadingWindow() {
 		width: 500,
 		height: 300,
 		frame: false,
-		icon: iguanaIcon
+		icon: iguanaIcon,
+		show: false,
 	});
 
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
@@ -238,6 +238,11 @@ function createLoadingWindow() {
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
+  loadingWindow.webContents.on('did-finish-load', function() {
+    setTimeout(function() {
+      loadingWindow.show();
+    }, 40);
+  });
 	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
@@ -279,7 +284,8 @@ function createWindow (status) {
 		mainWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 			width: closeAppAfterLoading ? 1 : 1280,
 			height: closeAppAfterLoading ? 1 : 800,
-			icon: iguanaIcon
+			icon: iguanaIcon,
+			show: false,
 		});
 
 		if (closeAppAfterLoading) {
@@ -318,6 +324,12 @@ function createWindow (status) {
 				} else {
 					mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
 				}
+
+			  mainWindow.webContents.on('did-finish-load', function() {
+			    setTimeout(function() {
+			      mainWindow.show();
+			    }, 40);
+			  });
 			} else {
 				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
