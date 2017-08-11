@@ -102,7 +102,7 @@ shepherd.appConfig = {
     "default": true
   },
   "iguanaLessMode": true,
-  "roundValues": true,
+  "roundValues": false,
 };
 
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
