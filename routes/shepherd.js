@@ -60,6 +60,7 @@ if (os.platform() === 'linux') {
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
       komodoDir = `${process.env.HOME}/.komodo`;
+      zcashDir = `${process.env.HOME}/.zcash-params`;
 }
 
 if (os.platform() === 'win32') {
@@ -77,6 +78,7 @@ if (os.platform() === 'win32') {
       komodocliBin = path.normalize(komodocliBin),
       komodoDir = `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
+      zcashDir = `${process.env.APPDATA}/ZcashParams`;
 }
 
 shepherd.appConfig = {
@@ -106,6 +108,18 @@ shepherd.appConfig = {
 };
 
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
+
+shepherd.zcashParamsExist = function() {
+  if (fs.existsSync(zcashDir) &&
+      fs.existsSync(`${zcashDir}/sprout-proving.key`) &&
+      fs.existsSync(`${zcashDir}/sprout-verifying.key`)) {
+    console.log('zcashparams exist');
+    return true;
+  }
+
+  console.log('zcashparams doesnt exist');
+  return false;
+}
 
 shepherd.readVersionFile = function() {
   // read app version
