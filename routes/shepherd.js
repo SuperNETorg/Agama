@@ -1376,9 +1376,10 @@ shepherd.get('/mock', function(req, res, next) {
  *  params: herd, lastLines
  */
 shepherd.post('/debuglog', function(req, res) {
-  let _herd = req.body.herdname,
-      _lastNLines = req.body.lastLines,
-      _location;
+  let _herd = req.body.herdname;
+  let _ac = req.body.ac;
+  let _lastNLines = req.body.lastLines;
+  let _location;
 
   if (_herd === 'iguana') {
     _location = iguanaDir;
@@ -1386,22 +1387,26 @@ shepherd.post('/debuglog', function(req, res) {
     _location = komodoDir;
   }
 
+  if (_ac) {
+    _location = `${komodoDir}/${_ac}`;
+  }
+
   shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
-    .then(function(result) {
-      const _obj = {
-        'msg': 'success',
-        'result': result
-      };
+  .then(function(result) {
+    const _obj = {
+      'msg': 'success',
+      'result': result
+    };
 
-      res.end(JSON.stringify(_obj));
-    }, function(result) {
-      const _obj = {
-        'msg': 'error',
-        'result': result
-      };
+    res.end(JSON.stringify(_obj));
+  }, function(result) {
+    const _obj = {
+      'msg': 'error',
+      'result': result
+    };
 
-      res.end(JSON.stringify(_obj));
-    });
+    res.end(JSON.stringify(_obj));
+  });
 });
 
 /*

@@ -318,6 +318,7 @@ function createWindow (status) {
 				mainWindow.appConfig = appConfig;
 				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
+				mainWindow.zcashParamsExist = shepherd.zcashParamsExist();
 
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
