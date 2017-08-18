@@ -49,7 +49,7 @@ if (os.platform() === 'darwin') {
       komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`,
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
-      zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
+      zcashDir = `${process.env.HOME}/Library/Application Support/ZcashParams`;
 }
 
 if (os.platform() === 'linux') {
@@ -1789,6 +1789,7 @@ function herder(flock, data) {
   }
 
   // TODO: notify gui that reindex/rescan param is used to reflect on the screen
+  //       asset chain debug.log unlink
   if (flock === 'komodod') {
     let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir) + '/debug.log';
 
@@ -1804,9 +1805,13 @@ function herder(flock, data) {
           console.log(`error accessing ${kmdDebugLogLocation}`);
           shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
         } else {
-          console.log(`truncate ${kmdDebugLogLocation}`);
-          shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
-          fs.unlink(kmdDebugLogLocation);
+          try {
+            fs.unlink(kmdDebugLogLocation);
+            console.log(`truncate ${kmdDebugLogLocation}`);
+            shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
+          } catch (e) {
+            console.log('cant unlink debug.log');
+          }
         }
       });
     } catch(e) {

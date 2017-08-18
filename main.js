@@ -318,6 +318,7 @@ function createWindow (status) {
 				mainWindow.appConfig = appConfig;
 				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
+				mainWindow.assetChainPorts = require('./routes/ports.js');
 				mainWindow.zcashParamsExist = shepherd.zcashParamsExist();
 
 				if (appConfig.dev) {
