@@ -11,6 +11,8 @@ const electron = require('electron'),
 			spawn = require('child_process').spawn,
 			exec = require('child_process').exec,
 			{ Menu } = require('electron'),
+			portscanner = require('portscanner'),
+			osPlatform = os.platform(),
 			fixPath = require('fix-path');
 
 var express = require('express'),
@@ -26,22 +28,31 @@ var express = require('express'),
 
 Promise = require('bluebird');
 
-const appBasicInfo = {
-	name: 'Agama',
-	version: '0.2.0.1a-beta'
-};
-
-app.setName(appBasicInfo.name);
-app.setVersion(appBasicInfo.version);
-
-if (os.platform() === 'linux') {
+if (osPlatform === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
 	// console.log(process.env);
 }
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
-var shepherd = require('./routes/shepherd'),
-		guiapp = express();
+var shepherd = require('./routes/shepherd');
+var guiapp = express();
+
+let localVersion;
+let localVersionFile = shepherd.readVersionFile();
+
+if (localVersionFile.indexOf('\r\n') > -1) {
+  localVersion = localVersionFile.split('\r\n');
+} else {
+  localVersion = localVersionFile.split('\n');
+}
+
+const appBasicInfo = {
+	name: 'Agama',
+	version: localVersion[0],
+};
+
+app.setName(appBasicInfo.name);
+app.setVersion(appBasicInfo.version);
 
 shepherd.createIguanaDirs();
 
@@ -54,7 +65,7 @@ shepherd.writeLog(`totalmem_readable: ${formatBytes(os.totalmem())}`);
 shepherd.writeLog(`arch: ${os.arch()}`);
 shepherd.writeLog(`cpu: ${os.cpus()[0].model}`);
 shepherd.writeLog(`cpu_cores: ${os.cpus().length}`);
-shepherd.writeLog(`platform: ${os.platform()}`);
+shepherd.writeLog(`platform: ${osPlatform}`);
 shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
@@ -64,21 +75,25 @@ shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}
 
 shepherd.setConfKMD();
 
+// kill rogue iguana copies on start
 if (appConfig.killIguanaOnStart) {
 	let iguanaGrep;
 
-	if (os.platform() === 'darwin') {
-		iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
+	switch (osPlatform) {
+		case 'darwin':
+			iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
+			break;
+		case 'linux':
+			iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
+			break;
+		case 'win32':
+			iguanaGrep = 'tasklist';
+			break;
 	}
-	if (os.platform() === 'linux') {
-		iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
-	}
-	if (os.platform() === 'win32') {
-		iguanaGrep = 'tasklist';
-	}
+
 	exec(iguanaGrep, function(error, stdout, stderr) {
 		if (stdout.indexOf('iguana') > -1) {
-			const pkillCmd = os.platform() === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
+			const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
 
 			console.log('found another iguana process(es)');
 			shepherd.writeLog('found another iguana process(es)');
@@ -118,7 +133,7 @@ process.once('loaded', () => {
 	global.setImmediate = _setImmediate;
 	global.clearImmediate = _clearImmediate;
 
-	if (os.platform() === 'darwin') {
+	if (osPlatform === 'darwin') {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
 		app.setAboutPanelOptions({
 			applicationName: app.getName(),
@@ -127,7 +142,7 @@ process.once('loaded', () => {
 			credits: 'SuperNET Team'
 		})
 	}
-	if (os.platform() === 'linux') {
+	if (osPlatform === 'linux') {
 		process.setFdLimit(appConfig.maxDescriptors.linux);
 	}
 });
@@ -148,10 +163,25 @@ guiapp.use('/shepherd', shepherd);
 
 const server = require('http').createServer(guiapp);
 const io = require('socket.io').listen(server);
+let willQuitApp = false;
 
-server.listen(appConfig.agamaPort, function() {
-	console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
-	shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+// check if agama is already running
+portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', function(error, status) {
+	// Status is 'open' if currently in use or 'closed' if available
+	if (status === 'closed') {
+		server.listen(appConfig.agamaPort, function() {
+			console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+			shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+		});
+	} else {
+		willQuitApp = true;
+		server.listen(appConfig.agamaPort + 1, function() {
+			console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+			shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+		});
+		loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/agama-instance-error.html`);
+		console.log('another agama app is already running');
+	}
 });
 
 io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
@@ -188,7 +218,6 @@ if (os.platform() === 'win32') {
 
 let mainWindow;
 let loadingWindow;
-let willQuitApp = false;
 let closeAppAfterLoading = false;
 
 function createLoadingWindow() {
@@ -199,13 +228,21 @@ function createLoadingWindow() {
 		width: 500,
 		height: 300,
 		frame: false,
-		icon: iguanaIcon
+		icon: iguanaIcon,
+		show: false,
 	});
 
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
+	loadingWindow.appConfig = appConfig;
+	loadingWindow.forseCloseApp = forseCloseApp;
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
+  loadingWindow.webContents.on('did-finish-load', function() {
+    setTimeout(function() {
+      loadingWindow.show();
+    }, 40);
+  });
 	shepherd.writeLog('show loading window');
 
 	// DEVTOOLS - only for dev purposes - ca333
@@ -230,17 +267,25 @@ function createLoadingWindow() {
   });
 }
 
+// close app
+function forseCloseApp() {
+	loadingWindow = null;
+	mainWindow = null;
+	app.quit();
+}
+
 app.on('ready', createLoadingWindow);
 
 function createWindow (status) {
-	if ( status === 'open') {
+	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
 		// initialise window
 		mainWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 			width: closeAppAfterLoading ? 1 : 1280,
 			height: closeAppAfterLoading ? 1 : 800,
-			icon: iguanaIcon
+			icon: iguanaIcon,
+			show: false,
 		});
 
 		if (closeAppAfterLoading) {
@@ -271,13 +316,22 @@ function createWindow (status) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
 				mainWindow.appConfig = appConfig;
+				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
+				mainWindow.assetChainPorts = require('./routes/ports.js');
+				mainWindow.zcashParamsExist = shepherd.zcashParamsExist();
 
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
 				} else {
 					mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
 				}
+
+			  mainWindow.webContents.on('did-finish-load', function() {
+			    setTimeout(function() {
+			      mainWindow.show();
+			    }, 40);
+			  });
 			} else {
 				shepherd.writeLog('show edex gui');
 				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
@@ -307,10 +361,6 @@ function createWindow (status) {
 
 					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod();
-					// if komodod is under heavy load it may not respond to cli stop the first time
-					setInterval(function() {
-						shepherd.quitKomodod();
-					}, 100);
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
@@ -367,6 +417,7 @@ function createWindow (status) {
 
 			const QuitApp = function() {
 				return new Promise(function(resolve, reject) {
+					KillPm2(); // required for normal app quit in iguana-less mode
 					app.quit();
 					const result = 'Quiting App: done';
 					console.log(result);

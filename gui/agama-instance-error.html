@@ -15,19 +15,12 @@
   </head>
   <body class="agamaMode">
     <div class="text-center">
-      <!--div id="normalStart">
-        <div class="loader-block">
-          <div id="loading_status_text">Starting Wallet. Please wait...</div>
-          <div id="loading_sub_status_text"></div>
-          <div id="loading_sub_status_output_text"></div>
-        </div>
-        <div id="pulse" class="pulse-loader"></div>
-      </div-->
       <div id="agamaMode">
         <img src="EasyDEX-GUI/assets/mainWindow/img/agama-icon.svg" class="agama-logo" alt="Agama Wallet" width="80" height="100" />
-        <div id="agamaModeStatus">Choose Agama mode</div>
-        <button onClick="closeMainWindow()" class="btn btn-primary">Native only</button>
-        <button onClick="normalStart()" class="btn btn-primary">Normal start</button>
+        <div id="agamaModeStatus">Another Agama instance is already running!</div>
+        <div>Please close all other instaces and restart the app.</div>
+        <br />
+        <button onClick="quitApp()" class="btn btn-primary btn-close-app">Quit</button>
       </div>
     </div>
     <script type="text/javascript" src="EasyDEX-GUI/assets/mainWindow/js/init.js"></script>

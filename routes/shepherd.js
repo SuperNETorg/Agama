@@ -17,6 +17,8 @@ const electron = require('electron'),
       async = require('async'),
       rimraf = require('rimraf'),
       portscanner = require('portscanner'),
+      AdmZip = require('adm-zip'),
+      remoteFileSize = require('remote-file-size'),
       Promise = require('bluebird');
 
 const fixPath = require('fix-path');
@@ -25,6 +27,7 @@ var ps = require('ps-node'),
     assetChainPorts = require('./ports.js'),
     shepherd = express.Router(),
     iguanaInstanceRegistry = {},
+    coindInstanceRegistry = {},
     syncOnlyIguanaInstanceInfo = {},
     syncOnlyInstanceInterval = -1,
     guiLog = {},
@@ -46,7 +49,7 @@ if (os.platform() === 'darwin') {
       komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`,
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
-      zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
+      zcashDir = `${process.env.HOME}/Library/Application Support/ZcashParams`;
 }
 
 if (os.platform() === 'linux') {
@@ -57,6 +60,7 @@ if (os.platform() === 'linux') {
       komododBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/linux/komodod'),
       komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/linux/komodo-cli'),
       komodoDir = `${process.env.HOME}/.komodo`;
+      zcashDir = `${process.env.HOME}/.zcash-params`;
 }
 
 if (os.platform() === 'win32') {
@@ -74,6 +78,7 @@ if (os.platform() === 'win32') {
       komodocliBin = path.normalize(komodocliBin),
       komodoDir = `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
+      zcashDir = `${process.env.APPDATA}/ZcashParams`;
 }
 
 shepherd.appConfig = {
@@ -93,29 +98,55 @@ shepherd.appConfig = {
   "dev": false,
   "v2": true,
   "useBasiliskInstance": true,
-  "debug": true,
+  "debug": false,
   "cli": {
-    "passthru": false,
-    "default": false
-  }
+    "passthru": true,
+    "default": true
+  },
+  "iguanaLessMode": true,
+  "roundValues": false,
 };
+
+shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
+
+shepherd.zcashParamsExist = function() {
+  if (fs.existsSync(zcashDir) &&
+      fs.existsSync(`${zcashDir}/sprout-proving.key`) &&
+      fs.existsSync(`${zcashDir}/sprout-verifying.key`)) {
+    console.log('zcashparams exist');
+    return true;
+  }
+
+  console.log('zcashparams doesnt exist');
+  return false;
+}
+
+shepherd.readVersionFile = function() {
+  // read app version
+  const rootLocation = path.join(__dirname, '../');
+  const localVersionFile = fs.readFileSync(rootLocation + 'version', 'utf8');
+
+  return localVersionFile;
+}
 
 shepherd.writeLog = function(data) {
   const logLocation = `${iguanaDir}/shepherd`;
   const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
 
-  if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
-    fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
-      if (err) {
-        console.log('error writing log file');
-      }
-    });
-  } else {
-    fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
-      if (err) {
-        console.log('error writing log file');
-      }
-    });
+  if (shepherd.appConfig.debug) {
+    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
+      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
+        if (err) {
+          console.log('error writing log file');
+        }
+      });
+    } else {
+      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function (err) {
+        if (err) {
+          console.log('error writing log file');
+        }
+      });
+    }
   }
 }
 
@@ -142,6 +173,365 @@ shepherd.createIguanaDirs = function() {
     console.log('shepherd folder already exists');
   }
 }
+
+/**
+ * Promise based download file method
+ */
+function downloadFile(configuration) {
+  return new Promise(function(resolve, reject) {
+    // Save variable to know progress
+    let receivedBytes = 0;
+    let totalBytes = 0;
+
+    let req = request({
+      method: 'GET',
+      uri: configuration.remoteFile,
+      agentOptions: {
+        keepAlive: true,
+        keepAliveMsecs: 15000,
+      }
+    });
+
+    let out = fs.createWriteStream(configuration.localFile);
+    req.pipe(out);
+
+    req.on('response', function(data) {
+      // Change the total bytes value to get progress later.
+      totalBytes = parseInt(data.headers['content-length']);
+    });
+
+    // Get progress if callback exists
+    if (configuration.hasOwnProperty('onProgress')) {
+      req.on('data', function(chunk) {
+        // Update the received bytes
+        receivedBytes += chunk.length;
+        configuration.onProgress(receivedBytes, totalBytes);
+      });
+    } else {
+      req.on('data', function(chunk) {
+        // Update the received bytes
+        receivedBytes += chunk.length;
+      });
+    }
+
+    req.on('end', function() {
+      resolve();
+    });
+  });
+}
+
+const remoteBinLocation = {
+  'win32': 'https://artifacts.supernet.org/latest/windows/',
+  'darwin': 'https://artifacts.supernet.org/latest/osx/',
+  'linux': 'https://artifacts.supernet.org/latest/linux/',
+};
+const localBinLocation = {
+  'win32': 'assets/bin/win64/',
+  'darwin': 'assets/bin/osx/',
+  'linux': 'assets/bin/linux64/',
+};
+const latestBins = {
+  'win32': [
+    'iguana.exe',
+    'komodo-cli.exe',
+    'komodod.exe',
+    'libcrypto-1_1.dll',
+    'libcurl-4.dll',
+    'libcurl.dll',
+    'libgcc_s_sjlj-1.dll',
+    'libnanomsg.dll',
+    'libssl-1_1.dll',
+    'libwinpthread-1.dll',
+    'nanomsg.dll',
+    'pthreadvc2.dll',
+  ],
+  'darwin': [
+    'iguana',
+    'komodo-cli',
+    'komodod',
+    'libgcc_s.1.dylib',
+    'libgomp.1.dylib',
+    'libnanomsg.5.0.0.dylib',
+    'libstdc++.6.dylib', // encode %2B
+  ],
+  'linux': [
+    'iguana',
+    'komodo-cli',
+    'komodod',
+  ]
+};
+
+let binsToUpdate = [];
+
+/*
+ *  Check bins file size
+ *  type:
+ *  params:
+ */
+shepherd.get('/update/bins/check', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'bins',
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  const _os = os.platform();
+  console.log('checking bins: ' + _os);
+
+  cache.io.emit('patch', {
+    'patch': {
+      'type': 'bins-check',
+      'status': 'progress',
+      'message': 'checking bins: ' + _os,
+    },
+  });
+  // get list of bins/dlls that can be updated to the latest
+  for (let i = 0; i < latestBins[_os].length; i++) {
+    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], function(err, remoteBinSize) {
+      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
+
+      console.log('remote url: ' + (remoteBinLocation[_os] + latestBins[_os][i]) + ' (' + remoteBinSize + ')');
+      console.log('local file: ' + (rootLocation + localBinLocation[_os] + latestBins[_os][i]) + ' (' + localBinSize + ')');
+
+      if (remoteBinSize !== localBinSize) {
+        console.log(latestBins[_os][i] + ' can be updated');
+        binsToUpdate.push({
+          'name': latestBins[_os][i],
+          'rSize': remoteBinSize,
+          'lSize': localBinSize,
+        });
+      }
+
+      if (i === latestBins[_os].length - 1) {
+        cache.io.emit('patch', {
+          'patch': {
+            'type': 'bins-check',
+            'status': 'done',
+            'fileList': binsToUpdate,
+          }
+        });
+      }
+    });
+  }
+});
+
+/*
+ *  Update bins
+ *  type:
+ *  params:
+ */
+shepherd.get('/update/bins', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+  const _os = os.platform();
+  const successObj = {
+    'msg': 'success',
+    'result': {
+      'filesCount': binsToUpdate.length,
+      'list': binsToUpdate,
+    }
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  for (let i = 0; i < binsToUpdate.length; i++) {
+    downloadFile({
+      remoteFile: remoteBinLocation[_os] + binsToUpdate[i].name,
+      localFile: rootLocation + localBinLocation[_os] + 'patch/' + binsToUpdate[i].name,
+      onProgress: function(received, total) {
+        const percentage = (received * 100) / total;
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'bins-update',
+            'status': 'progress',
+            'file': binsToUpdate[i].name,
+            'bytesTotal': total,
+            'bytesReceived': received,
+          }
+        });
+        console.log(binsToUpdate[i].name + ' ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+      }
+    })
+    .then(function() {
+      // verify that remote file is matching to DL'ed file
+      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + 'patch/' + binsToUpdate[i].name).size;
+      console.log('compare dl file size');
+
+      if (localBinSize === binsToUpdate[i].rSize) {
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'bins-update',
+            'file': binsToUpdate[i].name,
+            'status': 'done',
+          }
+        });
+        console.log('file ' + binsToUpdate[i].name + ' succesfully downloaded');
+      } else {
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'bins-update',
+            'file': binsToUpdate[i].name,
+            'message': 'size mismatch',
+          }
+        });
+        console.log('error: ' + binsToUpdate[i].name + ' file size doesnt match remote!');
+      }
+    });
+  }
+});
+
+/*
+ *  DL app patch
+ *  type:
+ *  params: patchList
+ */
+shepherd.get('/update/patch', function(req, res, next) {
+  const successObj = {
+    'msg': 'success',
+    'result': 'dl started'
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  shepherd.updateAgama();
+});
+
+shepherd.updateAgama = function() {
+  const rootLocation = path.join(__dirname, '../');
+
+  downloadFile({
+    remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
+    localFile: rootLocation + 'patch.zip',
+    onProgress: function(received, total) {
+      const percentage = (received * 100) / total;
+      if (Math.floor(percentage) % 5 === 0 ||
+          Math.floor(percentage) % 10 === 0) {
+        console.log('patch ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+        cache.io.emit('patch', {
+          'msg': {
+            'status': 'progress',
+            'type': 'ui',
+            'progress': percentage,
+            'bytesTotal': total,
+            'bytesReceived': received
+          }
+        });
+      }
+    }
+  })
+  .then(function() {
+    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', function(err, remotePatchSize) {
+      // verify that remote file is matching to DL'ed file
+      const localPatchSize = fs.statSync(rootLocation + 'patch.zip').size;
+      console.log('compare dl file size');
+
+      if (localPatchSize === remotePatchSize) {
+        console.log('patch succesfully downloaded');
+        console.log('extracting contents');
+
+        const zip = new AdmZip(rootLocation + 'patch.zip');
+
+        if (shepherd.appConfig.dev) {
+          if (!fs.existsSync(`${rootLocation}/patch`)) {
+            fs.mkdirSync(`${rootLocation}/patch`);
+          }
+        }
+
+        zip.extractAllTo(/*target path*/rootLocation + (shepherd.appConfig.dev ? '/patch' : ''), /*overwrite*/true);
+        // TODO: extract files in chunks
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'ui',
+            'status': 'done'
+          }
+        });
+        fs.unlink(rootLocation + 'patch.zip');
+      } else {
+        cache.io.emit('patch', {
+          'msg': {
+            'type': 'ui',
+            'status': 'error',
+            'message': 'size mismatch'
+          }
+        });
+        console.log('patch file size doesnt match remote!');
+      }
+    });
+  });
+}
+
+/*
+ *  check latest version
+ *  type:
+ *  params:
+ */
+shepherd.get('/update/patch/check', function(req, res, next) {
+  const rootLocation = path.join(__dirname, '../');
+  const options = {
+    url: 'https://github.com/pbca26/dl-test/raw/master/version',
+    method: 'GET'
+  };
+
+  request(options, function (error, response, body) {
+    if (response &&
+        response.statusCode &&
+        response.statusCode === 200) {
+      const remoteVersion = body.split('\n');
+      const localVersionFile = fs.readFileSync(rootLocation + 'version', 'utf8');
+      let localVersion;
+
+      if (localVersionFile.indexOf('\r\n') > -1) {
+        localVersion = localVersionFile.split('\r\n');
+      } else {
+        localVersion = localVersionFile.split('\n');
+      }
+
+      if (remoteVersion[0] === localVersion[0]) {
+        const successObj = {
+          'msg': 'success',
+          'result': 'latest'
+        };
+
+        res.end(JSON.stringify(successObj));
+      } else {
+        const successObj = {
+          'msg': 'success',
+          'result': 'update',
+          'version': {
+            'local': localVersion[0],
+            'remote': remoteVersion[0],
+          }
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    } else {
+      res.end({
+        'err': 'error getting update'
+      });
+    }
+  });
+});
+
+/*
+ *  unpack zip
+ *  type:
+ *  params:
+ */
+shepherd.get('/unpack', function(req, res, next) {
+  const dlLocation = path.join(__dirname, '../');
+  var zip = new AdmZip(dlLocation + 'patch.zip');
+  zip.extractAllTo(/*target path*/dlLocation + '/patch/unpack', /*overwrite*/true);
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'unpack started'
+  };
+
+  res.end(JSON.stringify(successObj));
+});
 
 shepherd.get('/coinslist', function(req, res, next) {
   if (fs.existsSync(`${iguanaDir}/shepherd/coinslist.json`)) {
@@ -273,17 +663,33 @@ shepherd.post('/coinslist', function(req, res, next) {
 });
 
 // TODO: check if komodod is running
-shepherd.quitKomodod = function(chain) {
+shepherd.quitKomodod = function() {
+  // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
-  console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
-  exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
-    console.log(`stdout: ${stdout}`);
-    console.log(`stderr: ${stderr}`);
+  let coindExitInterval = {};
 
-    if (error !== null) {
-      console.log(`exec error: ${error}`);
-    }
-  });
+  for (let key in coindInstanceRegistry) {
+    const chain = key !== 'komodod' ? key : null;
+
+    coindExitInterval[key] = setInterval(function() {
+      console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
+      exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
+        console.log(`stdout: ${stdout}`);
+        console.log(`stderr: ${stderr}`);
+
+        if (stdout.indexOf('EOF reached') > -1 ||
+            stderr.indexOf('EOF reached') > -1 ||
+            stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
+            stderr.indexOf('connect to server: unknown (code -1)') > -1) {
+          clearInterval(coindExitInterval[key]);
+        }
+
+        if (error !== null) {
+          console.log(`exec error: ${error}`);
+        }
+      });
+    }, 100);
+  }
 }
 
 shepherd.getConf = function(chain) {
@@ -331,7 +737,7 @@ shepherd.post('/cli', function(req, res, next) {
     };
 
     res.end(JSON.stringify(errorObj));
-  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z _\[\]"'/\\]+$/g)) {
+  } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z _\,\.\[\]"'/\\]+$/g)) {
     const errorObj = {
       'msg': 'error',
       'result': 'wrong cli string format'
@@ -427,13 +833,28 @@ shepherd.post('/appconf', function(req, res, next) {
   } else {
     shepherd.saveLocalAppConf(req.body.payload);
 
-    const errorObj = {
+    const successObj = {
       'msg': 'success',
       'result': 'config saved'
     };
 
-    res.end(JSON.stringify(errorObj));
+    res.end(JSON.stringify(successObj));
   }
+});
+
+/*
+ *  type: POST
+ *  params: none
+ */
+shepherd.post('/appconf/reset', function(req, res, next) {
+  shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
+
+  const successObj = {
+    'msg': 'success',
+    'result': 'config saved'
+  };
+
+  res.end(JSON.stringify(successObj));
 });
 
 shepherd.saveLocalAppConf = function(appSettings) {
@@ -489,7 +910,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
 shepherd.loadLocalConfig = function() {
   if (fs.existsSync(`${iguanaDir}/config.json`)) {
     let localAppConfig = fs.readFileSync(`${iguanaDir}/config.json`, 'utf8');
-    
+
     console.log('app config set from local file');
     shepherd.writeLog('app config set from local file');
 
@@ -509,7 +930,7 @@ shepherd.loadLocalConfig = function() {
 
     if (localAppConfig) {
       const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-      
+
       if (Object.keys(compareConfigs).length) {
         const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
 
@@ -767,13 +1188,29 @@ shepherd.post('/forks', function(req, res, next) {
         args: [`-port=${_port}`],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
-        iguanaInstanceRegistry[_port] = {
-          'mode': mode,
-          'coin': coin,
-          'pid': apps[0].process && apps[0].process.pid,
-          'pmid': apps[0].pm2_env.pm_id
-        };
-        cache.setVar('iguanaInstances', iguanaInstanceRegistry);
+        if (apps && apps[0] && apps[0].process && apps[0].process.pid) {
+          iguanaInstanceRegistry[_port] = {
+            'mode': mode,
+            'coin': coin,
+            'pid': apps[0].process && apps[0].process.pid,
+            'pmid': apps[0].pm2_env.pm_id
+          };
+          cache.setVar('iguanaInstances', iguanaInstanceRegistry);
+
+          const successObj = {
+            'msg': 'success',
+            'result': _port
+          };
+
+          res.end(JSON.stringify(successObj));
+        } else {
+          const errorObj = {
+            'msg': 'success',
+            'error': 'iguana start error'
+          };
+
+          res.end(JSON.stringify(errorObj));
+        }
 
         // get sync only forks info
         if (syncOnlyInstanceInterval === -1) {
@@ -785,22 +1222,98 @@ shepherd.post('/forks', function(req, res, next) {
           }, 20000);
         }
 
-        const successObj = {
-          'msg': 'success',
-          'result': _port
-        };
-
-        res.end(JSON.stringify(successObj));
-
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
-            throw err;
             shepherd.writeLog(`iguana fork error: ${err}`);
             console.log(`iguana fork error: ${err}`);
+            throw err;
           }
       });
     });
   });
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
+  // TODO: if only native return obj
+  //       else query main iguana instance and return combined response
+  // http://localhost:7778/api/InstantDEX/allcoins?userpass=tmpIgRPCUser@1234
+  let successObj;
+  let nativeCoindList = [];
+
+  for (let key in coindInstanceRegistry) {
+    nativeCoindList.push(key === 'komodod' ? 'KMD' : key);
+  }
+
+  if (Object.keys(iguanaInstanceRegistry).length) {
+    // call to iguana
+    request({
+      url: `http://localhost:${shepherd.appConfig.iguanaCorePort}/api/InstantDEX/allcoins?userpass=${req.query.userpass}`,
+      method: 'GET'
+    }, function (error, response, body) {
+      if (response &&
+          response.statusCode &&
+          response.statusCode === 200) {
+        const _body = JSON.parse(body);
+        _body.native = nativeCoindList;
+        console.log(_body);
+      } else {
+        console.log('main iguana instance is not ready yet');
+      }
+
+      res.send(body);
+    });
+  } else {
+    successObj = {
+      'native': nativeCoindList,
+      'basilisk': [],
+      'full': []
+    };
+
+    res.end(JSON.stringify(successObj));
+  }
+});
+
+/*
+ *  type: GET
+ *
+ */
+shepherd.get('/SuperNET/activehandle', function(req, res, next) {
+  // TODO: if only native return obj
+  //       else query main iguana instance and return combined response
+  // http://localhost:7778/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234
+  let successObj;
+
+  if (Object.keys(iguanaInstanceRegistry).length) {
+    // call to iguana
+    request({
+      url: `http://localhost:${shepherd.appConfig.iguanaCorePort}/api/SuperNET/activehandle?userpass=${req.query.userpass}`,
+      method: 'GET'
+    }, function (error, response, body) {
+      if (response &&
+          response.statusCode &&
+          response.statusCode === 200) {
+        console.log(body);
+      } else {
+        console.log('main iguana instance is not ready yet');
+      }
+
+      res.send(body);
+    });
+  } else {
+    successObj = {
+      'pubkey': 'nativeonly',
+      'result': 'success',
+      'handle': '',
+      'status': Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
+      'duration': 2507830
+    };
+
+    res.end(JSON.stringify(successObj));
+  }
 });
 
 /*
@@ -863,9 +1376,10 @@ shepherd.get('/mock', function(req, res, next) {
  *  params: herd, lastLines
  */
 shepherd.post('/debuglog', function(req, res) {
-  let _herd = req.body.herdname,
-      _lastNLines = req.body.lastLines,
-      _location;
+  let _herd = req.body.herdname;
+  let _ac = req.body.ac;
+  let _lastNLines = req.body.lastLines;
+  let _location;
 
   if (_herd === 'iguana') {
     _location = iguanaDir;
@@ -873,22 +1387,26 @@ shepherd.post('/debuglog', function(req, res) {
     _location = komodoDir;
   }
 
+  if (_ac) {
+    _location = `${komodoDir}/${_ac}`;
+  }
+
   shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
-    .then(function(result) {
-      const _obj = {
-        'msg': 'success',
-        'result': result
-      };
+  .then(function(result) {
+    const _obj = {
+      'msg': 'success',
+      'result': result
+    };
 
-      res.end(JSON.stringify(_obj));
-    }, function(result) {
-      const _obj = {
-        'msg': 'error',
-        'result': result
-      };
+    res.end(JSON.stringify(_obj));
+  }, function(result) {
+    const _obj = {
+      'msg': 'error',
+      'result': result
+    };
 
-      res.end(JSON.stringify(_obj));
-    });
+    res.end(JSON.stringify(_obj));
+  });
 });
 
 /*
@@ -1179,7 +1697,7 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
 
               const lines = data.trim().split('\n');
               const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
-              
+
               resolve(lastLine);
             });
           }
@@ -1262,17 +1780,19 @@ function herder(flock, data) {
 
         pm2.disconnect(); // Disconnect from PM2
           if (err) {
-            throw err;
             shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
             console.log(`iguana fork error: ${err}`);
+            throw err;
           }
       });
     });
   }
 
+  // TODO: notify gui that reindex/rescan param is used to reflect on the screen
+  //       asset chain debug.log unlink
   if (flock === 'komodod') {
     let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir) + '/debug.log';
-    
+
     console.log('komodod flock selected...');
     console.log(`selected data: ${data}`);
     shepherd.writeLog('komodod flock selected...');
@@ -1285,9 +1805,13 @@ function herder(flock, data) {
           console.log(`error accessing ${kmdDebugLogLocation}`);
           shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
         } else {
-          console.log(`truncate ${kmdDebugLogLocation}`);
-          shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
-          fs.unlink(kmdDebugLogLocation);
+          try {
+            fs.unlink(kmdDebugLogLocation);
+            console.log(`truncate ${kmdDebugLogLocation}`);
+            shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
+          } catch (e) {
+            console.log('cant unlink debug.log');
+          }
         }
       });
     } catch(e) {
@@ -1304,59 +1828,50 @@ function herder(flock, data) {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
-          if (data.ac_name === 'komodod') {
-            const _customParamDict = {
-              'silent': '&',
-              'reindex': '-reindex',
-              'change': '-pubkey='
-            };
-            let _customParam = '';
+          const _customParamDict = {
+            'silent': '&',
+            'reindex': '-reindex',
+            'change': '-pubkey=',
+            'datadir': '-datadir=',
+            'rescan': '-rescan'
+          };
+          let _customParam = '';
 
-            if (data.ac_custom_param === 'silent' ||
-                data.ac_custom_param === 'reindex') {
-              _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
-            } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
-              _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
-            }
-
-            console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
-            shepherd.writeLog(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
-
-            exec(`${komododBin} ${data.ac_options.join(' ')}${_customParam}`, {
-              maxBuffer: 1024 * 10000 // 10 mb
-            }, function(error, stdout, stderr) {
-              // console.log('stdout: ' + stdout);
-              // console.log('stderr: ' + stderr);
-              shepherd.writeLog(`stdout: ${stdout}`);
-              shepherd.writeLog(`stderr: ${stderr}`);
-
-              if (error !== null) {
-                console.log(`exec error: ${error}`)
-                shepherd.writeLog(`exec error: ${error}`);
-              }
-            });
-          } else {
-            pm2.connect(true, function(err) { // start up pm2 god
-              if (err) {
-                console.error(err);
-                process.exit(2);
-              }
-
-              pm2.start({
-                script: komododBin, // path to binary
-                name: data.ac_name, // REVS, USD, EUR etc.
-                exec_mode : 'fork',
-                cwd: komodoDir,
-                args: data.ac_options
-              }, function(err, apps) {
-                shepherd.writeLog(`komodod fork started ${data.ac_name} ${JSON.stringify(data.ac_options)}`);
-
-                pm2.disconnect(); // Disconnect from PM2
-                if (err)
-                  throw err;
-              });
-            });
+          if (data.ac_custom_param === 'silent' ||
+              data.ac_custom_param === 'reindex' ||
+              data.ac_custom_param === 'rescan') {
+            _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
+          } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
+            _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
           }
+
+          console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
+          shepherd.writeLog(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
+
+          const isChain = data.ac_name.match(/^[A-Z]*$/);
+          const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
+          console.log('daemon param ' + data.ac_custom_param);
+
+          coindInstanceRegistry[data.ac_name] = true;
+          exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
+            maxBuffer: 1024 * 10000 // 10 mb
+          }, function(error, stdout, stderr) {
+            shepherd.writeLog(`stdout: ${stdout}`);
+            shepherd.writeLog(`stderr: ${stderr}`);
+
+            if (error !== null) {
+              console.log(`exec error: ${error}`);
+              shepherd.writeLog(`exec error: ${error}`);
+
+              if (error.toString().indexOf('using -reindex') > -1) {
+                cache.io.emit('service', {
+                  'komodod': {
+                    'error': 'run -reindex'
+                  }
+                });
+              }
+            }
+          });
         } else {
           console.log(`port ${_port} (${data.ac_name}) is already in use`);
           shepherd.writeLog(`port ${_port} (${data.ac_name}) is already in use`);
@@ -1385,36 +1900,12 @@ function herder(flock, data) {
       pm2.start({
         script: zcashdBin, // path to binary
         name: data.ac_name, // REVS, USD, EUR etc.
-        exec_mode : 'fork',
+        exec_mode: 'fork',
         cwd: zcashDir,
         args: data.ac_options
       }, function(err, apps) {
         shepherd.writeLog(`zcashd fork started ${data.ac_name} ${JSON.stringify(data.ac_options)}`);
 
-        pm2.disconnect(); // Disconnect from PM2
-        if (err)
-          throw err;
-      });
-    });
-  }
-
-  // deprecated, to be removed
-  if (flock === 'corsproxy') {
-    console.log('corsproxy flock selected...');
-    console.log(`selected data: ${data}`);
-
-    pm2.connect(true,function(err) { //start up pm2 god
-      if (err) {
-        console.error(err);
-        process.exit(2);
-      }
-
-      pm2.start({
-        script: CorsProxyBin, // path to binary
-        name: 'CORSPROXY',
-        exec_mode : 'fork',
-        cwd: iguanaDir
-      }, function(err, apps) {
         pm2.disconnect(); // Disconnect from PM2
         if (err)
           throw err;
@@ -1493,14 +1984,14 @@ function setConf(flock) {
   switch (flock) {
     case 'komodod':
       DaemonConfPath = `${komodoDir}/komodo.conf`;
-      
+
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
       break;
     case 'zcashd':
       DaemonConfPath = `${ZcashDir}/zcash.conf`;
-      
+
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
@@ -1550,11 +2041,11 @@ function setConf(flock) {
 
   const RemoveLines = function() {
     return new Promise(function(resolve, reject) {
-      const result = 'RemoveLines is done'
+      const result = 'RemoveLines is done';
 
       fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
         if (err) {
-          shepherd.writeLog(`setconf error '${err}`);
+          shepherd.writeLog(`setconf error ${err}`);
           return console.log(err);
         }
 
@@ -1777,7 +2268,7 @@ function formatBytes(bytes, decimals) {
     return '0 Bytes';
 
   const k = 1000,
-        dm = decimals + 1 || 3,
+        dm = (decimals + 1) || 3,
         sizes = [
           'Bytes',
           'KB',
