@@ -117,6 +117,28 @@
             </ruleList>
         </deleteFile>
         <deleteFile>
+            <explanation>Deleting iguana config json</explanation>
+            <path>${user_home_directory}/Library/Application Support/Iguana/config.json</path>
+            <progressText>Deleting iguana config</progressText>
+            <ruleList>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${previous_installation_exists}</value1>
+                    <value2>1</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${installation_type}</value1>
+                    <value2>uninstall</value2>
+                </compareValues>
+                <compareValues>
+                    <logic>equals</logic>
+                    <value1>${delete_config_data}</value1>
+                    <value2>1</value2>
+                </compareValues>
+            </ruleList>
+        </deleteFile>
+        <deleteFile>
             <explanation>Deleting ZcashParams</explanation>
             <path>${user_home_directory}/Library/Application Support/ZcashParams/</path>
             <progressText>Deleting ZcashParams</progressText>
@@ -320,4 +342,3 @@
         </choiceParameterGroup>
     </parameterList>
 </project>
-
