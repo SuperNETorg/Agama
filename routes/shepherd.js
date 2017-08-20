@@ -79,6 +79,7 @@ if (os.platform() === 'win32') {
       komodoDir = `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
       zcashDir = `${process.env.APPDATA}/ZcashParams`;
+      zcashDir = path.normalize(zcashDir);
 }
 
 shepherd.appConfig = {
@@ -108,6 +109,8 @@ shepherd.appConfig = {
 };
 
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
+
+shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
 shepherd.zcashParamsExist = function() {
   if (fs.existsSync(zcashDir) &&
@@ -663,7 +666,7 @@ shepherd.post('/coinslist', function(req, res, next) {
 });
 
 // TODO: check if komodod is running
-shepherd.quitKomodod = function() {
+shepherd.quitKomodod = function(timeout = 100) {
   // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
   let coindExitInterval = {};
@@ -681,6 +684,7 @@ shepherd.quitKomodod = function() {
             stderr.indexOf('EOF reached') > -1 ||
             stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
             stderr.indexOf('connect to server: unknown (code -1)') > -1) {
+          delete coindInstanceRegistry[key];
           clearInterval(coindExitInterval[key]);
         }
 
@@ -688,7 +692,7 @@ shepherd.quitKomodod = function() {
           console.log(`exec error: ${error}`);
         }
       });
-    }, 100);
+    }, timeout);
   }
 }
 

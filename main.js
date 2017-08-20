@@ -164,50 +164,13 @@ guiapp.use('/shepherd', shepherd);
 const server = require('http').createServer(guiapp);
 const io = require('socket.io').listen(server);
 let willQuitApp = false;
-
-// check if agama is already running
-portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', function(error, status) {
-	// Status is 'open' if currently in use or 'closed' if available
-	if (status === 'closed') {
-		server.listen(appConfig.agamaPort, function() {
-			console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
-			shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
-		});
-	} else {
-		willQuitApp = true;
-		server.listen(appConfig.agamaPort + 1, function() {
-			console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
-			shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
-		});
-		loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/agama-instance-error.html`);
-		console.log('another agama app is already running');
-	}
-});
-
-io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
-
-io.on('connection', function(client) {
-	console.log('EDEX GUI is connected...');
-	shepherd.writeLog('EDEX GUI is connected...');
-
-	client.on('event', function(data) { // listen for client requests
-		console.log(data);
-	});
-	client.on('disconnect', function(data) {
-		console.log('EDEX GUI is disconnected');
-	});
-	client.on('join', function(data) {
-		console.log(data);
-		client.emit('messages', 'Sockets server is listening');
-	});
-});
-
-shepherd.setIO(io); // pass sockets object to shepherd router
-shepherd.setVar('appBasicInfo', appBasicInfo);
-shepherd.setVar('appSessionHash', appSessionHash);
+let mainWindow;
+let loadingWindow;
+let appCloseWindow;
+let closeAppAfterLoading = false;
 
 module.exports = guiapp;
-var iguanaIcon;
+let iguanaIcon;
 
 if (os.platform() === 'linux') {
 	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
@@ -216,21 +179,60 @@ if (os.platform() === 'win32') {
 	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
 }
 
-let mainWindow;
-let loadingWindow;
-let closeAppAfterLoading = false;
-
 function createLoadingWindow() {
 	mainWindow = null;
 
 	// initialise window
-	loadingWindow = new BrowserWindow({
-		width: 500,
-		height: 300,
-		frame: false,
-		icon: iguanaIcon,
-		show: false,
-	});
+	try {
+		loadingWindow = new BrowserWindow({
+			width: 500,
+			height: 300,
+			frame: false,
+			icon: iguanaIcon,
+			show: false,
+		});
+	} catch(e) {}
+
+	// check if agama is already running
+	portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', function(error, status) {
+		// Status is 'open' if currently in use or 'closed' if available
+		if (status === 'closed') {
+			server.listen(appConfig.agamaPort, function() {
+				console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+				// start sockets.io
+				io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
+
+				io.on('connection', function(client) {
+					console.log('EDEX GUI is connected...');
+					shepherd.writeLog('EDEX GUI is connected...');
+
+					client.on('event', function(data) { // listen for client requests
+						console.log(data);
+					});
+					client.on('disconnect', function(data) {
+						console.log('EDEX GUI is disconnected');
+					});
+					client.on('join', function(data) {
+						console.log(data);
+						client.emit('messages', 'Sockets server is listening');
+					});
+				});
+			});
+		} else {
+			willQuitApp = true;
+			server.listen(appConfig.agamaPort + 1, function() {
+				console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+			});
+			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/agama-instance-error.html`);
+			console.log('another agama app is already running');
+		}
+	})
+
+	shepherd.setIO(io); // pass sockets object to shepherd router
+	shepherd.setVar('appBasicInfo', appBasicInfo);
+	shepherd.setVar('appSessionHash', appSessionHash);
 
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
 	loadingWindow.appConfig = appConfig;
@@ -276,7 +278,26 @@ function forseCloseApp() {
 
 app.on('ready', createLoadingWindow);
 
-function createWindow (status) {
+function createAppCloseWindow() {
+	// initialise window
+	appCloseWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
+		width: 500,
+		height: 300,
+		frame: false,
+		icon: iguanaIcon,
+		show: false,
+	});
+
+	appCloseWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/app-closing.html`);
+
+  appCloseWindow.webContents.on('did-finish-load', function() {
+    setTimeout(function() {
+      appCloseWindow.show();
+    }, 40);
+  });
+}
+
+function createWindow(status) {
 	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
@@ -415,6 +436,13 @@ function createWindow (status) {
 				});
 			}
 
+			const HideAppClosingWindow = function() {
+				return new Promise(function(resolve, reject) {
+					appCloseWindow = null;
+					resolve(true);
+				});
+			}
+
 			const QuitApp = function() {
 				return new Promise(function(resolve, reject) {
 					KillPm2(); // required for normal app quit in iguana-less mode
@@ -425,16 +453,33 @@ function createWindow (status) {
 				});
 			}
 
-			ConnectToPm2()
-			.then(function(result) {
-				return KillPm2();
-			})
-			.then(HideMainWindow)
-			.then(QuitApp);
+			const closeApp = function() {
+				ConnectToPm2()
+				.then(function(result) {
+					return KillPm2();
+				})
+				.then(HideMainWindow)
+				.then(HideAppClosingWindow)
+				.then(QuitApp);
+			}
+
+			let _appClosingInterval;
+
+			if (!Object.keys(shepherd.coindInstanceRegistry).length) {
+				closeApp();
+			} else {
+				shepherd.quitKomodod(1000);
+				_appClosingInterval = setInterval(function() {
+					if (!Object.keys(shepherd.coindInstanceRegistry).length) {
+						closeApp();
+					}
+				}, 1000);
+				createAppCloseWindow();
+			}
 		}
 
 		// if window closed we kill iguana proc
-		mainWindow.on('closed', function () {
+		mainWindow.on('closed', function() {
 			pm2Exit();
 		});
 	}
