@@ -1,6 +1,6 @@
-const fs = require('fs-extra'),
-      request = require('request'),
-      async = require('async');
+const fs = require('fs-extra');
+const request = require('request');
+const async = require('async');
 
 var cache = {};
 var inMemCache;
@@ -33,18 +33,18 @@ cache.get = function(req, res, next) {
         fs.readFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8', function (err, data) {
           if (err) {
             const errorObj = {
-              'msg': 'error',
-              'result': err
+              msg: 'error',
+              result: err,
             };
 
             res.end(JSON.stringify(errorObj));
-          } else {
+          } else { // deprecated
             try {
-              const parsedJSON = JSON.parse(data),
-                    successObj = {
-                      'msg': 'success',
-                      'result': parsedJSON
-                    };
+              const parsedJSON = JSON.parse(data);
+              const successObj = {
+                msg: 'success',
+                result: parsedJSON,
+              };
 
               inMemCache = parsedJSON;
               res.end(JSON.stringify(successObj));
@@ -59,8 +59,8 @@ cache.get = function(req, res, next) {
 
                 fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, data.substring(0, errorPos[errorPos.length - 1]), function(err) {
                   const successObj = {
-                    'msg': 'success',
-                    'result': data.substring(0, errorPos[errorPos.length - 1])
+                    msg: 'success',
+                    result: data.substring(0, errorPos[errorPos.length - 1]),
                   };
 
                   inMemCache = JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
@@ -72,16 +72,16 @@ cache.get = function(req, res, next) {
         });
       } else {
         const errorObj = {
-          'msg': 'error',
-          'result': `no file with handle ${pubkey}`
+          msg: 'error',
+          result: `no file with handle ${pubkey}`,
         };
 
         res.end(JSON.stringify(errorObj));
       }
     } else {
       const successObj = {
-        'msg': 'success',
-        'result': inMemCache
+        msg: 'success',
+        result: inMemCache,
       };
 
       res.end(JSON.stringify(successObj));
@@ -89,7 +89,7 @@ cache.get = function(req, res, next) {
   } else {
     const errorObj = {
       'msg': 'error',
-      'result': 'no pubkey provided'
+      'result': 'no pubkey provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -104,15 +104,15 @@ cache.groomGet = function(req, res, next) {
       fs.readFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, 'utf8', function (err, data) {
         if (err) {
           const errorObj = {
-            'msg': 'error',
-            'result': err
+            msg: 'error',
+            result: err,
           };
 
           res.end(JSON.stringify(errorObj));
         } else {
           const successObj = {
-            'msg': 'success',
-            'result': data ? JSON.parse(data) : ''
+            msg: 'success',
+            result: data ? JSON.parse(data) : '',
           };
 
           res.end(JSON.stringify(successObj));
@@ -120,16 +120,16 @@ cache.groomGet = function(req, res, next) {
       });
     } else {
       const errorObj = {
-        'msg': 'error',
-        'result': `no file with name ${_filename}`
+        msg: 'error',
+        result: `no file with name ${_filename}`,
       };
 
       res.end(JSON.stringify(errorObj));
     }
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no file name provided'
+      msg: 'error',
+      result: 'no file name provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -146,15 +146,15 @@ cache.groomDelete = function(req, res, next) {
       fs.unlink(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, function(err) {
         if (err) {
           const errorObj = {
-            'msg': 'error',
-            'result': err
+            msg: 'error',
+            result: err,
           };
 
           res.end(JSON.stringify(errorObj));
         } else {
           const successObj = {
-            'msg': 'success',
-            'result': 'deleted'
+            msg: 'success',
+            result: 'deleted',
           };
 
           res.end(JSON.stringify(successObj));
@@ -162,16 +162,16 @@ cache.groomDelete = function(req, res, next) {
       });
     } else {
       const errorObj = {
-        'msg': 'error',
-        'result': `no file with name ${_filename}`
+        msg: 'error',
+        result: `no file with name ${_filename}`,
       };
 
       res.end(JSON.stringify(errorObj));
     }
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no file name provided'
+      msg: 'error',
+      result: 'no file name provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -179,8 +179,8 @@ cache.groomDelete = function(req, res, next) {
 }
 
 cache.groomPost = function(req, res) {
-  const _filename = req.body.filename,
-        _payload = req.body.payload;
+  const _filename = req.body.filename;
+  const _payload = req.body.payload;
 
   if (!cacheCallInProgress) {
     cacheCallInProgress = true;
@@ -188,8 +188,8 @@ cache.groomPost = function(req, res) {
     if (_filename) {
       if (!_payload) {
         const errorObj = {
-          'msg': 'error',
-          'result': 'no payload provided'
+          msg: 'error',
+          result: 'no payload provided',
         };
 
         res.end(JSON.stringify(errorObj));
@@ -201,16 +201,16 @@ cache.groomPost = function(req, res) {
         fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, _payload, function (err) {
           if (err) {
             const errorObj = {
-              'msg': 'error',
-              'result': err
+              msg: 'error',
+              result: err,
             };
 
             cacheCallInProgress = false;
             res.end(JSON.stringify(errorObj));
           } else {
             const successObj = {
-              'msg': 'success',
-              'result': 'done'
+              msg: 'success',
+              result: 'done',
             };
 
             cacheCallInProgress = false;
@@ -220,33 +220,33 @@ cache.groomPost = function(req, res) {
       }
     } else {
       const errorObj = {
-        'msg': 'error',
-        'result': 'no file name provided'
+        msg: 'error',
+        result: 'no file name provided',
       };
 
       res.end(JSON.stringify(errorObj));
     }
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': 'another job is in progress'
+      msg: 'error',
+      result: 'another job is in progress',
     };
 
     res.end(JSON.stringify(errorObj));
   }
 }
 
-var cacheCallInProgress = false,
-    cacheGlobLifetime = 600; // sec
+var cacheCallInProgress = false;
+const cacheGlobLifetime = 600; // sec
 
 // TODO: reset calls' states on new /cache call start
 var mock = require('./mock');
 
-var callStack = {},
-checkCallStack = function() {
-  var total = 0;
+var callStack = {};
+const checkCallStack = function() {
+  let total = 0;
 
-  for (var coin in callStack) {
+  for (let coin in callStack) {
     total =+ callStack[coin];
   }
 
@@ -254,13 +254,13 @@ checkCallStack = function() {
     cache.dumpCacheBeforeExit();
     cacheCallInProgress = false;
     cache.io.emit('messages', {
-      'message': {
-        'shepherd': {
-          'method': 'cache-one',
-          'status': 'done',
-          'resp': 'success'
-        }
-      }
+      message: {
+        shepherd: {
+          method: 'cache-one',
+          status: 'done',
+          resp: 'success',
+        },
+      },
     });
   }
 };
@@ -284,45 +284,45 @@ cache.one = function(req, res, next) {
 
     if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${req.query.pubkey}.json`)) {
       let _data = fs.readFileSync(`${cache.iguanaDir}/shepherd/cache-${req.query.pubkey}.json`, 'utf8');
+
       if (_data) {
-          inMemCache = JSON.parse(_data);
-          _data = _data.replace('waiting', 'failed');
-          cache.dumpCacheBeforeExit();
+        inMemCache = JSON.parse(_data);
+        _data = _data.replace('waiting', 'failed');
+        cache.dumpCacheBeforeExit();
       }
     }
 
     // TODO: add check to allow only one cache call/sequence in progress
     cacheCallInProgress = true;
 
-    var sessionKey = req.query.userpass,
-        coin = req.query.coin,
-        address = req.query.address,
-        addresses = req.query.addresses && req.query.addresses.indexOf(':') > -1 ? req.query.addresses.split(':') : null,
-        pubkey = req.query.pubkey,
-        mock = req.query.mock,
-        skipTimeout = req.query.skip,
-        callsArray = req.query.calls.split(':'),
-        iguanaCorePort = req.query.port ? req.query.port : cache.appConfig.iguanaCorePort,
-        errorObj = {
-          'msg': 'error',
-          'result': 'error'
-        },
-        outObj = {},
-        pubkey,
-        writeCache = function(timeStamp) {
-          if (timeStamp) {
-            outObj.timestamp = timeStamp;
-          }
+    let sessionKey = req.query.userpass;
+    let coin = req.query.coin;
+    let address = req.query.address;
+    let addresses = req.query.addresses && req.query.addresses.indexOf(':') > -1 ? req.query.addresses.split(':') : null;
+    let pubkey = req.query.pubkey;
+    let mock = req.query.mock;
+    let skipTimeout = req.query.skip;
+    let callsArray = req.query.calls.split(':');
+    let iguanaCorePort = req.query.port ? req.query.port : cache.appConfig.iguanaCorePort;
+    let errorObj = {
+      msg: 'error',
+      result: 'error'
+    };
+    let outObj = {};
+    const writeCache = function(timeStamp) {
+      if (timeStamp) {
+        outObj.timestamp = timeStamp;
+      }
 
-          inMemCache = outObj;
-        },
-        checkTimestamp = function(dateToCheck) {
-          var currentEpochTime = new Date(Date.now()) / 1000,
-              secondsElapsed = Number(currentEpochTime) - Number(dateToCheck / 1000);
+      inMemCache = outObj;
+    };
+    const checkTimestamp = function(dateToCheck) {
+      const currentEpochTime = new Date(Date.now()) / 1000;
+      const secondsElapsed = Number(currentEpochTime) - Number(dateToCheck / 1000);
 
-          return Math.floor(secondsElapsed);
-        },
-        internalError = false;
+      return Math.floor(secondsElapsed);
+    };
+    let internalError = false;
 
     inMemPubkey = pubkey;
     callStack[coin] = 1;
@@ -331,8 +331,8 @@ cache.one = function(req, res, next) {
 
     if (!sessionKey) {
       const errorObj = {
-        'msg': 'error',
-        'result': 'no session key provided'
+        msg: 'error',
+        result: 'no session key provided',
       };
 
       res.end(JSON.stringify(errorObj));
@@ -341,8 +341,8 @@ cache.one = function(req, res, next) {
 
     if (!pubkey) {
       const errorObj = {
-        'msg': 'error',
-        'result': 'no pubkey provided'
+        msg: 'error',
+        result: 'no pubkey provided',
       };
 
       res.end(JSON.stringify(errorObj));
@@ -352,7 +352,8 @@ cache.one = function(req, res, next) {
     console.log('cache-one call started');
 
     function fixJSON(data) {
-      if (data && data.length) {
+      if (data &&
+          data.length) {
         try {
           const parsedJSON = JSON.parse(data);
 
@@ -381,6 +382,7 @@ cache.one = function(req, res, next) {
         outObj = inMemCache;
       } else {
         const _file = fs.readFileSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8');
+
         console.log('cache one from disk');
         outObj = fixJSON(_file);
       }
@@ -402,28 +404,28 @@ cache.one = function(req, res, next) {
     }
 
     res.end(JSON.stringify({
-      'msg': 'success',
-      'result': 'call is initiated'
+      msg: 'success',
+      result: 'call is initiated',
     }));
 
     if (!internalError) {
       cache.io.emit('messages', {
-        'message': {
-          'shepherd': {
-            'method': 'cache-one',
-            'status': 'in progress'
-          }
-        }
+        message: {
+          shepherd: {
+            method: 'cache-one',
+            status: 'in progress',
+          },
+        },
       });
 
       function execDEXRequests(coin, address) {
         let dexUrls = {
-          'listunspent': `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/listunspent?userpass=${sessionKey}&symbol=${coin}&address=${address}`,
-          'listtransactions': `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/listtransactions?userpass=${sessionKey}&count=100&skip=0&symbol=${coin}&address=${address}`,
-          'getbalance': `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/getbalance?userpass=${sessionKey}&symbol=${coin}&address=${address}`,
-          'refresh': `http://${cache.appConfig.host}:${iguanaCorePort}/api/basilisk/refresh?userpass=${sessionKey}&symbol=${coin}&address=${address}`
-        },
-        _dexUrls = {};
+          listunspent: `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/listunspent?userpass=${sessionKey}&symbol=${coin}&address=${address}`,
+          listtransactions: `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/listtransactions?userpass=${sessionKey}&count=100&skip=0&symbol=${coin}&address=${address}`,
+          getbalance: `http://${cache.appConfig.host}:${iguanaCorePort}/api/dex/getbalance?userpass=${sessionKey}&symbol=${coin}&address=${address}`,
+          refresh: `http://${cache.appConfig.host}:${iguanaCorePort}/api/basilisk/refresh?userpass=${sessionKey}&symbol=${coin}&address=${address}`
+        };
+        let _dexUrls = {};
 
         for (let a = 0; a < callsArray.length; a++) {
           _dexUrls[callsArray[a]] = dexUrls[callsArray[a]];
@@ -457,39 +459,39 @@ cache.one = function(req, res, next) {
           var tooEarly = false;
           if (outObj.basilisk[coin][address][key] &&
               outObj.basilisk[coin][address][key].timestamp &&
-              checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime) {
+              (!skipTimeout && checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime)) {
             tooEarly = true;
             outObj.basilisk[coin][address][key].status = 'done';
             cache.io.emit('messages', {
-              'message': {
-                'shepherd': {
-                  'method': 'cache-one',
-                  'status': 'in progress',
-                  'iguanaAPI': {
-                    'method': key,
-                    'coin': coin,
-                    'address': address,
-                    'status': 'done',
-                    'resp': 'too early'
-                  }
-                }
-              }
+              message: {
+                shepherd: {
+                  method: 'cache-one',
+                  status: 'in progress',
+                  iguanaAPI: {
+                    method: key,
+                    coin: coin,
+                    address: address,
+                    status: 'done',
+                    resp: 'too early',
+                  },
+                },
+              },
             });
           }
           if (!tooEarly) {
             cache.io.emit('messages', {
-              'message': {
-                'shepherd': {
-                  'method': 'cache-one',
-                  'status': 'in progress',
-                  'iguanaAPI': {
-                    'method': key,
-                    'coin': coin,
-                    'address': address,
-                    'status': 'in progress'
-                  }
-                }
-              }
+              message: {
+                shepherd: {
+                  method: 'cache-one',
+                  status: 'in progress',
+                  iguanaAPI: {
+                    method: key,
+                    coin: coin,
+                    address: address,
+                    status: 'in progress',
+                  },
+                },
+              },
             });
             outObj.basilisk[coin][address][key].status = 'in progress';
             request({
@@ -500,25 +502,25 @@ cache.one = function(req, res, next) {
                   response.statusCode &&
                   response.statusCode === 200) {
                 cache.io.emit('messages', {
-                  'message': {
-                    'shepherd': {
-                      'method': 'cache-one',
-                      'status': 'in progress',
-                      'iguanaAPI': {
-                        'method': key,
-                        'coin': coin,
-                        'address': address,
-                        'status': 'done',
-                        'resp': body
-                      }
-                    }
-                  }
+                  message: {
+                    shepherd: {
+                      method: 'cache-one',
+                      status: 'in progress',
+                      iguanaAPI: {
+                        method: key,
+                        coin: coin,
+                        address: address,
+                        status: 'done',
+                        resp: body,
+                      },
+                    },
+                  },
                 });
 
                 // basilisk balance fallback
                 const _parsedJSON = JSON.parse(body);
                 if (key === 'getbalance' &&
-                  coin === 'KMD'/* &&
+                    coin === 'KMD'/* &&
                   ((_parsedJSON && _parsedJSON.balance === 0) || body === [])*/) {
                   console.log('fallback to kmd explorer ======>');
                   request({
@@ -559,15 +561,15 @@ cache.one = function(req, res, next) {
                 callStack[coin]--;
                 console.log(`${coin} _stack len ${callStack[coin]}`);
                 cache.io.emit('messages', {
-                  'message': {
-                    'shepherd': {
-                      'method': 'cache-one',
-                      'status': 'in progress',
-                      'iguanaAPI': {
-                        'currentStackLength': callStack[coin]
-                      }
-                    }
-                  }
+                  message: {
+                    shepherd: {
+                      method: 'cache-one',
+                      status: 'in progress',
+                      iguanaAPI: {
+                        currentStackLength: callStack[coin],
+                      },
+                    },
+                  },
                 });
                 checkCallStack();
 
@@ -583,15 +585,15 @@ cache.one = function(req, res, next) {
                 callStack[coin]--;
                 console.log(`${coin} _stack len ${callStack[coin]}`);
                 cache.io.emit('messages', {
-                  'message': {
-                    'shepherd': {
-                      'method': 'cache-one',
-                      'status': 'in progress',
-                      'iguanaAPI': {
-                        'currentStackLength': callStack[coin]
-                      }
-                    }
-                  }
+                  message: {
+                    shepherd: {
+                      method: 'cache-one',
+                      status: 'in progress',
+                      iguanaAPI: {
+                        currentStackLength: callStack[coin],
+                      },
+                    },
+                  },
                 });
                 checkCallStack();
                 writeCache();
@@ -602,15 +604,15 @@ cache.one = function(req, res, next) {
             callStack[coin]--;
             console.log(`${coin} _stack len ${callStack[coin]}`);
             cache.io.emit('messages', {
-              'message': {
-                'shepherd': {
-                  'method': 'cache-one',
-                  'status': 'in progress',
-                  'iguanaAPI': {
-                    'currentStackLength': callStack[coin]
-                  }
-                }
-              }
+              message: {
+                shepherd: {
+                  method: 'cache-one',
+                  status: 'in progress',
+                  iguanaAPI: {
+                    currentStackLength: callStack[coin],
+                  },
+                },
+              },
             });
             checkCallStack();
           }
@@ -619,18 +621,18 @@ cache.one = function(req, res, next) {
 
       function parseAddresses(coin, addrArray) {
         cache.io.emit('messages', {
-          'message': {
-            'shepherd': {
-              'method': 'cache-one',
-              'status': 'in progress',
-              'iguanaAPI': {
-                'method': 'getaddressesbyaccount',
-                'coin': coin,
-                'status': 'done',
-                'resp': addrArray
-              }
-            }
-          }
+          message: {
+            shepherd: {
+              method: 'cache-one',
+              status: 'in progress',
+              iguanaAPI: {
+                method: 'getaddressesbyaccount',
+                coin: coin,
+                status: 'done',
+                resp: addrArray,
+              },
+            },
+          },
         });
         outObj.basilisk[coin].addresses = addrArray;
         console.log(addrArray);
@@ -649,15 +651,15 @@ cache.one = function(req, res, next) {
         console.log(`${coin} stack len ${callStack[coin]}`);
 
         cache.io.emit('messages', {
-          'message': {
-            'shepherd': {
-              'method': 'cache-one',
-              'status': 'in progress',
-              'iguanaAPI': {
-                'totalStackLength': callStack[coin]
-              }
-            }
-          }
+          message: {
+            shepherd: {
+              method: 'cache-one',
+              status: 'in progress',
+              iguanaAPI: {
+                totalStackLength: callStack[coin],
+              },
+            },
+          },
         });
         async.each(outObj.basilisk[coin].addresses, function(address) {
           execDEXRequests(coin, address);
@@ -687,17 +689,17 @@ cache.one = function(req, res, next) {
       // update all available coin addresses
       if (!address) {
         cache.io.emit('messages', {
-          'message': {
-            'shepherd': {
-              'method': 'cache-one',
-              'status': 'in progress',
-              'iguanaAPI': {
-                'method': 'getaddressesbyaccount',
-                'coin': coin,
-                'status': 'in progress'
-              }
-            }
-          }
+          message: {
+            shepherd: {
+              method: 'cache-one',
+              status: 'in progress',
+              iguanaAPI: {
+                method: 'getaddressesbyaccount',
+                coin: coin,
+                status: 'in progress',
+              },
+            },
+          },
         });
 
         if (coin === 'all') {
@@ -711,17 +713,17 @@ cache.one = function(req, res, next) {
                 response.statusCode === 200) {
               console.log(JSON.parse(body).basilisk);
               cache.io.emit('messages', {
-                'message': {
-                  'shepherd': {
-                    'method': 'cache-one',
-                    'status': 'in progress',
-                    'iguanaAPI': {
-                      'method': 'allcoins',
-                      'status': 'done',
-                      'resp': body
-                    }
-                  }
-                }
+                message: {
+                  shepherd: {
+                    method: 'cache-one',
+                    status: 'in progress',
+                    iguanaAPI: {
+                      method: 'allcoins',
+                      status: 'done',
+                      resp: body,
+                    },
+                  },
+                },
               });
               body = JSON.parse(body);
               // basilisk coins
@@ -737,17 +739,17 @@ cache.one = function(req, res, next) {
                   writeCache();
 
                   cache.io.emit('messages', {
-                    'message': {
-                      'shepherd': {
-                        'method': 'cache-one',
-                        'status': 'in progress',
-                        'iguanaAPI': {
-                          'method': 'getaddressesbyaccount',
-                          'coin': coin,
-                          'status': 'in progress'
-                        }
-                      }
-                    }
+                    message: {
+                      shepherd: {
+                        method: 'cache-one',
+                        status: 'in progress',
+                        iguanaAPI: {
+                          method: 'getaddressesbyaccount',
+                          coin: coin,
+                          status: 'in progress',
+                        },
+                      },
+                    },
                   });
 
                   getAddresses(coin);
@@ -776,36 +778,36 @@ cache.one = function(req, res, next) {
         console.log(`${coin} stack len ${callStack[coin]}`);
 
         cache.io.emit('messages', {
-          'message': {
-            'shepherd': {
-              'method': 'cache-one',
-              'status': 'in progress',
-              'iguanaAPI': {
-                'totalStackLength': callStack[coin],
-                'currentStackLength': callStack[coin]
-              }
-            }
-          }
+          message: {
+            shepherd: {
+              method: 'cache-one',
+              status: 'in progress',
+              iguanaAPI: {
+                totalStackLength: callStack[coin],
+                currentStackLength: callStack[coin],
+              },
+            },
+          },
         });
 
         execDEXRequests(coin, address);
       }
     } else {
       cache.io.emit('messages', {
-        'message': {
-          'shepherd': {
-            'method': 'cache-all',
-            'status': 'done',
-            'resp': 'internal error'
-          }
-        }
+        message: {
+          shepherd: {
+            method: 'cache-all',
+            status: 'done',
+            resp: 'internal error',
+          },
+        },
       });
       cacheCallInProgress = false;
     }
   } else {
     res.end(JSON.stringify({
-      'msg': 'error',
-      'result': 'another call is in progress already'
+      msg: 'error',
+      result: 'another call is in progress already',
     }));
   }
 };
