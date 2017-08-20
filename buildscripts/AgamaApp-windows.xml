@@ -236,28 +236,6 @@
                 </compareValues>
             </ruleList>
         </deleteFile>
-        <deleteFile>
-            <explanation>Deleting zcash params</explanation>
-            <path>${windows_folder_appdata}/ZcashParams/</path>
-            <progressText>Deleting zcash-params</progressText>
-            <ruleList>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${previous_installation_exists}</value1>
-                    <value2>1</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${installation_type}</value1>
-                    <value2>uninstall</value2>
-                </compareValues>
-                <compareValues>
-                    <logic>equals</logic>
-                    <value1>${delete_zcash_params}</value1>
-                    <value2>1</value2>
-                </compareValues>
-            </ruleList>
-        </deleteFile>
         <exit>
             <explanation>Uninstalled</explanation>
             <progressText>Uninstalled</progressText>
