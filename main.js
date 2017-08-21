@@ -153,7 +153,7 @@ guiapp.use(bodyParser.urlencoded({
 	extended: true,
 })); // support encoded bodies
 
-guiapp.get('/', function (req, res) {
+guiapp.get('/', function(req, res) {
 	res.send('Agama app server');
 });
 
@@ -251,7 +251,7 @@ function createLoadingWindow() {
 	// loadingWindow.webContents.openDevTools()
 
 	// if window closed we kill iguana proc
-	loadingWindow.on('hide', function () {
+	loadingWindow.on('hide', function() {
 		// our app does not have multiwindow - so we dereference the window object instead of
 		// putting them into an window_arr
 		loadingWindow = null;
@@ -486,7 +486,7 @@ function createWindow(status) {
 	}
 }
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', function() {
 	//if (os.platform() !== 'win32') { ig.kill(); }
 	// in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
 	// so we do not kill the app --> for the case user clicks again on the iguana icon
@@ -498,7 +498,7 @@ app.on('window-all-closed', function () {
 
 // Emitted before the application starts closing its windows.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('before-quit', function (event) {
+app.on('before-quit', function(event) {
 	console.log('before-quit');
 	if (mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
@@ -513,7 +513,7 @@ app.on('before-quit', function (event) {
 
 // Emitted when all windows have been closed and the application will quit.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('will-quit', function (event) {
+app.on('will-quit', function(event) {
 	if (mainWindow === null && loadingWindow != null) {
 		// loading window is still open
 		console.log('will-quit while loading window active');
@@ -523,14 +523,14 @@ app.on('will-quit', function (event) {
 
 // Emitted when the application is quitting.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('quit', function (event) {
+app.on('quit', function(event) {
 	if (mainWindow === null && loadingWindow != null) {
 		console.log('quit while loading window active');
 		event.preventDefault();
 	}
 })
 
-app.on('activate', function () {
+app.on('activate', function() {
 	if (mainWindow === null) {
 		// createWindow('open');
 	}

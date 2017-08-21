@@ -50,7 +50,8 @@ if (os.platform() === 'darwin') {
       komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`,
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
-      zcashDir = `${process.env.HOME}/Library/Application Support/ZcashParams`;
+      zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`,
+      zcashParamsDir = `${process.env.HOME}/Library/Application Support/ZcashParams`;
 }
 
 if (os.platform() === 'linux') {
@@ -60,8 +61,8 @@ if (os.platform() === 'linux') {
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
-      komodoDir = `${process.env.HOME}/.komodo`;
-      zcashDir = `${process.env.HOME}/.zcash-params`;
+      komodoDir = `${process.env.HOME}/.komodo`,
+      zcashParamsDir = `${process.env.HOME}/.zcash-params`;
 }
 
 if (os.platform() === 'win32') {
@@ -79,8 +80,8 @@ if (os.platform() === 'win32') {
       komodocliBin = path.normalize(komodocliBin),
       komodoDir = `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
-      zcashDir = `${process.env.APPDATA}/ZcashParams`;
-      zcashDir = path.normalize(zcashDir);
+      zcashParamsDir = `${process.env.APPDATA}/ZcashParams`;
+      zcashParamsDir = path.normalize(zcashParamsDir);
 }
 
 shepherd.appConfig = {
@@ -114,9 +115,9 @@ shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
 shepherd.zcashParamsExist = function() {
-  if (fs.existsSync(zcashDir) &&
-      fs.existsSync(`${zcashDir}/sprout-proving.key`) &&
-      fs.existsSync(`${zcashDir}/sprout-verifying.key`)) {
+  if (fs.existsSync(zcashParamsDir) &&
+      fs.existsSync(`${zcashParamsDir}/sprout-proving.key`) &&
+      fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`)) {
     console.log('zcashparams exist');
     return true;
   }
@@ -216,16 +217,16 @@ shepherd.get('/encryptkey', function(req, res, next) {
       }
 
       const returnObj = {
-        'msg': 'success',
-        'result': encryptedString
+        msg: 'success',
+        result: encryptedString,
       };
 
       res.end(JSON.stringify(returnObj));
     });
   } else {
     let errorObj = {
-      'msg': 'error',
-      'result': ''
+      msg: 'error',
+      result: '',
     };
     const _paramsList = [
       'key',
@@ -252,8 +253,8 @@ shepherd.get('/decryptkey', function(req, res, next) {
       fs.readFile(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`, 'utf8', function (err, data) {
         if (err) {
           const errorObj = {
-            'msg': 'error',
-            'result': err
+            msg: 'error',
+            result: err,
           };
 
           res.end(JSON.stringify(errorObj));
@@ -266,13 +267,13 @@ shepherd.get('/decryptkey', function(req, res, next) {
 
           if (!_regexTest) {
             returnObj = {
-              'msg': 'error',
-              'result': 'wrong key'
+              msg: 'error',
+              result: 'wrong key',
             };
           } else {
             returnObj = {
-              'msg': 'success',
-              'result': encryptedKey
+              msg: 'success',
+              result: encryptedKey,
             };
           }
 
@@ -281,22 +282,58 @@ shepherd.get('/decryptkey', function(req, res, next) {
       });
     } else {
       const errorObj = {
-        'msg': 'error',
-        'result': `file ${req.query.pubkey}.pin doesnt exist`
+        msg: 'error',
+        result: `file ${req.query.pubkey}.pin doesnt exist`,
       };
 
       res.end(JSON.stringify(errorObj));
     }
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': 'missing key or pubkey param'
+      msg: 'error',
+      result: 'missing key or pubkey param',
     };
 
     res.end(JSON.stringify(errorObj));
   }
 });
 
+shepherd.get('/getpinlist', function(req, res, next) {
+  if (fs.existsSync(`${iguanaDir}/shepherd/pin`)) {
+    fs.readdir(`${iguanaDir}/shepherd/pin`, function(err, items) {
+      let _pins = [];
+
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].substr(items[i].length - 4, 4) === '.pin') {
+          _pins.push(items[i].substr(0, items[i].length - 4));
+        }
+      }
+
+      if (!items.length) {
+        const errorObj = {
+          msg: 'error',
+          result: 'no pins',
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        const successObj = {
+          msg: 'success',
+          result: _pins,
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    });
+  } else {
+    const errorObj = {
+      msg: 'error',
+      result: 'pin folder doesnt exist',
+    };
+
+    res.end(JSON.stringify(errorObj));
+  }
+});
 /**
  * Promise based download file method
  */
@@ -344,17 +381,17 @@ function downloadFile(configuration) {
 }
 
 const remoteBinLocation = {
-  'win32': 'https://artifacts.supernet.org/latest/windows/',
-  'darwin': 'https://artifacts.supernet.org/latest/osx/',
-  'linux': 'https://artifacts.supernet.org/latest/linux/',
+  win32: 'https://artifacts.supernet.org/latest/windows/',
+  darwin: 'https://artifacts.supernet.org/latest/osx/',
+  linux: 'https://artifacts.supernet.org/latest/linux/',
 };
 const localBinLocation = {
-  'win32': 'assets/bin/win64/',
-  'darwin': 'assets/bin/osx/',
-  'linux': 'assets/bin/linux64/',
+  win32: 'assets/bin/win64/',
+  darwin: 'assets/bin/osx/',
+  linux: 'assets/bin/linux64/',
 };
 const latestBins = {
-  'win32': [
+  win32: [
     'iguana.exe',
     'komodo-cli.exe',
     'komodod.exe',
@@ -368,7 +405,7 @@ const latestBins = {
     'nanomsg.dll',
     'pthreadvc2.dll',
   ],
-  'darwin': [
+  darwin: [
     'iguana',
     'komodo-cli',
     'komodod',
@@ -377,7 +414,7 @@ const latestBins = {
     'libnanomsg.5.0.0.dylib',
     'libstdc++.6.dylib', // encode %2B
   ],
-  'linux': [
+  linux: [
     'iguana',
     'komodo-cli',
     'komodod',
@@ -394,8 +431,8 @@ let binsToUpdate = [];
 shepherd.get('/update/bins/check', function(req, res, next) {
   const rootLocation = path.join(__dirname, '../');
   const successObj = {
-    'msg': 'success',
-    'result': 'bins',
+    msg: 'success',
+    result: 'bins',
   };
 
   res.end(JSON.stringify(successObj));
@@ -530,15 +567,15 @@ shepherd.updateAgama = function() {
       const percentage = (received * 100) / total;
       if (Math.floor(percentage) % 5 === 0 ||
           Math.floor(percentage) % 10 === 0) {
-        console.log('patch ' + percentage + '% | ' + received + ' bytes out of ' + total + ' bytes.');
+        console.log(`patch ${percentage}% | ${received} bytes out of ${total} bytes.`);
         cache.io.emit('patch', {
-          'msg': {
-            'status': 'progress',
-            'type': 'ui',
-            'progress': percentage,
-            'bytesTotal': total,
-            'bytesReceived': received
-          }
+          msg: {
+            status: 'progress',
+            type: 'ui',
+            progress: percentage,
+            bytesTotal: total,
+            bytesReceived: received,
+          },
         });
       }
     }
@@ -546,14 +583,14 @@ shepherd.updateAgama = function() {
   .then(function() {
     remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', function(err, remotePatchSize) {
       // verify that remote file is matching to DL'ed file
-      const localPatchSize = fs.statSync(rootLocation + 'patch.zip').size;
+      const localPatchSize = fs.statSync(`${rootLocation}patch.zip`).size;
       console.log('compare dl file size');
 
       if (localPatchSize === remotePatchSize) {
+        const zip = new AdmZip(`${rootLocation}patch.zip`);
+
         console.log('patch succesfully downloaded');
         console.log('extracting contents');
-
-        const zip = new AdmZip(rootLocation + 'patch.zip');
 
         if (shepherd.appConfig.dev) {
           if (!fs.existsSync(`${rootLocation}/patch`)) {
@@ -564,19 +601,19 @@ shepherd.updateAgama = function() {
         zip.extractAllTo(/*target path*/rootLocation + (shepherd.appConfig.dev ? '/patch' : ''), /*overwrite*/true);
         // TODO: extract files in chunks
         cache.io.emit('patch', {
-          'msg': {
-            'type': 'ui',
-            'status': 'done'
-          }
+          msg: {
+            type: 'ui',
+            status: 'done',
+          },
         });
-        fs.unlink(rootLocation + 'patch.zip');
+        fs.unlink(`${rootLocation}patch.zip`);
       } else {
         cache.io.emit('patch', {
-          'msg': {
-            'type': 'ui',
-            'status': 'error',
-            'message': 'size mismatch'
-          }
+          msg: {
+            type: 'ui',
+            status: 'error',
+            message: 'size mismatch',
+          },
         });
         console.log('patch file size doesnt match remote!');
       }
@@ -593,7 +630,7 @@ shepherd.get('/update/patch/check', function(req, res, next) {
   const rootLocation = path.join(__dirname, '../');
   const options = {
     url: 'https://github.com/pbca26/dl-test/raw/master/version',
-    method: 'GET'
+    method: 'GET',
   };
 
   request(options, function (error, response, body) {
@@ -601,7 +638,7 @@ shepherd.get('/update/patch/check', function(req, res, next) {
         response.statusCode &&
         response.statusCode === 200) {
       const remoteVersion = body.split('\n');
-      const localVersionFile = fs.readFileSync(rootLocation + 'version', 'utf8');
+      const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
       let localVersion;
 
       if (localVersionFile.indexOf('\r\n') > -1) {
@@ -612,26 +649,26 @@ shepherd.get('/update/patch/check', function(req, res, next) {
 
       if (remoteVersion[0] === localVersion[0]) {
         const successObj = {
-          'msg': 'success',
-          'result': 'latest'
+          msg: 'success',
+          result: 'latest',
         };
 
         res.end(JSON.stringify(successObj));
       } else {
         const successObj = {
-          'msg': 'success',
-          'result': 'update',
-          'version': {
-            'local': localVersion[0],
-            'remote': remoteVersion[0],
-          }
+          msg: 'success',
+          result: 'update',
+          version: {
+            local: localVersion[0],
+            remote: remoteVersion[0],
+          },
         };
 
         res.end(JSON.stringify(successObj));
       }
     } else {
       res.end({
-        'err': 'error getting update'
+        err: 'error getting update',
       });
     }
   });
@@ -644,12 +681,12 @@ shepherd.get('/update/patch/check', function(req, res, next) {
  */
 shepherd.get('/unpack', function(req, res, next) {
   const dlLocation = path.join(__dirname, '../');
-  var zip = new AdmZip(dlLocation + 'patch.zip');
-  zip.extractAllTo(/*target path*/dlLocation + '/patch/unpack', /*overwrite*/true);
+  const zip = new AdmZip(`${dlLocation}patch.zip`);
+  zip.extractAllTo(/*target path*/ `${dlLocation}/patch/unpack`, /*overwrite*/true);
 
   const successObj = {
-    'msg': 'success',
-    'result': 'unpack started'
+    msg: 'success',
+    result: 'unpack started',
   };
 
   res.end(JSON.stringify(successObj));
@@ -664,15 +701,15 @@ shepherd.get('/coinslist', function(req, res, next) {
     fs.readFile(`${iguanaDir}/shepherd/coinslist.json`, 'utf8', function (err, data) {
       if (err) {
         const errorObj = {
-          'msg': 'error',
-          'result': err
+          msg: 'error',
+          result: err,
         };
 
         res.end(JSON.stringify(errorObj));
       } else {
         const successObj = {
-          'msg': 'success',
-          'result': data ? JSON.parse(data) : ''
+          msg: 'success',
+          result: data ? JSON.parse(data) : '',
         };
 
         res.end(JSON.stringify(successObj));
@@ -680,8 +717,8 @@ shepherd.get('/coinslist', function(req, res, next) {
     });
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': 'coin list doesn\'t exist'
+      msg: 'error',
+      result: 'coin list doesn\'t exist',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -704,11 +741,11 @@ shepherd.post('/guilog', function(req, res, next) {
     guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
   } else {
     guiLog[shepherd.appSessionHash][req.body.timestamp] = {
-      'function': req.body.function,
-      'type': req.body.type,
-      'url': req.body.url,
-      'payload': req.body.payload,
-      'status': req.body.status,
+      function: req.body.function,
+      type: req.body.type,
+      url: req.body.url,
+      payload: req.body.payload,
+      status: req.body.status,
     };
   }
 
@@ -718,8 +755,8 @@ shepherd.post('/guilog', function(req, res, next) {
     }
 
     const returnObj = {
-      'msg': 'success',
-      'result': 'gui log entry is added'
+      msg: 'success',
+      result: 'gui log entry is added',
     };
 
     res.end(JSON.stringify(returnObj));
@@ -737,15 +774,15 @@ shepherd.get('/getlog', function(req, res, next) {
     fs.readFile(`${iguanaDir}/shepherd/agamalog.${logExt}`, 'utf8', function (err, data) {
       if (err) {
         const errorObj = {
-          'msg': 'error',
-          'result': err
+          msg: 'error',
+          result: err,
         };
 
         res.end(JSON.stringify(errorObj));
       } else {
         const successObj = {
-          'msg': 'success',
-          'result': data ? JSON.parse(data) : ''
+          msg: 'success',
+          result: data ? JSON.parse(data) : '',
         };
 
         res.end(JSON.stringify(successObj));
@@ -753,8 +790,8 @@ shepherd.get('/getlog', function(req, res, next) {
     });
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': `agama.${logExt} doesnt exist`
+      msg: 'error',
+      result: `agama.${logExt} doesnt exist`,
     };
 
     res.end(JSON.stringify(errorObj));
@@ -770,8 +807,8 @@ shepherd.post('/coinslist', function(req, res, next) {
 
   if (!_payload) {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no payload provided'
+      msg: 'error',
+      result: 'no payload provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -779,15 +816,15 @@ shepherd.post('/coinslist', function(req, res, next) {
     fs.writeFile(`${cache.iguanaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), function (err) {
       if (err) {
         const errorObj = {
-          'msg': 'error',
-          'result': err
+          msg: 'error',
+          result: err,
         };
 
         res.end(JSON.stringify(errorObj));
       } else {
         const successObj = {
-          'msg': 'success',
-          'result': 'done'
+          msg: 'success',
+          result: 'done',
         };
 
         res.end(JSON.stringify(successObj));
@@ -839,7 +876,7 @@ shepherd.getConf = function(chain) {
       let parsedRpcConfig = {
         user: '',
         pass: '',
-        port: _port
+        port: _port,
       };
 
       if (_match = _rpcConf.match(/rpcuser=\s*(.*)/)) {
@@ -867,15 +904,15 @@ shepherd.getConf = function(chain) {
 shepherd.post('/cli', function(req, res, next) {
   if (!req.body.payload) {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no payload provided'
+      msg: 'error',
+      result: 'no payload provided',
     };
 
     res.end(JSON.stringify(errorObj));
   } else if (!req.body.payload.cmd.match(/^[0-9a-zA-Z _\,\.\[\]"'/\\]+$/g)) {
     const errorObj = {
-      'msg': 'error',
-      'result': 'wrong cli string format'
+      msg: 'error',
+      result: 'wrong cli string format',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -891,15 +928,15 @@ shepherd.post('/cli', function(req, res, next) {
 
     if (_mode === 'default') {
       let _body = {
-        'agent': 'bitcoinrpc',
-        'method': _cmd
+        agent: 'bitcoinrpc',
+        method: _cmd,
       };
 
       if (req.body.payload.params) {
         _body = {
-          'agent': 'bitcoinrpc',
-          'method': _cmd,
-          'params': req.body.payload.params === ' ' ? [''] : req.body.payload.params
+          agent: 'bitcoinrpc',
+          method: _cmd,
+          params: req.body.payload.params === ' ' ? [''] : req.body.payload.params,
         };
       }
 
@@ -907,8 +944,8 @@ shepherd.post('/cli', function(req, res, next) {
         url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
         method: 'POST',
         auth: {
-          'user': rpcConf[req.body.payload.chain].user,
-          'pass': rpcConf[req.body.payload.chain].pass
+          user: rpcConf[req.body.payload.chain].user,
+          pass: rpcConf[req.body.payload.chain].pass,
         },
         body: JSON.stringify(_body)
       };
@@ -937,13 +974,13 @@ shepherd.post('/cli', function(req, res, next) {
 
         if (stderr) {
           responseObj = {
-            'msg': 'error',
-            'result': stderr
+            msg: 'error',
+            result: stderr,
           };
         } else {
           responseObj = {
-            'msg': 'success',
-            'result': stdout
+            msg: 'success',
+            result: stdout,
           };
         }
 
@@ -960,8 +997,8 @@ shepherd.post('/cli', function(req, res, next) {
 shepherd.post('/appconf', function(req, res, next) {
   if (!req.body.payload) {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no payload provided'
+      msg: 'error',
+      result: 'no payload provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -969,8 +1006,8 @@ shepherd.post('/appconf', function(req, res, next) {
     shepherd.saveLocalAppConf(req.body.payload);
 
     const successObj = {
-      'msg': 'success',
-      'result': 'config saved'
+      msg: 'success',
+      result: 'config saved',
     };
 
     res.end(JSON.stringify(successObj));
@@ -985,8 +1022,8 @@ shepherd.post('/appconf/reset', function(req, res, next) {
   shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
 
   const successObj = {
-    'msg': 'success',
-    'result': 'config saved'
+    msg: 'success',
+    result: 'config saved',
   };
 
   res.end(JSON.stringify(successObj));
@@ -1204,8 +1241,8 @@ shepherd.getSyncOnlyForksInfo = function() {
  */
 shepherd.get('/forks/info/start', function(req, res, next) {
   const successObj = {
-    'msg': 'success',
-    'result': 'started'
+    msg: 'success',
+    result: 'started',
   };
 
   res.end(JSON.stringify(successObj));
@@ -1218,8 +1255,8 @@ shepherd.get('/forks/info/start', function(req, res, next) {
  */
 shepherd.get('/forks/info/show', function(req, res, next) {
   const successObj = {
-    'msg': 'success',
-    'result': JSON.stringify(syncOnlyIguanaInstanceInfo)
+    msg: 'success',
+    result: JSON.stringify(syncOnlyIguanaInstanceInfo),
   };
 
   res.end(JSON.stringify(successObj));
@@ -1244,8 +1281,8 @@ shepherd.get('/forks/restart', function(req, res, next) {
       pm2.disconnect();
 
       const successObj = {
-        'msg': 'success',
-        'result': 'restarted'
+        msg: 'success',
+        result: 'restarted',
       };
       shepherd.writeLog(`iguana fork pmid ${_pmid} restarted`);
 
@@ -1273,8 +1310,8 @@ shepherd.get('/forks/stop', function(req, res, next) {
       pm2.disconnect();
 
       const successObj = {
-        'msg': 'success',
-        'result': 'stopped'
+        msg: 'success',
+        result: 'stopped',
       };
 
       shepherd.writeLog(`iguana fork pmid ${_pmid} stopped`);
@@ -1290,8 +1327,8 @@ shepherd.get('/forks/stop', function(req, res, next) {
  */
 shepherd.get('/forks', function(req, res, next) {
   const successObj = {
-    'msg': 'success',
-    'result': iguanaInstanceRegistry
+    msg: 'success',
+    result: iguanaInstanceRegistry,
   };
 
   res.end(JSON.stringify(successObj));
@@ -1302,9 +1339,9 @@ shepherd.get('/forks', function(req, res, next) {
  *  params: name
  */
 shepherd.post('/forks', function(req, res, next) {
-  const mode = req.body.mode,
-        coin = req.body.coin,
-        port = shepherd.appConfig.iguanaCorePort;
+  const mode = req.body.mode;
+  const coin = req.body.coin;
+  const port = shepherd.appConfig.iguanaCorePort;
 
   portscanner.findAPortNotInUse(port, port + 100, '127.0.0.1', function(error, _port) {
     pm2.connect(true, function(err) { //start up pm2 god
@@ -1325,23 +1362,23 @@ shepherd.post('/forks', function(req, res, next) {
       }, function(err, apps) {
         if (apps && apps[0] && apps[0].process && apps[0].process.pid) {
           iguanaInstanceRegistry[_port] = {
-            'mode': mode,
-            'coin': coin,
-            'pid': apps[0].process && apps[0].process.pid,
-            'pmid': apps[0].pm2_env.pm_id
+            mode: mode,
+            coin: coin,
+            pid: apps[0].process && apps[0].process.pid,
+            pmid: apps[0].pm2_env.pm_id,
           };
           cache.setVar('iguanaInstances', iguanaInstanceRegistry);
 
           const successObj = {
-            'msg': 'success',
-            'result': _port
+            msg: 'success',
+            result: _port,
           };
 
           res.end(JSON.stringify(successObj));
         } else {
           const errorObj = {
-            'msg': 'success',
-            'error': 'iguana start error'
+            msg: 'success',
+            error: 'iguana start error',
           };
 
           res.end(JSON.stringify(errorObj));
@@ -1358,11 +1395,11 @@ shepherd.post('/forks', function(req, res, next) {
         }
 
         pm2.disconnect(); // Disconnect from PM2
-          if (err) {
-            shepherd.writeLog(`iguana fork error: ${err}`);
-            console.log(`iguana fork error: ${err}`);
-            throw err;
-          }
+        if (err) {
+          shepherd.writeLog(`iguana fork error: ${err}`);
+          console.log(`iguana fork error: ${err}`);
+          throw err;
+        }
       });
     });
   });
@@ -1403,9 +1440,9 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
     });
   } else {
     successObj = {
-      'native': nativeCoindList,
-      'basilisk': [],
-      'full': []
+      native: nativeCoindList,
+      basilisk: [],
+      full: [],
     };
 
     res.end(JSON.stringify(successObj));
@@ -1416,7 +1453,7 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/SuperNET/activehandle', function(req, res, next) {
+shepherd.get('/SuperNET/activehandle', function(req, res, next) { // not finished
   // TODO: if only native return obj
   //       else query main iguana instance and return combined response
   // http://localhost:7778/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234
@@ -1440,11 +1477,11 @@ shepherd.get('/SuperNET/activehandle', function(req, res, next) {
     });
   } else {
     successObj = {
-      'pubkey': 'nativeonly',
-      'result': 'success',
-      'handle': '',
-      'status': Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
-      'duration': 2507830
+      pubkey: 'nativeonly',
+      result: 'success',
+      handle: '',
+      status: Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
+      duration: 2507830,
     };
 
     res.end(JSON.stringify(successObj));
@@ -1529,15 +1566,15 @@ shepherd.post('/debuglog', function(req, res) {
   shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
   .then(function(result) {
     const _obj = {
-      'msg': 'success',
-      'result': result
+      msg: 'success',
+      result: result,
     };
 
     res.end(JSON.stringify(_obj));
   }, function(result) {
     const _obj = {
-      'msg': 'error',
-      'result': result
+      msg: 'error',
+      result: result,
     };
 
     res.end(JSON.stringify(_obj));
@@ -1555,8 +1592,8 @@ shepherd.post('/herd', function(req, res) {
   herder(req.body.herd, req.body.options);
 
   const obj = {
-    'msg': 'success',
-    'result': 'result'
+    msg: 'success',
+    result: 'result',
   };
 
   res.end(JSON.stringify(obj));
@@ -1570,9 +1607,9 @@ shepherd.post('/herd', function(req, res) {
         if (status === 'closed') {
           shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
           cache.io.emit('service', {
-            'komodod': {
-              'error': 'start error'
-            }
+            komodod: {
+              error: 'start error',
+            },
           });
         }
       });
@@ -1601,9 +1638,9 @@ shepherd.post('/herdlist', function(req, res) {
       shepherd.writeLog(list[0].pid);
 
       const obj = {
-        'herdname': req.body.herdname,
-        'status': list[0].pm2_env.status,
-        'pid': list[0].pid
+        herdname: req.body.herdname,
+        status: list[0].pm2_env.status,
+        pid: list[0].pid,
       };
 
       res.end(JSON.stringify(obj));
@@ -1620,8 +1657,8 @@ shepherd.post('/slay', function(req, res) {
 
   slayer(req.body.slay);
   const obj = {
-    'msg': 'success',
-    'result': 'result'
+    msg: 'success',
+    result: 'result',
   };
 
   res.end(JSON.stringify(obj));
@@ -1643,8 +1680,8 @@ shepherd.post('/setconf', function(req, res) {
   }
 
   const obj = {
-    'msg': 'success',
-    'result': 'result'
+    msg: 'success',
+    result: 'result',
   };
 
   res.end(JSON.stringify(obj));
@@ -1665,8 +1702,8 @@ shepherd.post('/getconf', function(req, res) {
   shepherd.writeLog(confpath);
 
   const obj = {
-    'msg': 'success',
-    'result': confpath
+    msg: 'success',
+    result: confpath,
   };
 
   res.end(JSON.stringify(obj));
@@ -1682,8 +1719,8 @@ shepherd.get('/kick', function(req, res, next) {
 
   if (!_coin) {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no coin name provided'
+      msg: 'error',
+      result: 'no coin name provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -1691,85 +1728,85 @@ shepherd.get('/kick', function(req, res, next) {
 
   if (!_type) {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no type provided'
+      msg: 'error',
+      result: 'no type provided',
     };
 
     res.end(JSON.stringify(errorObj));
   }
 
   const kickStartDirs = {
-    'soft': [
+    soft: [
       {
-        'name': 'DB/[coin]',
-        'type': 'pattern',
-        'match': 'balancecrc.'
+        name: 'DB/[coin]',
+        type: 'pattern',
+        match: 'balancecrc.',
       },
       {
-        'name': 'DB/[coin]/utxoaddrs',
-        'type': 'file'
+        name: 'DB/[coin]/utxoaddrs',
+        type: 'file',
       },
       {
-        'name': 'DB/[coin]/accounts',
-        'type': 'folder'
+        name: 'DB/[coin]/accounts',
+        type: 'folder',
       },
       {
-        'name': 'DB/[coin]/fastfind',
-        'type': 'folder'
+        name: 'DB/[coin]/fastfind',
+        type: 'folder',
       },
       {
-        'name': 'tmp/[coin]',
-        'type': 'folder'
+        name: 'tmp/[coin]',
+        type: 'folder',
       }
     ],
-    'hard': [
+    hard: [
       {
-        'name': 'DB/[coin]',
-        'type': 'pattern',
-        'match': 'balancecrc.'
+        name: 'DB/[coin]',
+        type: 'pattern',
+        match: 'balancecrc.',
       },
       {
-        'name': 'DB/[coin]/utxoaddrs',
-        'type': 'file'
+        name: 'DB/[coin]/utxoaddrs',
+        type: 'file',
       },
       {
-        'name': 'DB/[coin]',
-        'type': 'pattern',
-        'match': 'utxoaddrs.'
+        name: 'DB/[coin]',
+        type: 'pattern',
+        match: 'utxoaddrs.',
       },
       {
-        'name': 'DB/[coin]/accounts',
-        'type': 'folder'
+        name: 'DB/[coin]/accounts',
+        type: 'folder',
       },
       {
-        'name': 'DB/[coin]/fastfind',
-        'type': 'folder'
+        name: 'DB/[coin]/fastfind',
+        type: 'folder',
       },
       {
-        'name': 'DB/[coin]/spends',
-        'type': 'folder'
+        name: 'DB/[coin]/spends',
+        type: 'folder',
       },
       {
-        'name': 'tmp/[coin]',
-        'type': 'folder'
+        name: 'tmp/[coin]',
+        type: 'folder',
       }
     ],
-    'brutal': [ // delete all coin related data
+    brutal: [ // delete all coin related data
       {
-        'name': 'DB/[coin]',
-        'type': 'folder'
+        name: 'DB/[coin]',
+        type: 'folder',
       },
       {
-        'name': 'DB/purgeable/[coin]',
-        'type': 'folder'
+        name: 'DB/purgeable/[coin]',
+        type: 'folder',
       },
       {
-        'name': 'DB/ro/[coin]',
-        'type': 'folder'
+        name: 'DB/ro/[coin]',
+        type: 'folder',
       },
       {
-        'name': 'tmp/[coin]',
-        'type': 'folder'
+        name: 'tmp/[coin]',
+        type: 'folder',
       }
     ]
   };
@@ -1808,8 +1845,8 @@ shepherd.get('/kick', function(req, res, next) {
     }
 
     const successObj = {
-      'msg': 'success',
-      'result': 'kickstart: brutal is executed'
+      msg: 'success',
+      result: 'kickstart: brutal is executed',
     };
 
     res.end(JSON.stringify(successObj));
@@ -1828,7 +1865,8 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
           } else {
             console.log(`reading ${fileLocation}`);
             _fs.readFile(fileLocation, 'utf-8', function(err, data) {
-              if (err) throw err;
+              if (err)
+                throw err;
 
               const lines = data.trim().split('\n');
               const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
@@ -1906,10 +1944,10 @@ function herder(flock, data) {
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
         iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
-          'mode': 'main',
-          'coin': 'none',
-          'pid': apps[0].process.pid,
-          'pmid': apps[0].pm2_env.pm_id
+          mode: 'main',
+          coin: 'none',
+          pid: apps[0].process.pid,
+          pmid: apps[0].pm2_env.pm_id,
         };
         shepherd.writeLog(`iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
 
@@ -1964,11 +2002,11 @@ function herder(flock, data) {
         if (status === 'closed') {
           // start komodod via exec
           const _customParamDict = {
-            'silent': '&',
-            'reindex': '-reindex',
-            'change': '-pubkey=',
-            'datadir': '-datadir=',
-            'rescan': '-rescan'
+            silent: '&',
+            reindex: '-reindex',
+            change: '-pubkey=',
+            datadir: '-datadir=',
+            rescan: '-rescan',
           };
           let _customParam = '';
 
@@ -1985,7 +2023,7 @@ function herder(flock, data) {
 
           const isChain = data.ac_name.match(/^[A-Z]*$/);
           const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
-          console.log('daemon param ' + data.ac_custom_param);
+          console.log(`daemon param ${data.ac_custom_param}`);
 
           coindInstanceRegistry[data.ac_name] = true;
           exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
@@ -2000,8 +2038,8 @@ function herder(flock, data) {
 
               if (error.toString().indexOf('using -reindex') > -1) {
                 cache.io.emit('service', {
-                  'komodod': {
-                    'error': 'run -reindex'
+                  komodod: {
+                    error: 'run -reindex',
                   }
                 });
               }
@@ -2350,9 +2388,9 @@ function setConf(flock) {
 }
 
 function getConf(flock) {
-  let komodoDir = '',
-      ZcashDir = '',
-      DaemonConfPath = '';
+  let komodoDir = '';
+  let ZcashDir = '';
+  let DaemonConfPath = '';
 
   console.log(flock);
   shepherd.writeLog(`getconf flock: ${flock}`);
@@ -2402,9 +2440,9 @@ function formatBytes(bytes, decimals) {
   if (bytes === 0)
     return '0 Bytes';
 
-  const k = 1000,
-        dm = (decimals + 1) || 3,
-        sizes = [
+  const k = 1000;
+  const dm = (decimals + 1) || 3;
+  const sizes = [
           'Bytes',
           'KB',
           'MB',
@@ -2414,23 +2452,23 @@ function formatBytes(bytes, decimals) {
           'EB',
           'ZB',
           'YB'
-        ],
-        i = Math.floor(Math.log(bytes) / Math.log(k));
+        ];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 shepherd.SystemInfo = function() {
   const os_data = {
-          'totalmem_bytes': os.totalmem(),
-          'totalmem_readable': formatBytes(os.totalmem()),
-          'arch': os.arch(),
-          'cpu': os.cpus()[0].model,
-          'cpu_cores': os.cpus().length,
-          'platform': os.platform(),
-          'os_release': os.release(),
-          'os_type': os.type()
-        };
+    'totalmem_bytes': os.totalmem(),
+    'totalmem_readable': formatBytes(os.totalmem()),
+    'arch': os.arch(),
+    'cpu': os.cpus()[0].model,
+    'cpu_cores': os.cpus().length,
+    'platform': os.platform(),
+    'os_release': os.release(),
+    'os_type': os.type()
+  };
 
   return os_data;
 }

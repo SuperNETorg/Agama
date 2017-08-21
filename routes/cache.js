@@ -88,8 +88,8 @@ cache.get = function(req, res, next) {
     }
   } else {
     const errorObj = {
-      'msg': 'error',
-      'result': 'no pubkey provided',
+      msg: 'error',
+      result: 'no pubkey provided',
     };
 
     res.end(JSON.stringify(errorObj));
@@ -376,7 +376,8 @@ cache.one = function(req, res, next) {
       }
     }
 
-    if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`) && coin !== 'all') {
+    if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`) &&
+        coin !== 'all') {
       if (inMemCache) {
         console.log('cache one from mem');
         outObj = inMemCache;
@@ -457,6 +458,7 @@ cache.one = function(req, res, next) {
 
         async.forEachOf(_dexUrls, function(dexUrl, key) {
           var tooEarly = false;
+
           if (outObj.basilisk[coin][address][key] &&
               outObj.basilisk[coin][address][key].timestamp &&
               (!skipTimeout && checkTimestamp(outObj.basilisk[coin][address][key].timestamp) < cacheGlobLifetime)) {
