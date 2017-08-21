@@ -20,7 +20,8 @@ const electron = require('electron'),
       aes256 = require('nodejs-aes256'),
       AdmZip = require('adm-zip'),
       remoteFileSize = require('remote-file-size'),
-      Promise = require('bluebird');
+      Promise = require('bluebird'),
+      {shell} = require('electron');
 
 const fixPath = require('fix-path');
 var ps = require('ps-node'),
