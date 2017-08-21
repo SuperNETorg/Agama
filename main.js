@@ -341,6 +341,7 @@ function createWindow(status) {
 				mainWindow.appSessionHash = appSessionHash;
 				mainWindow.assetChainPorts = require('./routes/ports.js');
 				mainWindow.zcashParamsExist = shepherd.zcashParamsExist();
+				mainWindow.iguanaIcon = iguanaIcon;
 
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
