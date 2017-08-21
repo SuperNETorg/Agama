@@ -194,11 +194,11 @@ shepherd.createIguanaDirs = function() {
  *  type: POST
  *  params: none
  */
-shepherd.get('/encryptkey', function(req, res, next) {
-  if (req.query.key &&
-      req.query.string &&
-      req.query.pubkey) {
-    const encryptedString = aes256.encrypt(req.query.key, req.query.string);
+shepherd.post('/encryptkey', function(req, res, next) {
+  if (req.body.key &&
+      req.body.string &&
+      req.body.pubkey) {
+    const encryptedString = aes256.encrypt(req.body.key, req.body.string);
 
     // test pin security
     // - at least 1 char in upper case
@@ -206,12 +206,12 @@ shepherd.get('/encryptkey', function(req, res, next) {
     // - at least one special character
     // - min length 8
 
-    const _pin = req.query.key;
+    const _pin = req.body.key;
     const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
 
     console.log(_pinTest);
 
-    fs.writeFile(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`, encryptedString, function (err) {
+    fs.writeFile(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, function (err) {
       if (err) {
         console.log('error writing pin file');
       }
@@ -246,11 +246,11 @@ shepherd.get('/encryptkey', function(req, res, next) {
   }
 });
 
-shepherd.get('/decryptkey', function(req, res, next) {
-  if (req.query.key &&
-      req.query.pubkey) {
-    if (fs.existsSync(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`)) {
-      fs.readFile(`${iguanaDir}/shepherd/pin/${req.query.pubkey}.pin`, 'utf8', function (err, data) {
+shepherd.post('/decryptkey', function(req, res, next) {
+  if (req.body.key &&
+      req.body.pubkey) {
+    if (fs.existsSync(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
+      fs.readFile(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', function (err, data) {
         if (err) {
           const errorObj = {
             msg: 'error',
@@ -259,7 +259,7 @@ shepherd.get('/decryptkey', function(req, res, next) {
 
           res.end(JSON.stringify(errorObj));
         } else {
-          const encryptedKey = aes256.decrypt(req.query.key, data);
+          const encryptedKey = aes256.decrypt(req.body.key, data);
           // test if stored encrypted passphrase is decrypted correctly
           // if not then the key is wrong
           const _regexTest = encryptedKey.match(/^[0-9a-zA-Z ]+$/g);
