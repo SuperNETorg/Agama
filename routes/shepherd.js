@@ -135,9 +135,9 @@ shepherd.killRogueProcess = function(processName) {
 }
 
 shepherd.zcashParamsExist = function() {
-  if (fs.existsSync(zcashParamsDir) &&
-      fs.existsSync(`${zcashParamsDir}/sprout-proving.key`) &&
-      fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`)) {
+  if (_fs.existsSync(zcashParamsDir) &&
+      _fs.existsSync(`${zcashParamsDir}/sprout-proving.key`) &&
+      _fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`)) {
     console.log('zcashparams exist');
     return true;
   }

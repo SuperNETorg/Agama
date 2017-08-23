@@ -131,6 +131,7 @@ let mainWindow;
 let loadingWindow;
 let appCloseWindow;
 let closeAppAfterLoading = false;
+const _zcashParamsExist = shepherd.zcashParamsExist();
 
 module.exports = guiapp;
 let iguanaIcon;
@@ -304,7 +305,7 @@ function createWindow(status) {
 				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
 				mainWindow.assetChainPorts = require('./routes/ports.js');
-				mainWindow.zcashParamsExist = shepherd.zcashParamsExist();
+				mainWindow.zcashParamsExist = _zcashParamsExist;
 				mainWindow.iguanaIcon = iguanaIcon;
 
 				if (appConfig.dev) {
