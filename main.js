@@ -75,45 +75,8 @@ shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}
 
 shepherd.setConfKMD();
 
-// kill rogue iguana copies on start
 if (appConfig.killIguanaOnStart) {
-	let iguanaGrep;
-
-	switch (osPlatform) {
-		case 'darwin':
-			iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
-			break;
-		case 'linux':
-			iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
-			break;
-		case 'win32':
-			iguanaGrep = 'tasklist';
-			break;
-	}
-
-	exec(iguanaGrep, function(error, stdout, stderr) {
-		if (stdout.indexOf('iguana') > -1) {
-			const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
-
-			console.log('found another iguana process(es)');
-			shepherd.writeLog('found another iguana process(es)');
-
-			exec(pkillCmd, function(error, stdout, stderr) {
-				console.log(`${pkillCmd} is issued`);
-				shepherd.writeLog(`${pkillCmd} is issued`);
-
-				if (error !== null) {
-					console.log(`${pkillCmd} exec error: ${error}`);
-					shepherd.writeLog(`${pkillCmd} exec error: ${error}`);
-				};
-			});
-		}
-
-		if (error !== null) {
-			console.log(`${iguanaGrep} exec error: ${error}`);
-			shepherd.writeLog(`${iguanaGrep} exec error: ${error}`);
-		};
-	});
+	shepherd.killRogueProcess('iguana');
 }
 
 guiapp.use(function(req, res, next) {
@@ -423,7 +386,7 @@ function createWindow(status) {
 						shepherd.writeLog(result);
 
 						resolve(result);
-					}, 2000)
+					}, 2000);
 				})
 			}
 

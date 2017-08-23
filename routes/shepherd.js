@@ -92,6 +92,48 @@ shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
+shepherd.killRogueProcess = function(processName) {
+  // kill rogue process copies on start
+  let processGrep;
+  const osPlatform = os.platform();
+
+  switch (osPlatform) {
+    case 'darwin':
+      processGrep = "ps -p $(ps -A | grep -m1 " + processName + " | awk '{print $1}') | grep -i " + processName;
+      break;
+    case 'linux':
+      processGrep = 'ps -p $(pidof ' + processName + ') | grep -i ' + processName;
+      break;
+    case 'win32':
+      processGrep = 'tasklist';
+      break;
+  }
+
+  exec(processGrep, function(error, stdout, stderr) {
+    if (stdout.indexOf(processName) > -1) {
+      const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im ' + processName + '.exe' : 'pkill -15 ' + processName;
+
+      console.log('found another ' + processName + ' process(es)');
+      shepherd.writeLog('found another ' + processName + ' process(es)');
+
+      exec(pkillCmd, function(error, stdout, stderr) {
+        console.log(`${pkillCmd} is issued`);
+        shepherd.writeLog(`${pkillCmd} is issued`);
+
+        if (error !== null) {
+          console.log(`${pkillCmd} exec error: ${error}`);
+          shepherd.writeLog(`${pkillCmd} exec error: ${error}`);
+        };
+      });
+    }
+
+    if (error !== null) {
+      console.log(`${processGrep} exec error: ${error}`);
+      shepherd.writeLog(`${processGrep} exec error: ${error}`);
+    };
+  });
+}
+
 shepherd.zcashParamsExist = function() {
   if (fs.existsSync(zcashParamsDir) &&
       fs.existsSync(`${zcashParamsDir}/sprout-proving.key`) &&
@@ -819,6 +861,7 @@ shepherd.quitKomodod = function(timeout = 100) {
     const chain = key !== 'komodod' ? key : null;
 
     coindExitInterval[key] = setInterval(function() {
+      shepherd.killRogueProcess('komodo-cli');
       console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
       exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
         console.log(`stdout: ${stdout}`);
@@ -938,6 +981,7 @@ shepherd.post('/cli', function(req, res, next) {
         }
       });
     } else {
+      shepherd.killRogueProcess('komodo-cli');
       exec(komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params, function(error, stdout, stderr) {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
