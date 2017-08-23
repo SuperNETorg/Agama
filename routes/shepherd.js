@@ -107,7 +107,7 @@ shepherd.zcashParamsExist = function() {
 shepherd.readVersionFile = function() {
   // read app version
   const rootLocation = path.join(__dirname, '../');
-  const localVersionFile = fs.readFileSync(rootLocation + 'version', 'utf8');
+  const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
 
   return localVersionFile;
 }
@@ -186,8 +186,6 @@ shepherd.post('/encryptkey', function(req, res, next) {
 
     const _pin = req.body.key;
     const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
-
-    console.log(_pinTest);
 
     fs.writeFile(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, function (err) {
       if (err) {
@@ -1567,31 +1565,55 @@ shepherd.post('/herd', function(req, res) {
   console.log('======= req.body =======');
   console.log(req.body);
 
-  herder(req.body.herd, req.body.options);
+  function testCoindPort() {
+    const _port = assetChainPorts[req.body.options.ac_name];
 
-  const obj = {
-    msg: 'success',
-    result: 'result',
-  };
+    portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+      // Status is 'open' if currently in use or 'closed' if available
+      if (status === 'open') {
+        console.log(`komodod service start error at port ${_port}, reason: port is closed`);
+        shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
+        cache.io.emit('service', {
+          komodod: {
+            error: 'error starting ' + req.body.herd + ' ' + req.body.options.ac_name + ' daemon. Port ' + _port + ' is already taken!',
+          },
+        });
 
-  res.end(JSON.stringify(obj));
+        const obj = {
+          msg: 'error',
+          result: 'error starting ' + req.body.herd + ' ' + req.body.options.ac_name + ' daemon. Port ' + _port + ' is already taken!',
+        };
+
+        res.status(500);
+        res.end(JSON.stringify(obj));
+      } else {
+        herder(req.body.herd, req.body.options);
+
+        const obj = {
+          msg: 'success',
+          result: 'result',
+        };
+
+        res.end(JSON.stringify(obj));
+      }
+    });
+  }
 
   if (req.body.herd === 'komodod') {
-    const _port = assetChainPorts[req.body.options.ac_name];
     // check if komodod instance is already running
+    testCoindPort();
     setTimeout(function() {
-      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
-        // Status is 'open' if currently in use or 'closed' if available
-        if (status === 'closed') {
-          shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-          cache.io.emit('service', {
-            komodod: {
-              error: 'start error',
-            },
-          });
-        }
-      });
+      testCoindPort();
     }, 10000);
+  } else {
+    herder(req.body.herd, req.body.options);
+
+    const obj = {
+      msg: 'success',
+      result: 'result',
+    };
+
+    res.end(JSON.stringify(obj));
   }
 });
 
@@ -1797,7 +1819,7 @@ shepherd.get('/kick', function(req, res, next) {
       console.log('deleting ' + currentKickItem.type + (currentKickItem.match ? ' ' + currentKickItem.match : '') + ' ' + iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
       if (currentKickItem.type === 'folder' ||
           currentKickItem.type === 'file') {
-        rimraf(iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin), function(err) {
+        rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}`, function(err) {
           if (err) {
             throw err;
           }
@@ -1919,7 +1941,7 @@ function herder(flock, data) {
         name: 'IGUANA',
         exec_mode : 'fork',
         args: [`-port=${shepherd.appConfig.iguanaCorePort}`],
-        cwd: iguanaDir //set correct iguana directory
+        cwd: iguanaDir // set correct iguana directory
       }, function(err, apps) {
         iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
           mode: 'main',
@@ -1930,11 +1952,11 @@ function herder(flock, data) {
         shepherd.writeLog(`iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
 
         pm2.disconnect(); // Disconnect from PM2
-          if (err) {
-            shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-            console.log(`iguana fork error: ${err}`);
-            throw err;
-          }
+        if (err) {
+          shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
+          console.log(`iguana fork error: ${err}`);
+          throw err;
+        }
       });
     });
   }
