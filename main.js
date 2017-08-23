@@ -337,6 +337,7 @@ function createWindow(status) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
 				mainWindow.appConfig = appConfig;
+				mainWindow.appConfigSchema = shepherd.appConfigSchema;
 				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
 				mainWindow.assetChainPorts = require('./routes/ports.js');
@@ -545,16 +546,16 @@ function formatBytes(bytes, decimals) {
   const k = 1000;
 	const dm = decimals + 1 || 3;
 	const sizes = [
-	        'Bytes',
-	        'KB',
-	        'MB',
-	        'GB',
-	        'TB',
-	        'PB',
-	        'EB',
-	        'ZB',
-	        'YB'
-	      ];
+    'Bytes',
+    'KB',
+    'MB',
+    'GB',
+    'TB',
+    'PB',
+    'EB',
+    'ZB',
+    'YB'
+  ];
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
