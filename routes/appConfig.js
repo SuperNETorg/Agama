@@ -23,6 +23,7 @@ const appConfig = {
     },
     iguanaLessMode: true,
     roundValues: false,
+    dataDir: '',
   },
   schema: {
     edexGuiOnly: {
@@ -139,7 +140,13 @@ const appConfig = {
       info: 'Round \"dust\" amounts to save screen space.',
       type: 'boolean',
     },
-  }
+    dataDir: {
+      display: true,
+      displayName: 'Komodo data directory',
+      info: 'The data directory is the location where Komodo data files are stored, including the wallet data file.',
+      type: 'folder',
+    },
+  },
 };
 
 module.exports = appConfig;

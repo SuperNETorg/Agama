@@ -36,9 +36,10 @@ var ps = require('ps-node'),
     guiLog = {},
     rpcConf = {};
 
+shepherd.appConfig = _appConfig.config;
+
 // IGUANA FILES AND CONFIG SETTINGS
-var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs'),
-    CorsProxyBin = path.join(__dirname, '../node_modules/corsproxy/bin/corsproxy');
+var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs');
 
 // SETTING OS DIR TO RUN IGUANA FROM
 // SETTING APP ICON FOR LINUX AND WINDOWS
@@ -49,7 +50,7 @@ if (os.platform() === 'darwin') {
       iguanaConfsDir = `${iguanaDir}/confs`,
       komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
-      komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`,
+      komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`,
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
       zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`,
@@ -63,7 +64,7 @@ if (os.platform() === 'linux') {
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
-      komodoDir = `${process.env.HOME}/.komodo`,
+      komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`,
       zcashParamsDir = `${process.env.HOME}/.zcash-params`;
 }
 
@@ -80,17 +81,34 @@ if (os.platform() === 'win32') {
       komododBin = path.normalize(komododBin),
       komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
       komodocliBin = path.normalize(komodocliBin),
-      komodoDir = `${process.env.APPDATA}/Komodo`,
+      komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
       zcashParamsDir = `${process.env.APPDATA}/ZcashParams`;
       zcashParamsDir = path.normalize(zcashParamsDir);
 }
 
-shepherd.appConfig = _appConfig.config;
 shepherd.appConfigSchema = _appConfig.schema;
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
+
+shepherd.testLocation = function(path) {
+  return new Promise(function(resolve, reject) {
+    fs.lstat(path, (err, stats) => {
+      if (err) {
+        console.log('error testing path ' + path);
+        resolve(-1);
+      } else {
+        if (stats.isDirectory()) {
+          resolve(true);
+        } else {
+          console.log('error testing path ' + path + ' not a folder');
+          resolve(false);
+        }
+      }
+    });
+  });
+}
 
 shepherd.killRogueProcess = function(processName) {
   // kill rogue process copies on start
@@ -113,8 +131,8 @@ shepherd.killRogueProcess = function(processName) {
     if (stdout.indexOf(processName) > -1) {
       const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im ' + processName + '.exe' : 'pkill -15 ' + processName;
 
-      console.log('found another ' + processName + ' process(es)');
-      shepherd.writeLog('found another ' + processName + ' process(es)');
+      console.log(`found another ${processName} process(es)`);
+      shepherd.writeLog(`found another ${processName} process(es)`);
 
       exec(pkillCmd, function(error, stdout, stderr) {
         console.log(`${pkillCmd} is issued`);
@@ -367,7 +385,7 @@ function downloadFile(configuration) {
       agentOptions: {
         keepAlive: true,
         keepAliveMsecs: 15000,
-      }
+      },
     });
 
     let out = fs.createWriteStream(configuration.localFile);
@@ -488,7 +506,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
             type: 'bins-check',
             status: 'done',
             fileList: binsToUpdate,
-          }
+          },
         });
       }
     });
@@ -508,7 +526,7 @@ shepherd.get('/update/bins', function(req, res, next) {
     result: {
       filesCount: binsToUpdate.length,
       list: binsToUpdate,
-    }
+    },
   };
 
   res.end(JSON.stringify(successObj));
@@ -1573,6 +1591,19 @@ shepherd.post('/debuglog', function(req, res) {
   let _lastNLines = req.body.lastLines;
   let _location;
 
+  if (os.platform() === 'darwin') {
+    komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`;
+  }
+
+  if (os.platform() === 'linux') {
+    komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`;
+  }
+
+  if (os.platform() === 'win32') {
+    komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`;
+    komodoDir = path.normalize(komodoDir);
+  }
+
   if (_herd === 'iguana') {
     _location = iguanaDir;
   } else if (_herd === 'komodo') {
@@ -1583,6 +1614,7 @@ shepherd.post('/debuglog', function(req, res) {
     _location = `${komodoDir}/${_ac}`;
   }
 
+  console.log('komodo dir ' + komodoDir);
   shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
   .then(function(result) {
     const _obj = {
@@ -2060,6 +2092,10 @@ function herder(flock, data) {
             _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
           } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
             _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
+          }
+
+          if (shepherd.appConfig.dataDir.length) {
+            _customParam = _customParam + ' -datadir=' + shepherd.appConfig.dataDir + '/' + data.ac_name;
           }
 
           console.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
