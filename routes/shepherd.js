@@ -110,6 +110,32 @@ shepherd.testLocation = function(path) {
   });
 }
 
+// osx and linux
+shepherd.binFixRights = function() {
+  const osPlatform = os.platform();
+  const _bins = [
+    iguanaBin,
+    komododBin,
+    komodocliBin
+  ];
+
+  if (osPlatform === 'darwin' ||
+      osPlatform === 'linux') {
+    for (let i = 0; i < _bins.length; i++) {
+      _fs.stat(_bins[i], function(err, stat) {
+        if (!err) {
+          if (parseInt(stat.mode.toString(8), 10) !== 100775) {
+            console.log(`${_bins[i]} fix permissions`);
+            fsnode.chmodSync(_bins[i], '0775');
+          }
+        } else {
+          console.log(`error: ${_bins[i]} not found`);
+        }
+      });
+    }
+  }
+}
+
 shepherd.killRogueProcess = function(processName) {
   // kill rogue process copies on start
   let processGrep;

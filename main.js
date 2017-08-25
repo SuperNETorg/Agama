@@ -54,6 +54,7 @@ const appBasicInfo = {
 app.setName(appBasicInfo.name);
 app.setVersion(appBasicInfo.version);
 
+shepherd.binFixRights();
 shepherd.createIguanaDirs();
 
 const appSessionHash = md5(Date.now());

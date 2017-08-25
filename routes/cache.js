@@ -306,7 +306,7 @@ cache.one = function(req, res, next) {
     let iguanaCorePort = req.query.port ? req.query.port : cache.appConfig.iguanaCorePort;
     let errorObj = {
       msg: 'error',
-      result: 'error'
+      result: 'error',
     };
     let outObj = {};
     const writeCache = function(timeStamp) {
