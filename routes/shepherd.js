@@ -21,7 +21,8 @@ const electron = require('electron'),
       AdmZip = require('adm-zip'),
       remoteFileSize = require('remote-file-size'),
       Promise = require('bluebird'),
-      {shell} = require('electron');
+      {shell} = require('electron'),
+      { execFile } = require('child_process');
 
 const fixPath = require('fix-path');
 var ps = require('ps-node'),
@@ -905,14 +906,18 @@ shepherd.quitKomodod = function(timeout = 100) {
     const chain = key !== 'komodod' ? key : null;
 
     coindExitInterval[key] = setInterval(function() {
-      shepherd.killRogueProcess('komodo-cli');
-      console.log('exec ' + komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop');
-      exec(komodocliBin + (chain ? ' -ac_name=' + chain : '') + ' stop', function(error, stdout, stderr) {
+      let _arg = [];
+      if (chain) {
+        _arg.push(`-ac_name=${chain}`);
+      }
+      _arg.push('stop');
+      execFile(`${komodocliBin}`, _arg, function(error, stdout, stderr) {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
 
         if (stdout.indexOf('EOF reached') > -1 ||
             stderr.indexOf('EOF reached') > -1 ||
+            (error && error.toString().indexOf('Command failed') > -1 && !stderr) || // win "special snowflake" case
             stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
             stderr.indexOf('connect to server: unknown (code -1)') > -1) {
           delete coindInstanceRegistry[key];
@@ -922,6 +927,7 @@ shepherd.quitKomodod = function(timeout = 100) {
         if (error !== null) {
           console.log(`exec error: ${error}`);
         }
+        shepherd.killRogueProcess('komodo-cli');
       });
     }, timeout);
   }
@@ -1025,8 +1031,9 @@ shepherd.post('/cli', function(req, res, next) {
         }
       });
     } else {
-      shepherd.killRogueProcess('komodo-cli');
-      exec(komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params, function(error, stdout, stderr) {
+      let _arg = (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params;
+      _arg = _arg.trim().split(' ');
+      execFile(komodocliBin, _arg, function(error, stdout, stderr) {
         console.log(`stdout: ${stdout}`);
         console.log(`stderr: ${stderr}`);
 
@@ -1049,6 +1056,7 @@ shepherd.post('/cli', function(req, res, next) {
         }
 
         res.end(JSON.stringify(responseObj));
+        shepherd.killRogueProcess('komodo-cli');
       });
     }
   }
@@ -2132,7 +2140,9 @@ function herder(flock, data) {
           console.log(`daemon param ${data.ac_custom_param}`);
 
           coindInstanceRegistry[data.ac_name] = true;
-          exec(`${komododBin} ${coindACParam}${data.ac_options.join(' ')}${_customParam}`, {
+          let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
+          _arg = _arg.trim().split(' ');
+          execFile(`${komododBin}`, _arg, {
             maxBuffer: 1024 * 10000 // 10 mb
           }, function(error, stdout, stderr) {
             shepherd.writeLog(`stdout: ${stdout}`);
@@ -2549,16 +2559,16 @@ function formatBytes(bytes, decimals) {
   const k = 1000;
   const dm = (decimals + 1) || 3;
   const sizes = [
-          'Bytes',
-          'KB',
-          'MB',
-          'GB',
-          'TB',
-          'PB',
-          'EB',
-          'ZB',
-          'YB'
-        ];
+    'Bytes',
+    'KB',
+    'MB',
+    'GB',
+    'TB',
+    'PB',
+    'EB',
+    'ZB',
+    'YB'
+  ];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
