@@ -906,7 +906,6 @@ shepherd.quitKomodod = function(timeout = 100) {
     const chain = key !== 'komodod' ? key : null;
 
     coindExitInterval[key] = setInterval(function() {
-      shepherd.killRogueProcess('komodo-cli');
       let _arg = [];
       if (chain) {
         _arg.push(`-ac_name=${chain}`);
@@ -918,6 +917,7 @@ shepherd.quitKomodod = function(timeout = 100) {
 
         if (stdout.indexOf('EOF reached') > -1 ||
             stderr.indexOf('EOF reached') > -1 ||
+            (error && error.toString().indexOf('Command failed') > -1 && !stderr) || // win "special snowflake" case
             stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
             stderr.indexOf('connect to server: unknown (code -1)') > -1) {
           delete coindInstanceRegistry[key];
@@ -927,6 +927,7 @@ shepherd.quitKomodod = function(timeout = 100) {
         if (error !== null) {
           console.log(`exec error: ${error}`);
         }
+        shepherd.killRogueProcess('komodo-cli');
       });
     }, timeout);
   }
@@ -1030,7 +1031,6 @@ shepherd.post('/cli', function(req, res, next) {
         }
       });
     } else {
-      shepherd.killRogueProcess('komodo-cli');
       let _arg = (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params;
       _arg = _arg.trim().split(' ');
       execFile(komodocliBin, _arg, function(error, stdout, stderr) {
@@ -1056,6 +1056,7 @@ shepherd.post('/cli', function(req, res, next) {
         }
 
         res.end(JSON.stringify(responseObj));
+        shepherd.killRogueProcess('komodo-cli');
       });
     }
   }
