@@ -22,7 +22,7 @@ const electron = require('electron'),
       remoteFileSize = require('remote-file-size'),
       Promise = require('bluebird'),
       {shell} = require('electron'),
-      { execFile } = require('child_process');
+      {execFile} = require('child_process');
 
 const fixPath = require('fix-path');
 var ps = require('ps-node'),
@@ -35,7 +35,8 @@ var ps = require('ps-node'),
     syncOnlyIguanaInstanceInfo = {},
     syncOnlyInstanceInterval = -1,
     guiLog = {},
-    rpcConf = {};
+    rpcConf = {},
+    lockDownAddCoin = false;
 
 shepherd.appConfig = _appConfig.config;
 
@@ -97,13 +98,13 @@ shepherd.testLocation = function(path) {
   return new Promise(function(resolve, reject) {
     fs.lstat(path, (err, stats) => {
       if (err) {
-        console.log('error testing path ' + path);
+        console.log(`error testing path ${path}`);
         resolve(-1);
       } else {
         if (stats.isDirectory()) {
           resolve(true);
         } else {
-          console.log('error testing path ' + path + ' not a folder');
+          console.log(`error testing path ${path} not a folder`);
           resolve(false);
         }
       }
@@ -156,7 +157,7 @@ shepherd.killRogueProcess = function(processName) {
 
   exec(processGrep, function(error, stdout, stderr) {
     if (stdout.indexOf(processName) > -1) {
-      const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im ' + processName + '.exe' : 'pkill -15 ' + processName;
+      const pkillCmd = osPlatform === 'win32' ? `taskkill /f /im ${processName}.exe` : `pkill -15 ${processName}`;
 
       console.log(`found another ${processName} process(es)`);
       shepherd.writeLog(`found another ${processName} process(es)`);
@@ -901,6 +902,7 @@ shepherd.quitKomodod = function(timeout = 100) {
   // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
   let coindExitInterval = {};
+  lockDownAddCoin = true;
 
   for (let key in coindInstanceRegistry) {
     const chain = key !== 'komodod' ? key : null;
@@ -1676,37 +1678,39 @@ shepherd.post('/herd', function(req, res) {
   console.log(req.body);
 
   function testCoindPort() {
-    const _port = assetChainPorts[req.body.options.ac_name];
+    if (!lockDownAddCoin) {
+      const _port = assetChainPorts[req.body.options.ac_name];
 
-    portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
-      // Status is 'open' if currently in use or 'closed' if available
-      if (status === 'open') {
-        console.log(`komodod service start error at port ${_port}, reason: port is closed`);
-        shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-        cache.io.emit('service', {
-          komodod: {
-            error: 'error starting ' + req.body.herd + ' ' + req.body.options.ac_name + ' daemon. Port ' + _port + ' is already taken!',
-          },
-        });
+      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+        // Status is 'open' if currently in use or 'closed' if available
+        if (status === 'open') {
+          console.log(`komodod service start error at port ${_port}, reason: port is closed`);
+          shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
+          cache.io.emit('service', {
+            komodod: {
+              error: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
+            },
+          });
 
-        const obj = {
-          msg: 'error',
-          result: 'error starting ' + req.body.herd + ' ' + req.body.options.ac_name + ' daemon. Port ' + _port + ' is already taken!',
-        };
+          const obj = {
+            msg: 'error',
+            result: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
+          };
 
-        res.status(500);
-        res.end(JSON.stringify(obj));
-      } else {
-        herder(req.body.herd, req.body.options);
+          res.status(500);
+          res.end(JSON.stringify(obj));
+        } else {
+          herder(req.body.herd, req.body.options);
 
-        const obj = {
-          msg: 'success',
-          result: 'result',
-        };
+          const obj = {
+            msg: 'success',
+            result: 'result',
+          };
 
-        res.end(JSON.stringify(obj));
-      }
-    });
+          res.end(JSON.stringify(obj));
+        }
+      });
+    }
   }
 
   if (req.body.herd === 'komodod') {

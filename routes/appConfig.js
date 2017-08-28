@@ -1,5 +1,5 @@
 const appConfig = {
-  config: {
+  config: { // default config
     edexGuiOnly: true,
     iguanaGuiOnly: false,
     manualIguanaStart: false,
@@ -23,6 +23,7 @@ const appConfig = {
     },
     iguanaLessMode: true,
     roundValues: false,
+    experimentalFeatures: false,
     dataDir: '',
   },
   schema: {
@@ -66,6 +67,7 @@ const appConfig = {
     },
     iguanaCorePort: {
       display: true,
+      initDisplay: true,
       type: 'number',
       displayName: 'Iguana Core Port',
       info: 'Default Iguana Core Port. Change it if you have conflicts with other applications.',
@@ -92,8 +94,9 @@ const appConfig = {
     },
     dev: {
       display: true,
+      initDisplay: true,
       displayName: 'Developer mode',
-      info: 'Enable developer mode.',
+      info: 'Enable developer mode',
       type: 'boolean',
     },
     v2: {
@@ -102,12 +105,14 @@ const appConfig = {
     },
     useBasiliskInstance: {
       display: true,
+      initDisplay: true,
       displayName: 'Iguana Core Basilisk Instance',
       info: 'Enable dedicated Iguana Core instance to handle all Basilisk network requests',
       type: 'boolean',
     },
     debug: {
       display: true,
+      initDisplay: true,
       displayName: 'Debug',
       info: 'Enable debug output',
       type: 'boolean',
@@ -137,14 +142,28 @@ const appConfig = {
     roundValues: {
       display: true,
       displayName: 'Enable amount rounding',
-      info: 'Round \"dust\" amounts to save screen space.',
+      info: 'Round \"dust\" amounts to save screen space',
+      type: 'boolean',
+    },
+    experimentalFeatures: {
+      display: true,
+      initDisplay: true,
+      displayName: 'Enable experimental features',
       type: 'boolean',
     },
     dataDir: {
       display: true,
+      initDisplay: true,
       displayName: 'Komodo data directory',
-      info: 'The data directory is the location where Komodo data files are stored, including the wallet data file.',
+      info: 'The data directory is the location where Komodo data files are stored, including the wallet data file',
       type: 'folder',
+    },
+    daemonTest: {
+      display: false,
+      initDisplay: true,
+      displayName: 'Test daemons start (debug)',
+      info: 'Test daemons before launching. Use this option to get verbose output regarding possible daemon start issues.',
+      type: 'boolean',
     },
   },
 };
