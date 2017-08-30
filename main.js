@@ -54,6 +54,7 @@ const appBasicInfo = {
 app.setName(appBasicInfo.name);
 app.setVersion(appBasicInfo.version);
 
+shepherd.binFixRights();
 shepherd.createIguanaDirs();
 
 const appSessionHash = md5(Date.now());
@@ -75,45 +76,8 @@ shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}
 
 shepherd.setConfKMD();
 
-// kill rogue iguana copies on start
 if (appConfig.killIguanaOnStart) {
-	let iguanaGrep;
-
-	switch (osPlatform) {
-		case 'darwin':
-			iguanaGrep = "ps -p $(ps -A | grep -m1 iguana | awk '{print $1}') | grep -i iguana";
-			break;
-		case 'linux':
-			iguanaGrep = 'ps -p $(pidof iguana) | grep -i iguana';
-			break;
-		case 'win32':
-			iguanaGrep = 'tasklist';
-			break;
-	}
-
-	exec(iguanaGrep, function(error, stdout, stderr) {
-		if (stdout.indexOf('iguana') > -1) {
-			const pkillCmd = osPlatform === 'win32' ? 'taskkill /f /im iguana.exe' : 'pkill -15 iguana';
-
-			console.log('found another iguana process(es)');
-			shepherd.writeLog('found another iguana process(es)');
-
-			exec(pkillCmd, function(error, stdout, stderr) {
-				console.log(`${pkillCmd} is issued`);
-				shepherd.writeLog(`${pkillCmd} is issued`);
-
-				if (error !== null) {
-					console.log(`${pkillCmd} exec error: ${error}`);
-					shepherd.writeLog(`${pkillCmd} exec error: ${error}`);
-				};
-			});
-		}
-
-		if (error !== null) {
-			console.log(`${iguanaGrep} exec error: ${error}`);
-			shepherd.writeLog(`${iguanaGrep} exec error: ${error}`);
-		};
-	});
+	shepherd.killRogueProcess('iguana');
 }
 
 guiapp.use(function(req, res, next) {
@@ -126,8 +90,8 @@ guiapp.use(function(req, res, next) {
 });
 
 // preload.js
-const _setImmediate = setImmediate,
-			_clearImmediate = clearImmediate;
+const _setImmediate = setImmediate;
+const _clearImmediate = clearImmediate;
 
 process.once('loaded', () => {
 	global.setImmediate = _setImmediate;
@@ -150,10 +114,10 @@ process.once('loaded', () => {
 guiapp.use(bodyParser.json({ limit: '50mb' })); // support json encoded bodies
 guiapp.use(bodyParser.urlencoded({
 	limit: '50mb',
-	extended: true
+	extended: true,
 })); // support encoded bodies
 
-guiapp.get('/', function (req, res) {
+guiapp.get('/', function(req, res) {
 	res.send('Agama app server');
 });
 
@@ -168,6 +132,7 @@ let mainWindow;
 let loadingWindow;
 let appCloseWindow;
 let closeAppAfterLoading = false;
+const _zcashParamsExist = shepherd.zcashParamsExist();
 
 module.exports = guiapp;
 let iguanaIcon;
@@ -251,7 +216,7 @@ function createLoadingWindow() {
 	// loadingWindow.webContents.openDevTools()
 
 	// if window closed we kill iguana proc
-	loadingWindow.on('hide', function () {
+	loadingWindow.on('hide', function() {
 		// our app does not have multiwindow - so we dereference the window object instead of
 		// putting them into an window_arr
 		loadingWindow = null;
@@ -337,10 +302,13 @@ function createWindow(status) {
 			if (appConfig.v2) {
 				shepherd.writeLog('show edex gui');
 				mainWindow.appConfig = appConfig;
+				mainWindow.appConfigSchema = shepherd.appConfigSchema;
 				mainWindow.appBasicInfo = appBasicInfo;
 				mainWindow.appSessionHash = appSessionHash;
 				mainWindow.assetChainPorts = require('./routes/ports.js');
-				mainWindow.zcashParamsExist = shepherd.zcashParamsExist();
+				mainWindow.zcashParamsExist = _zcashParamsExist;
+				mainWindow.iguanaIcon = iguanaIcon;
+				mainWindow.testLocation = shepherd.testLocation;
 
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
@@ -421,16 +389,16 @@ function createWindow(status) {
 						shepherd.writeLog(result);
 
 						resolve(result);
-					}, 2000)
+					}, 2000);
 				})
 			}
 
 			const HideMainWindow = function() {
 				return new Promise(function(resolve, reject) {
+					const result = 'Hiding Main Window: done';
+
 					console.log('Exiting App...');
 					mainWindow = null;
-
-					const result = 'Hiding Main Window: done';
 					console.log(result);
 					resolve(result);
 				});
@@ -445,9 +413,10 @@ function createWindow(status) {
 
 			const QuitApp = function() {
 				return new Promise(function(resolve, reject) {
+					const result = 'Quiting App: done';
+
 					KillPm2(); // required for normal app quit in iguana-less mode
 					app.quit();
-					const result = 'Quiting App: done';
 					console.log(result);
 					resolve(result);
 				});
@@ -468,13 +437,13 @@ function createWindow(status) {
 			if (!Object.keys(shepherd.coindInstanceRegistry).length) {
 				closeApp();
 			} else {
+				createAppCloseWindow();
 				shepherd.quitKomodod(1000);
 				_appClosingInterval = setInterval(function() {
 					if (!Object.keys(shepherd.coindInstanceRegistry).length) {
 						closeApp();
 					}
 				}, 1000);
-				createAppCloseWindow();
 			}
 		}
 
@@ -485,7 +454,7 @@ function createWindow(status) {
 	}
 }
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', function() {
 	//if (os.platform() !== 'win32') { ig.kill(); }
 	// in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
 	// so we do not kill the app --> for the case user clicks again on the iguana icon
@@ -497,7 +466,7 @@ app.on('window-all-closed', function () {
 
 // Emitted before the application starts closing its windows.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('before-quit', function (event) {
+app.on('before-quit', function(event) {
 	console.log('before-quit');
 	if (mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
@@ -512,7 +481,7 @@ app.on('before-quit', function (event) {
 
 // Emitted when all windows have been closed and the application will quit.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('will-quit', function (event) {
+app.on('will-quit', function(event) {
 	if (mainWindow === null && loadingWindow != null) {
 		// loading window is still open
 		console.log('will-quit while loading window active');
@@ -522,37 +491,38 @@ app.on('will-quit', function (event) {
 
 // Emitted when the application is quitting.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
-app.on('quit', function (event) {
+app.on('quit', function(event) {
 	if (mainWindow === null && loadingWindow != null) {
 		console.log('quit while loading window active');
 		event.preventDefault();
 	}
 })
 
-app.on('activate', function () {
+app.on('activate', function() {
 	if (mainWindow === null) {
 		// createWindow('open');
 	}
 });
 
 function formatBytes(bytes, decimals) {
-  if (bytes === 0)
+  if (bytes === 0) {
     return '0 Bytes';
+  }
 
-  const k = 1000,
-	      dm = decimals + 1 || 3,
-	      sizes = [
-	        'Bytes',
-	        'KB',
-	        'MB',
-	        'GB',
-	        'TB',
-	        'PB',
-	        'EB',
-	        'ZB',
-	        'YB'
-	      ],
-	      i = Math.floor(Math.log(bytes) / Math.log(k));
+  const k = 1000;
+	const dm = decimals + 1 || 3;
+	const sizes = [
+    'Bytes',
+    'KB',
+    'MB',
+    'GB',
+    'TB',
+    'PB',
+    'EB',
+    'ZB',
+    'YB'
+  ];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
 
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }

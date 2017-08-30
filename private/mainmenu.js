@@ -1,7 +1,7 @@
-const {Menu} = require('electron'),
-      electron = require('electron'),
-      app = electron.app,
-      {shell} = require('electron');
+const {Menu} = require('electron');
+const electron = require('electron');
+const app = electron.app;
+const {shell} = require('electron');
 
 const template = [
   {
@@ -86,7 +86,7 @@ const template = [
       }
     ]
   },
-  {
+  /*{
     role: 'help',
     label: 'Support',
     submenu: [
@@ -121,7 +121,7 @@ const template = [
         }
       }
     ]
-  }
+  }*/
 ]
 
 if (process.platform === 'darwin') {
