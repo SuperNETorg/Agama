@@ -49,6 +49,7 @@ if (os.platform() === 'darwin') {
   fixPath();
   var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
       iguanaDir = `${process.env.HOME}/Library/Application Support/iguana`,
+      iguanaTestDir = `${process.env.HOME}/Library/Application Support/iguana/test`,
       iguanaConfsDir = `${iguanaDir}/confs`,
       komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
@@ -62,6 +63,7 @@ if (os.platform() === 'darwin') {
 if (os.platform() === 'linux') {
   var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
       iguanaDir = `${process.env.HOME}/.iguana`,
+      iguanaTestDir = `${process.env.HOME}/.iguana/test`,
       iguanaConfsDir = `${iguanaDir}/confs`,
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
@@ -75,6 +77,8 @@ if (os.platform() === 'win32') {
       iguanaBin = path.normalize(iguanaBin);
       iguanaDir = `${process.env.APPDATA}/iguana`;
       iguanaDir = path.normalize(iguanaDir);
+      iguanaTestDir = `${process.env.APPDATA}/iguana/test`;
+      iguanaTestDir = path.normalize(iguanaTestDir);
       iguanaConfsDir = `${process.env.APPDATA}/iguana/confs`;
       iguanaConfsDir = path.normalize(iguanaConfsDir);
       iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
@@ -93,6 +97,292 @@ shepherd.appConfigSchema = _appConfig.schema;
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
+
+shepherd.testNearestIguanaPort = function() {
+  return new Promise(function(resolve, reject) {
+    const port = shepherd.appConfig.iguanaCorePort;
+    portscanner.findAPortNotInUse(port, port + 100, '127.0.0.1', function(error, _port) {
+      resolve(_port);
+    });
+  });
+}
+
+shepherd.testClearAll = function() {
+  return new Promise(function(resolve, reject) {
+    fs.removeSync(`${iguanaTestDir}`);
+    resolve('done');
+  });
+}
+
+shepherd.testBins = function(daemonName) {
+  return new Promise(function(resolve, reject) {
+    const _bins = {
+      komodod: komododBin,
+      komodoCli: komodocliBin,
+      iguana: iguanaBin,
+    };
+    const _arg = null;
+    let _pid;
+
+    console.log('testBins exec ' + _bins[daemonName]);
+
+    if (!fs.existsSync(iguanaTestDir)) {
+      fs.mkdirSync(iguanaTestDir);
+    }
+
+    if (daemonName === 'iguana') {
+      shepherd.killRogueProcess('iguana');
+    }
+
+    try {
+      _fs.access(`${iguanaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, function(err) {
+        if (!err) {
+          _fs.unlink(`${iguanaTestDir}/${daemonName}Test.log`);
+        } else {
+          console.log(`path ${iguanaTestDir}/${daemonName}Test.log doesnt exist`);
+        }
+      });
+    } catch (e) {}
+
+    if (daemonName === 'iguana') {
+      pm2.connect(true,function(err) { //start up pm2 god
+        if (err) {
+          console.error(err);
+          process.exit(2);
+        }
+        console.log(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
+        shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
+
+        pm2.start({
+          script: iguanaBin, // path to binary
+          name: 'iguana',
+          exec_mode : 'fork',
+          args: [`-port=${shepherd.appConfig.iguanaCorePort}`],
+          output: `${iguanaTestDir}/iguanaTest.log`,
+          mergeLogs: true,
+          cwd: iguanaDir // set correct iguana directory
+        }, function(err, apps) {
+          if (apps[0] &&
+              apps[0].process &&
+              apps[0].process.pid) {
+            console.log(`test: got iguana instance pid = ${apps[0].process.pid}`);
+            shepherd.writeLog(`test: iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
+          } else {
+            console.log(`test: unable to start iguana core at port ${shepherd.appConfig.iguanaCorePort}`);
+          }
+
+          pm2.disconnect(); // Disconnect from PM2
+          if (err) {
+            shepherd.writeLog(`test: iguana core port ${shepherd.appConfig.iguanaCorePort}`);
+            console.log(`test: iguana fork error: ${err}`);
+            throw err;
+          }
+        });
+      });
+
+      setTimeout(function() {
+        pm2.delete('iguana');
+
+        const _iguanaTestRunLog = fs.readFileSync(`${iguanaTestDir}/iguanaTest.log`, 'utf8');
+
+        if (_iguanaTestRunLog.indexOf('iguana main') > -1 &&
+            _iguanaTestRunLog.indexOf('Basilisk initialized') > -1) {
+          let _portTest = 'unknown';
+
+          if (_iguanaTestRunLog.indexOf(`iguana_rpcloop 127.0.0.1:${shepherd.appConfig.iguanaCorePort}`) > -1) {
+            _portTest = 'passed';
+          }
+
+          if (_iguanaTestRunLog.indexOf(`ERROR BINDING PORT.${shepherd.appConfig.iguanaCorePort}`) > -1) {
+            _portTest = 'failed';
+          }
+
+          resolve({
+            res: 'success',
+            port: _portTest,
+            iguanaPort: shepherd.appConfig.iguanaCorePort,
+          });
+        } else {
+          resolve({ res: 'error' });
+        }
+      }, 30000);
+    } else if (daemonName === 'komodod') {
+      try {
+        _fs.access(`${iguanaTestDir}/debug.log`, fs.constants.R_OK, function(err) {
+          if (!err) {
+            _fs.unlinkSync(`${iguanaTestDir}/db.log`);
+            _fs.unlinkSync(`${iguanaTestDir}/debug.log`);
+            _fs.unlinkSync(`${iguanaTestDir}/komodo.conf`);
+            _fs.unlinkSync(`${iguanaTestDir}/komodod.pid`);
+            _fs.unlinkSync(`${iguanaTestDir}/komodostate`);
+            _fs.unlinkSync(`${iguanaTestDir}/realtime`);
+            _fs.unlinkSync(`${iguanaTestDir}/wallet.dat`);
+            _fs.unlinkSync(`${iguanaTestDir}/.lock`);
+            fs.removeSync(`${iguanaTestDir}/blocks`);
+            fs.removeSync(`${iguanaTestDir}/chainstate`);
+            fs.removeSync(`${iguanaTestDir}/database`);
+            execKomodod();
+          } else {
+            console.log(`test: nothing to remove in ${iguanaTestDir}`);
+            execKomodod();
+          }
+        });
+      } catch (e) {}
+
+      function execKomodod() {
+        let _komododTest = {
+          port: 'unknown',
+          start: 'unknown',
+          getinfo: 'unknown',
+          errors: {
+            assertFailed: false,
+            zcashParams: false,
+          },
+        };
+        const _komodoConf = 'rpcuser=user83f3afba8d714993\n' +
+          'rpcpassword=0d4430ca1543833e35bce5a0cc9e16b3\n' +
+          'server=1\n' +
+          'addnode=78.47.196.146\n' +
+          'addnode=5.9.102.210\n' +
+          'addnode=178.63.69.164\n' +
+          'addnode=88.198.65.74\n' +
+          'addnode=5.9.122.241\n' +
+          'addnode=144.76.94.3\n' +
+          'addnode=144.76.94.38\n' +
+          'addnode=89.248.166.91\n' +
+          'addnode=148.251.57.148\n' +
+          'addnode=149.56.28.84\n' +
+          'addnode=176.9.26.39\n' +
+          'addnode=94.102.63.199\n' +
+          'addnode=94.102.63.200\n' +
+          'addnode=104.255.64.3\n' +
+          'addnode=221.121.144.140\n' +
+          'addnode=103.18.58.150\n' +
+          'addnode=103.18.58.146\n' +
+          'addnode=213.202.253.10\n' +
+          'addnode=185.106.121.32\n' +
+          'addnode=27.100.36.201\n';
+
+        fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, function (err) {
+          if (err) {
+            console.log(`test: error writing komodo conf in ${iguanaTestDir}`);
+          }
+        });
+
+        portscanner.checkPortStatus('7771', '127.0.0.1', function(error, status) {
+          // Status is 'open' if currently in use or 'closed' if available
+          if (status === 'closed') {
+            _komododTest.port = 'passed';
+          } else {
+            _komododTest.port = 'failed';
+          }
+        });
+
+        pm2.connect(true,function(err) { //start up pm2 god
+          if (err) {
+            console.error(err);
+            process.exit(2);
+          }
+
+          pm2.start({
+            script: komododBin, // path to binary
+            name: 'komodod',
+            exec_mode : 'fork',
+            args: [
+              '-daemon=0',
+              '-addnode=78.47.196.146',
+              `-datadir=${iguanaTestDir}/`
+            ],
+            output: `${iguanaTestDir}/komododTest.log`,
+            mergeLogs: true,
+          }, function(err, apps) {
+            if (apps[0] &&
+                apps[0].process &&
+                apps[0].process.pid) {
+              _komododTest.start = 'success';
+              console.log(`test: got komodod instance pid = ${apps[0].process.pid}`);
+              shepherd.writeLog(`test: komodod started with pid ${apps[0].process.pid}`);
+            } else {
+              _komododTest.start = 'failed';
+              console.log(`unable to start komodod`);
+            }
+
+            pm2.disconnect(); // Disconnect from PM2
+            if (err) {
+              shepherd.writeLog(`test: error starting komodod`);
+              console.log(`komodod fork err: ${err}`);
+              throw err;
+            }
+          });
+        });
+
+        setTimeout(function() {
+          const options = {
+            url: `http://localhost:7771`,
+            method: 'POST',
+            auth: {
+              user: 'user83f3afba8d714993',
+              pass: '0d4430ca1543833e35bce5a0cc9e16b3',
+            },
+            body: JSON.stringify({
+              agent: 'bitcoinrpc',
+              method: 'getinfo',
+            }),
+          };
+
+          request(options, function (error, response, body) {
+            if (response &&
+                response.statusCode &&
+                response.statusCode === 200) {
+              // res.end(body);
+              console.log(JSON.stringify(body, null, '\t'));
+            } else {
+              // res.end(body);
+              console.log(JSON.stringify(body, null, '\t'));
+            }
+          });
+        }, 10000);
+
+        setTimeout(function() {
+          pm2.delete('komodod');
+          resolve(_komododTest);
+        }, 20000);
+      }
+      // komodod debug.log hooks
+
+//"{\"result\":{\"version\":1000850,\"protocolversion\":170002,\"KMDversion\":\"0.1.1\",\"notarized\":0,\"notarizedhash\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"notarizedtxid\":\"0000000000000000000000000000000000000000000000000000000000000000\",\"notarizedtxid_height\":\"mempool\",\"notarized_confirms\":0,\"walletversion\":60000,\"balance\":0.00000000,\"interest\":0.00000000,\"blocks\":128,\"longestchain\":472331,\"timeoffset\":0,\"tiptime\":1473827710,\"connections\":1,\"proxy\":\"\",\"difficulty\":1,\"testnet\":false,\"keypoololdest\":1504118047,\"keypoolsize\":101,\"paytxfee\":0.00000000,\"relayfee\":0.00000100,\"errors\":\"\"},\"error\":null,\"id\":null}\n"
+
+      //2017-08-30 17:51:33 Error: Cannot find the Zcash network parameters in the following directory:
+      //"/home/pbca/.zcash-params"
+      //Please run 'zcash-fetch-params' or './zcutil/fetch-params.sh' and then restart.
+      //EXCEPTION: St13runtime_error
+      //Assertion failed.
+      //2017-08-30 17:51:14 Using config file /home/pbca/.iguana/test/komodo.conf
+      //2017-08-30 18:23:43 UpdateTip: new best=0a47c1323f393650f7221c217d19d149d002d35444f47fde61be2dd90fbde8e6  height=1  log2_work=5.0874628  tx=2  date=2016-09-13 19:04:01 progress=0.000001  cache=0.0MiB(1tx)
+      //2017-08-30 18:23:43 UpdateTip: new best=05076a4e1fc9af0f5fda690257b17ae20c12d4796dfba1624804d012c9ec00be  height=2  log2_work=5.6724253  tx=3  date=2016-09-13 19:05:28 progress=0.000001  cache=0.0MiB(2tx)
+
+      /*execFile(`${komododBin}`, _arg, {
+        maxBuffer: 1024 * 10000 // 10 mb
+      }, function(error, stdout, stderr) {
+        shepherd.writeLog(`stdout: ${stdout}`);
+        shepherd.writeLog(`stderr: ${stderr}`);
+
+        if (error !== null) {
+          console.log(`exec error: ${error}`);
+          shepherd.writeLog(`exec error: ${error}`);
+
+          if (error.toString().indexOf('using -reindex') > -1) {
+            cache.io.emit('service', {
+              komodod: {
+                error: 'run -reindex',
+              }
+            });
+          }
+        }
+      });*/
+    }
+  });
+}
 
 shepherd.testLocation = function(path) {
   return new Promise(function(resolve, reject) {
@@ -181,15 +471,34 @@ shepherd.killRogueProcess = function(processName) {
 }
 
 shepherd.zcashParamsExist = function() {
-  if (_fs.existsSync(zcashParamsDir) &&
-      _fs.existsSync(`${zcashParamsDir}/sprout-proving.key`) &&
-      _fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`)) {
+  let _checkList = {
+    rootDir: _fs.existsSync(zcashParamsDir),
+    provingKey: _fs.existsSync(`${zcashParamsDir}/sprout-proving.key`),
+    provingKeySize: false,
+    verifyingKey: _fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`),
+    verifyingKeySize: false,
+  };
+
+  if (_checkList.rootDir &&
+      _checkList.provingKey &&
+      _checkList.verifyingKey) {
+    // verify each key size
+    const _provingKeySize = fs.lstatSync(`${zcashParamsDir}/sprout-proving.key`);
+    const _verifyingKeySize = fs.lstatSync(`${zcashParamsDir}/sprout-verifying.key`);
+
+    if (_provingKeySize.size === 910173851) {
+      _checkList.provingKeySize = true;
+    }
+    if (_verifyingKeySize.size === 1449) {
+      _checkList.verifyingKeySize = true;
+    }
     console.log('zcashparams exist');
-    return true;
+  } else {
+    console.log('zcashparams doesnt exist');
   }
 
-  console.log('zcashparams doesnt exist');
-  return false;
+  console.log(JSON.stringify(_checkList, null, '\t'));
+  return _checkList;
 }
 
 shepherd.readVersionFile = function() {
@@ -1434,7 +1743,10 @@ shepherd.post('/forks', function(req, res, next) {
         args: [`-port=${_port}`],
         cwd: iguanaDir //set correct iguana directory
       }, function(err, apps) {
-        if (apps && apps[0] && apps[0].process && apps[0].process.pid) {
+        if (apps &&
+            apps[0] &&
+            apps[0].process &&
+            apps[0].process.pid) {
           iguanaInstanceRegistry[_port] = {
             mode: mode,
             coin: coin,
@@ -1971,24 +2283,28 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
     function(resolve, reject) {
       if (lastNLines) {
-        _fs.access(fileLocation, fs.constants.R_OK, function(err) {
-          if (err) {
-            console.log(`error reading ${fileLocation}`);
-            shepherd.writeLog(`error reading ${fileLocation}`);
-            reject(`readDebugLog error: ${err}`);
-          } else {
-            console.log(`reading ${fileLocation}`);
-            _fs.readFile(fileLocation, 'utf-8', function(err, data) {
-              if (err)
-                throw err;
+        try {
+          _fs.access(fileLocation, fs.constants.R_OK, function(err) {
+            if (err) {
+              console.log(`error reading ${fileLocation}`);
+              shepherd.writeLog(`error reading ${fileLocation}`);
+              reject(`readDebugLog error: ${err}`);
+            } else {
+              console.log(`reading ${fileLocation}`);
+              _fs.readFile(fileLocation, 'utf-8', function(err, data) {
+                if (err)
+                  throw err;
 
-              const lines = data.trim().split('\n');
-              const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
+                const lines = data.trim().split('\n');
+                const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
 
-              resolve(lastLine);
-            });
-          }
-        });
+                resolve(lastLine);
+              });
+            }
+          });
+        } catch (e) {
+          reject(`readDebugLog error: ${e}`);
+        }
       } else {
         reject('readDebugLog error: lastNLines param is not provided!');
       }
@@ -2057,13 +2373,20 @@ function herder(flock, data) {
         args: [`-port=${shepherd.appConfig.iguanaCorePort}`],
         cwd: iguanaDir // set correct iguana directory
       }, function(err, apps) {
-        iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
-          mode: 'main',
-          coin: 'none',
-          pid: apps[0].process.pid,
-          pmid: apps[0].pm2_env.pm_id,
-        };
-        shepherd.writeLog(`iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
+        if (apps[0] &&
+            apps[0].process &&
+            apps[0].process.pid) {
+          iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
+            mode: 'main',
+            coin: 'none',
+            pid: apps[0].process.pid,
+            pmid: apps[0].pm2_env.pm_id,
+          };
+          shepherd.writeLog(`iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
+        } else {
+          shepherd.writeLog(`unable to start iguana core at port ${shepherd.appConfig.iguanaCorePort}`);
+          console.log(`unable to start iguana core at port ${shepherd.appConfig.iguanaCorePort}`);
+        }
 
         pm2.disconnect(); // Disconnect from PM2
         if (err) {
