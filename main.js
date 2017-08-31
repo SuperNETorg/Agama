@@ -71,10 +71,10 @@ shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
 var appConfig = shepherd.loadLocalConfig(); // load app config
-appConfig['daemonTest'] = false; // shadow setting
+appConfig['daemonOutput'] = false; // shadow setting
 
 let __defaultAppSettings = require('./routes/appConfig.js').config;
-__defaultAppSettings['daemonTest'] = false; // shadow setting
+__defaultAppSettings['daemonOutput'] = false; // shadow setting
 const _defaultAppSettings = __defaultAppSettings;
 
 shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
@@ -288,7 +288,7 @@ function createAppSettingsWindow() {
 	// initialise window
 	appSettingsWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 750,
-		height: 800,
+		height: 820,
 		frame: false,
 		icon: iguanaIcon,
 		show: false,
@@ -302,6 +302,8 @@ function createAppSettingsWindow() {
 	appSettingsWindow.testLocation = shepherd.testLocation;
 	appSettingsWindow.setDefaultAppSettings = setDefaultAppSettings;
 	appSettingsWindow.updateAppSettings = updateAppSettings;
+	appSettingsWindow.testBins = shepherd.testBins;
+	appSettingsWindow.zcashParamsExist = _zcashParamsExist;
 	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/app-settings.html`);
 
   appSettingsWindow.webContents.on('did-finish-load', function() {
@@ -407,7 +409,7 @@ function createWindow(status) {
 					shepherd.writeLog('exiting app...');
 
 					shepherd.dumpCacheBeforeExit();
-					shepherd.quitKomodod();
+					shepherd.quitKomodod(1000);
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
@@ -526,6 +528,7 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	console.log('before-quit');
+	shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
 	if (!forceQuitApp && mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
 		console.log('before-quit prevented');

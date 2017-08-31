@@ -477,6 +477,7 @@ shepherd.zcashParamsExist = function() {
     provingKeySize: false,
     verifyingKey: _fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`),
     verifyingKeySize: false,
+    errors: false,
   };
 
   if (_checkList.rootDir &&
@@ -492,12 +493,20 @@ shepherd.zcashParamsExist = function() {
     if (_verifyingKeySize.size === 1449) {
       _checkList.verifyingKeySize = true;
     }
+
     console.log('zcashparams exist');
   } else {
     console.log('zcashparams doesnt exist');
   }
 
-  console.log(JSON.stringify(_checkList, null, '\t'));
+  if (!_checkList.rootDir ||
+      !_checkList.provingKey ||
+      !_checkList.verifyingKey ||
+      !_checkList.provingKeySize ||
+      !_checkList.verifyingKeySize) {
+    _checkList.errors = true;
+  }
+
   return _checkList;
 }
 
@@ -1216,7 +1225,7 @@ shepherd.quitKomodod = function(timeout = 100) {
   for (let key in coindInstanceRegistry) {
     const chain = key !== 'komodod' ? key : null;
 
-    coindExitInterval[key] = setInterval(function() {
+    function execCliStop() {
       let _arg = [];
       if (chain) {
         _arg.push(`-ac_name=${chain}`);
@@ -1240,6 +1249,11 @@ shepherd.quitKomodod = function(timeout = 100) {
         }
         shepherd.killRogueProcess('komodo-cli');
       });
+    }
+
+    execCliStop();
+    coindExitInterval[key] = setInterval(function() {
+      execCliStop();
     }, timeout);
   }
 }
