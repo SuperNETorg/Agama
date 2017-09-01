@@ -158,11 +158,11 @@ const appConfig = {
       info: 'The data directory is the location where Komodo data files are stored, including the wallet data file',
       type: 'folder',
     },
-    daemonTest: {
+    daemonOutput: {
       display: false,
       initDisplay: true,
-      displayName: 'Test daemons start (debug)',
-      info: 'Test daemons before launching. Use this option to get verbose output regarding possible daemon start issues.',
+      displayName: 'Output daemon prints (debug)',
+      info: 'Output daemon prints to GUI for debug purposes',
       type: 'boolean',
     },
   },

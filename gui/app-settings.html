@@ -14,6 +14,7 @@
     <script>if (window.module) module = window.module;</script>
   </head>
   <body class="agamaMode agama-app-settings-window">
+    <div id="debugOut"></div>
     <div class="text-center">
       <div
         id="agamaMode"
@@ -33,10 +34,17 @@
         <div
           id="agamaConfigBlock"
           class="agama-config-block"></div>
+        <!-- debug overlay -->
+        <div
+          id="debugOverlay"
+          class="debug-overlay hide"></div>
         <div class="settings-buttons-block">
           <button
+            onClick="testBins('komodod')"
+            class="btn btn-info pull-left">Test binaries</button>
+          <button
             onClick="handleSaveSettings()"
-            class="btn btn-primary">Save</button>
+            class="btn btn-primary margin-right-20">Save</button>
           <button
             onClick="initSettingsForm()"
             class="btn btn-primary">Reset changes</button>
@@ -44,6 +52,7 @@
             onClick="setDefaultAppSettings()"
             class="btn btn-primary">Reset all settings</button>
         </div>
+        <!-- toaster -->
         <div
           id="toast-container"
           class="single-toast toast-bottom-right hide">
@@ -57,7 +66,6 @@
         </div>
         <button onClick="reloadSettingsWindow()" class="btn btn-primary" style="margin-top: 20px">Reload</button>
       </div>
-      <div id="debugOut"></div>
       <script>initSettingsForm()</script>
     </div>
   </body>
