@@ -31,16 +31,16 @@ var child_process = require('child_process'),
     os = require('os');
 
 if (os.platform() === 'darwin') {
-  var komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/osx/komodo-cli'),
+  var komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli';
 }
 
 if (os.platform() === 'linux') {
-  var komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/linux/komodo-cli');
+  var komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli');
 }
 
 if (os.platform() === 'win32') {
-  var komodocliBin = path.join(__dirname, '../assets/artifacts.supernet.org/latest/windows/komodo-cli.exe'),
+  var komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
       komodocliBin = path.normalize(komodocliBin);
 }
 
@@ -116,11 +116,11 @@ function parse_kmdcli_commands(callback) {
  *     "notaryid" : -1,
  *     "pubkey" : "000000000000000000000000000000000000000000000000000000000000000000"
  * }
- * 
+ *
  */
 function command(kmd_command, callback) {
   if (callback) {
     return this.exec(komodocliBin + " " + kmd_command,
-      parse_kmdcli_commands(callback));  
+      parse_kmdcli_commands(callback));
   }
 }

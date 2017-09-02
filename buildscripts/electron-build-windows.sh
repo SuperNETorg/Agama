@@ -7,11 +7,11 @@
 
 echo
 echo "Build script for Iguana application for Windows x64 platform."
-echo "Preparing electron package $AGAMA_VERSION" 
+echo "Preparing electron package $AGAMA_VERSION"
 
 electron-packager . --platform=win32 --arch=ia32 \
   --icon=assets/icons/iguana_app_icon.ico \
   --out=build/ --buildVersion=$AGAMA_VERSION \
-  --ignore=assets/artifacts.supernet.org/latest/osx \
-  --ignore=assets/artifacts.supernet.org/latest/linux \
-  --overwrite 
+  --ignore=assets/bin/osx \
+  --ignore=assets/bin/linux64 \
+  --overwrite
