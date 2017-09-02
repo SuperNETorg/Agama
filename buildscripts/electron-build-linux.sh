@@ -13,5 +13,5 @@ electron-packager . --platform=linux --arch=x64 \
   --icon=assets/icons/iguana_app_icon_png/128x128.png \
   --out=build/ --buildVersion=$AGAMA_VERSION \
   --ignore=assets/bin/win64 \
-  --ignore=assets/bins/osx \
+  --ignore=assets/bin/osx \
   --overwrite

@@ -46,7 +46,7 @@ var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs');
 // SETTING APP ICON FOR LINUX AND WINDOWS
 if (os.platform() === 'darwin') {
   fixPath();
-  var iguanaBin = path.join(__dirname, '../assets/osx/iguana'),
+  var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
       iguanaDir = `${process.env.HOME}/Library/Application Support/iguana`,
       iguanaConfsDir = `${iguanaDir}/confs`,
       komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
