@@ -22,7 +22,7 @@ chmod +x assets/artifacts.supernet.org/latest/osx/iguana \
   assets/artifacts.supernet.org/latest/osx/komodo*
 
 #cp -rvf assets/artifacts.supernet.org/latest/osx/* assets/bin/osx/
-
+mkdir assets/bin
 echo Moving OSX bins to assets/bin
 mv assets/artifacts.supernet.org/latest/osx assets/bin/osx
 
