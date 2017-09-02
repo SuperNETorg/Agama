@@ -197,7 +197,7 @@ function createLoadingWindow() {
 				console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
 				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
 			});
-			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/agama-instance-error.html`);
+			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/startup/agama-instance-error.html`);
 			console.log('another agama app is already running');
 		}
 	});
@@ -212,7 +212,7 @@ function createLoadingWindow() {
 	loadingWindow.createAppSettingsWindow = createAppSettingsWindow;
 
 	// load our index.html (i.e. easyDEX GUI)
-	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
+	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup`);
   loadingWindow.webContents.on('did-finish-load', function() {
     setTimeout(function() {
       loadingWindow.show();
@@ -271,7 +271,7 @@ function createAppCloseWindow() {
 		show: false,
 	});
 
-	appCloseWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/app-closing.html`);
+	appCloseWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-closing.html`);
 
   appCloseWindow.webContents.on('did-finish-load', function() {
     setTimeout(function() {
@@ -281,7 +281,7 @@ function createAppCloseWindow() {
 }
 
 function reloadSettingsWindow() {
-	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/app-settings.html`);
+	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-settings.html`);
 }
 
 function createAppSettingsWindow() {
@@ -304,7 +304,7 @@ function createAppSettingsWindow() {
 	appSettingsWindow.updateAppSettings = updateAppSettings;
 	appSettingsWindow.testBins = shepherd.testBins;
 	appSettingsWindow.zcashParamsExist = _zcashParamsExist;
-	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/app-settings.html`);
+	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-settings.html`);
 
   appSettingsWindow.webContents.on('did-finish-load', function() {
     setTimeout(function() {
@@ -386,7 +386,7 @@ function createWindow(status) {
 				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
 			}
 		} else {
-			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/main.html`);
+			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/main.html`);
 		}
 
 		mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
