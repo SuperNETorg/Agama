@@ -30,15 +30,29 @@
         <div id="agamaModeStatus">Choose Agama mode</div>
         <button
           id="nativeOnlyBtn"
-          onClick="closeMainWindow()"
-          class="btn btn-primary margin-right-20 btn-mode">
-          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cube.png"> Native only
+          onClick="closeMainWindow(true)"
+          class="btn btn-primary btn-mode btn-native">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cube.png"> KMD native
         </button>
+        <div
+          id="nativeOnlyBtnCarret"
+          class="btn btn-primary btn-caret margin-right-20"
+          onClick="toggleDropdown()">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
+        </div>
+        <ul class="dropdown-menu hide">
+          <li onClick="closeMainWindow()">
+            <a>KMD + REVS + JUMBLR</a>
+          </li>
+          <li onClick="closeMainWindow(null, true)">
+            <a>Custom</a>
+          </li>
+        </ul>
         <button
           id="normalStartBtn"
           onClick="normalStart()"
           class="btn btn-primary btn-mode">
-          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cubes.png"> Normal start
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cubes.png"> All modes
         </button>
         <div class="margin-top-20">
           <button

@@ -210,6 +210,7 @@ function createLoadingWindow() {
 	loadingWindow.appConfig = appConfig;
 	loadingWindow.forseCloseApp = forseCloseApp;
 	loadingWindow.createAppSettingsWindow = createAppSettingsWindow;
+	loadingWindow.startKMDNative = shepherd.startKMDNative;
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup`);
