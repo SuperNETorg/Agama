@@ -71,6 +71,11 @@ shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
 var appConfig = shepherd.loadLocalConfig(); // load app config
+appConfig['daemonOutput'] = false; // shadow setting
+
+let __defaultAppSettings = require('./routes/appConfig.js').config;
+__defaultAppSettings['daemonOutput'] = false; // shadow setting
+const _defaultAppSettings = __defaultAppSettings;
 
 shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
@@ -131,7 +136,9 @@ let willQuitApp = false;
 let mainWindow;
 let loadingWindow;
 let appCloseWindow;
+let appSettingsWindow;
 let closeAppAfterLoading = false;
+let forceQuitApp = false;
 const _zcashParamsExist = shepherd.zcashParamsExist();
 
 module.exports = guiapp;
@@ -151,7 +158,7 @@ function createLoadingWindow() {
 	try {
 		loadingWindow = new BrowserWindow({
 			width: 500,
-			height: 300,
+			height: 335,
 			frame: false,
 			icon: iguanaIcon,
 			show: false,
@@ -190,10 +197,10 @@ function createLoadingWindow() {
 				console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
 				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
 			});
-			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/agama-instance-error.html`);
+			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/startup/agama-instance-error.html`);
 			console.log('another agama app is already running');
 		}
-	})
+	});
 
 	shepherd.setIO(io); // pass sockets object to shepherd router
 	shepherd.setVar('appBasicInfo', appBasicInfo);
@@ -202,9 +209,11 @@ function createLoadingWindow() {
 	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
 	loadingWindow.appConfig = appConfig;
 	loadingWindow.forseCloseApp = forseCloseApp;
+	loadingWindow.createAppSettingsWindow = createAppSettingsWindow;
+	loadingWindow.startKMDNative = shepherd.startKMDNative;
 
 	// load our index.html (i.e. easyDEX GUI)
-	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/`);
+	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup`);
   loadingWindow.webContents.on('did-finish-load', function() {
     setTimeout(function() {
       loadingWindow.show();
@@ -223,22 +232,32 @@ function createLoadingWindow() {
 	});
 
   loadingWindow.on('close', (e) => {
-    if (willQuitApp) {
-      /* the user tried to quit the app */
-      loadingWindow = null;
-    } else {
-      /* the user only tried to close the window */
-      closeAppAfterLoading = true;
-      e.preventDefault();
-    }
+  	if (!forseCloseApp) {
+	    if (willQuitApp) {
+	      /* the user tried to quit the app */
+	      loadingWindow = null;
+	    } else {
+	      /* the user only tried to close the window */
+	      closeAppAfterLoading = true;
+	      e.preventDefault();
+	    }
+	  }
   });
 }
 
 // close app
 function forseCloseApp() {
-	loadingWindow = null;
-	mainWindow = null;
+	forceQuitApp = true;
 	app.quit();
+}
+
+function setDefaultAppSettings() {
+	shepherd.saveLocalAppConf(_defaultAppSettings);
+}
+
+function updateAppSettings(_settings) {
+	shepherd.saveLocalAppConf(_settings);
+	appConfig = _settings;
 }
 
 app.on('ready', createLoadingWindow);
@@ -253,7 +272,7 @@ function createAppCloseWindow() {
 		show: false,
 	});
 
-	appCloseWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/app-closing.html`);
+	appCloseWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-closing.html`);
 
   appCloseWindow.webContents.on('did-finish-load', function() {
     setTimeout(function() {
@@ -262,7 +281,49 @@ function createAppCloseWindow() {
   });
 }
 
+function reloadSettingsWindow() {
+	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-settings.html`);
+}
+
+function createAppSettingsWindow() {
+	// initialise window
+	appSettingsWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
+		width: 750,
+		height: 820,
+		frame: false,
+		icon: iguanaIcon,
+		show: false,
+	});
+
+	appSettingsWindow.appConfig = appConfig;
+	appSettingsWindow.appConfigSchema = shepherd.appConfigSchema;
+	appSettingsWindow.defaultAppSettings = _defaultAppSettings;
+	appSettingsWindow.destroyAppSettingsWindow = destroyAppSettingsWindow;
+	appSettingsWindow.reloadSettingsWindow = reloadSettingsWindow;
+	appSettingsWindow.testLocation = shepherd.testLocation;
+	appSettingsWindow.setDefaultAppSettings = setDefaultAppSettings;
+	appSettingsWindow.updateAppSettings = updateAppSettings;
+	appSettingsWindow.testBins = shepherd.testBins;
+	appSettingsWindow.zcashParamsExist = _zcashParamsExist;
+	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-settings.html`);
+
+  appSettingsWindow.webContents.on('did-finish-load', function() {
+    setTimeout(function() {
+      appSettingsWindow.show();
+    }, 40);
+  });
+}
+
+function destroyAppSettingsWindow() {
+	appSettingsWindow.hide();
+	appSettingsWindow = null;
+}
+
 function createWindow(status) {
+	if (appSettingsWindow) {
+		destroyAppSettingsWindow();
+	}
+
 	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
@@ -326,7 +387,7 @@ function createWindow(status) {
 				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
 			}
 		} else {
-			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/main.html`);
+			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/main.html`);
 		}
 
 		mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
@@ -349,7 +410,7 @@ function createWindow(status) {
 					shepherd.writeLog('exiting app...');
 
 					shepherd.dumpCacheBeforeExit();
-					shepherd.quitKomodod();
+					shepherd.quitKomodod(1000);
 
 					pm2.connect(true, function(err) {
 						console.log('connecting to pm2...');
@@ -468,7 +529,8 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	console.log('before-quit');
-	if (mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
+	shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
+	if (!forceQuitApp && mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
 		console.log('before-quit prevented');
 		shepherd.writeLog('quit app after loading is done');
@@ -482,7 +544,7 @@ app.on('before-quit', function(event) {
 // Emitted when all windows have been closed and the application will quit.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('will-quit', function(event) {
-	if (mainWindow === null && loadingWindow != null) {
+	if (!forceQuitApp && mainWindow === null && loadingWindow != null) {
 		// loading window is still open
 		console.log('will-quit while loading window active');
 		event.preventDefault();
@@ -492,7 +554,7 @@ app.on('will-quit', function(event) {
 // Emitted when the application is quitting.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', function(event) {
-	if (mainWindow === null && loadingWindow != null) {
+	if (!forceQuitApp && mainWindow === null && loadingWindow != null) {
 		console.log('quit while loading window active');
 		event.preventDefault();
 	}

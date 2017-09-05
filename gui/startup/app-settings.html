@@ -1,0 +1,72 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+    <link rel="stylesheet" href="../EasyDEX-GUI/assets/global/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../EasyDEX-GUI/assets/mainWindow/css/jRoll.min.css">
+    <link rel="stylesheet" href="../EasyDEX-GUI/assets/mainWindow/css/loading.css">
+    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/module-hack.js"></script>
+    <script type="text/javascript" src="../EasyDEX-GUI/assets/global/vendor/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="../EasyDEX-GUI/assets/scripts/config.js"></script>
+    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/bluebird.min.js"></script>
+    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/loading.js"></script>
+    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/jRoll.min.js"></script>
+    <script>if (window.module) module = window.module;</script>
+  </head>
+  <body class="agamaMode agama-app-settings-window">
+    <div id="debugOut"></div>
+    <div class="text-center">
+      <div
+        id="agamaMode"
+        class="app-settings">
+        <div
+          class="btn-close"
+          onClick="closeSettingsWindow()">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-close.png">
+        </div>
+        <img
+          src="../EasyDEX-GUI/assets/mainWindow/img/agama-icon.svg"
+          class="agama-logo"
+          alt="Agama Wallet"
+          width="80"
+          height="100" />
+        <div id="agamaModeStatus">App configuration (selected options only)</div>
+        <div
+          id="agamaConfigBlock"
+          class="agama-config-block"></div>
+        <!-- debug overlay -->
+        <div
+          id="debugOverlay"
+          class="debug-overlay hide"></div>
+        <div class="settings-buttons-block">
+          <button
+            onClick="testBins('komodod')"
+            class="btn btn-info pull-left">Test binaries</button>
+          <button
+            onClick="handleSaveSettings()"
+            class="btn btn-primary margin-right-20">Save</button>
+          <button
+            onClick="initSettingsForm()"
+            class="btn btn-primary">Reset changes</button>
+          <button
+            onClick="setDefaultAppSettings()"
+            class="btn btn-primary">Reset all settings</button>
+        </div>
+        <!-- toaster -->
+        <div
+          id="toast-container"
+          class="single-toast toast-bottom-right hide">
+          <div class="toast toast-success">
+            <button
+              class="toast-close-button"
+              onClick="hideToastImmediate()">×</button>
+            <div class="toast-title">Settings notification</div>
+            <div class="toast-message"></div>
+          </div>
+        </div>
+        <button onClick="reloadSettingsWindow()" class="btn btn-primary" style="margin-top: 20px">Reload</button>
+      </div>
+      <script>initSettingsForm()</script>
+    </div>
+  </body>
+</html>
