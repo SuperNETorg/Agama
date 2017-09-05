@@ -16,8 +16,7 @@ mkdir patch/gui/EasyDEX-GUI/react
 mkdir patch/gui/EasyDEX-GUI/react
 cp -R gui/EasyDEX-GUI/react/build patch/gui/EasyDEX-GUI/react/build
 cp -R gui/EasyDEX-GUI/assets patch/gui/EasyDEX-GUI
-cp gui/index.html patch/gui/index.html
-cp gui/app-closing.html patch/gui/app-closing.html
+cp -R gui/startup patch/gui/startup
 cp ./main.js patch
 cp ./version patch
 cp -R routes patch/routes

@@ -30,7 +30,7 @@ cache.get = function(req, res, next) {
       console.log('serving cache from disk');
 
       if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`)) {
-        fs.readFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8', function (err, data) {
+        fs.readFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8', function(err, data) {
           if (err) {
             const errorObj = {
               msg: 'error',
@@ -101,7 +101,7 @@ cache.groomGet = function(req, res, next) {
 
   if (_filename) {
     if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`)) {
-      fs.readFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, 'utf8', function (err, data) {
+      fs.readFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, 'utf8', function(err, data) {
         if (err) {
           const errorObj = {
             msg: 'error',
@@ -198,7 +198,7 @@ cache.groomPost = function(req, res) {
         console.log('appending groom post to in mem cache');
         console.log('appending groom post to on disk cache');
 
-        fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, _payload, function (err) {
+        fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, _payload, function(err) {
           if (err) {
             const errorObj = {
               msg: 'error',
@@ -499,7 +499,7 @@ cache.one = function(req, res, next) {
             request({
               url: mock ? `http://localhost:17777/shepherd/mock?url=${dexUrl}` : dexUrl,
               method: 'GET'
-            }, function (error, response, body) {
+            }, function(error, response, body) {
               if (response &&
                   response.statusCode &&
                   response.statusCode === 200) {
@@ -528,7 +528,7 @@ cache.one = function(req, res, next) {
                   request({
                     url: `http://kmd.explorer.supernet.org/api/addr/${address}/?noTxList=1`,
                     method: 'GET'
-                  }, function (error, response, body) {
+                  }, function(error, response, body) {
                     if (response &&
                         response.statusCode &&
                         response.statusCode === 200) {
@@ -676,7 +676,7 @@ cache.one = function(req, res, next) {
           request({
             url: mock ? `http://localhost:17777/shepherd/mock?url=${tempUrl}` : tempUrl,
             method: 'GET'
-          }, function (error, response, body) {
+          }, function(error, response, body) {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
@@ -709,7 +709,7 @@ cache.one = function(req, res, next) {
           request({
             url: mock ? `http://localhost:17777/shepherd/mock?url=${tempUrl}` : tempUrl,
             method: 'GET'
-          }, function (error, response, body) {
+          }, function(error, response, body) {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
