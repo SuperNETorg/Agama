@@ -1569,7 +1569,7 @@ shepherd.quitKomodod = function(timeout = 100) {
 }
 
 shepherd.getConf = function(chain) {
-  const _confLocation = chain === 'komodod' ? (os.platform() === 'darwin' ? `${komodoDir}/Komodo.conf` : `${komodoDir}/komodo.conf`) : `${komodoDir}/${chain}/${chain}.conf`;
+  const _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
   // komodoDir
 
   if (fs.existsSync(_confLocation)) {
@@ -2902,7 +2902,7 @@ shepherd.setConfKMD = function() {
   }
 
   // check if kmd conf exists
-  _fs.access(os.platform() === 'darwin' ? `${komodoDir}/Komodo.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
+  _fs.access(`${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
     if (err) {
       console.log('creating komodo conf');
       shepherd.writeLog(`creating komodo conf in ${komodoDir}/komodo.conf`);
@@ -2939,7 +2939,7 @@ function setConf(flock) {
   let DaemonConfPath;
   switch (flock) {
     case 'komodod':
-      DaemonConfPath = os.platform() === 'darwin' ? `${komodoDir}/Komodo.conf` : `${komodoDir}/komodo.conf`;
+      DaemonConfPath = `${komodoDir}/komodo.conf`;
 
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
