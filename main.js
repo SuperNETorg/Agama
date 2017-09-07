@@ -148,7 +148,7 @@ if (os.platform() === 'linux') {
 	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
 }
 if (os.platform() === 'win32') {
-	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico');
+	iguanaIcon = path.join(__dirname, '/assets/icons/agama_app_icon.ico');
 }
 
 function createLoadingWindow() {
@@ -158,7 +158,7 @@ function createLoadingWindow() {
 	try {
 		loadingWindow = new BrowserWindow({
 			width: 500,
-			height: 335,
+			height: 355,
 			frame: false,
 			icon: iguanaIcon,
 			show: false,
