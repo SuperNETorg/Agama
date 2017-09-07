@@ -485,7 +485,7 @@ shepherd.testBins = function(daemonName) {
           if (err) {
             shepherd.writeLog(`test: iguana core port ${shepherd.appConfig.iguanaCorePort}`);
             console.log(`test: iguana fork error: ${err}`);
-            throw err;
+            // throw err;
           }
         });
       });
@@ -621,7 +621,7 @@ shepherd.testBins = function(daemonName) {
             if (err) {
               shepherd.writeLog(`test: error starting komodod`);
               console.log(`komodod fork err: ${err}`);
-              throw err;
+              // throw err;
             }
           });
         });
@@ -2109,7 +2109,7 @@ shepherd.post('/forks', function(req, res, next) {
         if (err) {
           shepherd.writeLog(`iguana fork error: ${err}`);
           console.log(`iguana fork error: ${err}`);
-          throw err;
+          // throw err;
         }
       });
     });
@@ -2313,7 +2313,8 @@ shepherd.post('/herd', function(req, res) {
   console.log('======= req.body =======');
   console.log(req.body);
 
-  if (!req.body.options.manualStart) {
+  if (req.body.options &&
+      !req.body.options.manualStart) {
     function testCoindPort() {
       if (!lockDownAddCoin) {
         const _port = assetChainPorts[req.body.options.ac_name];
@@ -2386,12 +2387,17 @@ shepherd.post('/herdlist', function(req, res) {
   console.log(req.body.herdname);
 
   pm2.connect(true, function(err) {
-    if (err) throw err; // TODO: proper error handling
+    if (err) {
+      shepherd.writeLog(`herdlist err: ${err}`);
+      console.log(`herdlist err:: ${err}`);
+    }
     pm2.describe(req.body.herdname, function(err, list) {
       pm2.disconnect(); // disconnect after getting proc info list
 
-      if (err)
-        throw err; // TODO: proper error handling
+      if (err) {
+        shepherd.writeLog(`pm2.describe err: ${err}`);
+        console.log(`pm2.describe err: ${err}`);
+      }
 
       console.log(list[0].pm2_env.status) // print status of IGUANA proc
       console.log(list[0].pid) // print pid of IGUANA proc
@@ -2582,7 +2588,8 @@ shepherd.get('/kick', function(req, res, next) {
           currentKickItem.type === 'file') {
         rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}`, function(err) {
           if (err) {
-            throw err;
+            shepherd.writeLog(`kickstart err: ${err}`);
+            console.log(`kickstart err: ${err}`);
           }
         });
       } else if (currentKickItem.type === 'pattern') {
@@ -2594,7 +2601,8 @@ shepherd.get('/kick', function(req, res, next) {
             if (dirItems[j].indexOf(currentKickItem.match) > -1) {
               rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}/${dirItems[j]}`, function(err) {
                 if (err) {
-                  throw err;
+                  shepherd.writeLog(`kickstart err: ${err}`);
+                  console.log(`kickstart err: ${err}`);
                 }
               });
 
@@ -2627,8 +2635,10 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
             } else {
               console.log(`reading ${fileLocation}`);
               _fs.readFile(fileLocation, 'utf-8', function(err, data) {
-                if (err)
-                  throw err;
+                if (err) {
+                  shepherd.writeLog(`readDebugLog err: ${err}`);
+                  console.log(`readDebugLog err: ${err}`);
+                }
 
                 const lines = data.trim().split('\n');
                 const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
@@ -2727,7 +2737,7 @@ function herder(flock, data) {
         if (err) {
           shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
           console.log(`iguana fork error: ${err}`);
-          throw err;
+          // throw err;
         }
       });
     });
@@ -2863,8 +2873,11 @@ function herder(flock, data) {
         shepherd.writeLog(`zcashd fork started ${data.ac_name} ${JSON.stringify(data.ac_options)}`);
 
         pm2.disconnect(); // Disconnect from PM2
-        if (err)
-          throw err;
+        if (err) {
+          shepherd.writeLog(`pm2.disconnect err: ${err}`);
+          console.log(`pm2.disconnect err: ${err}`);
+        }
+        // throw err;
       });
     });
   }
@@ -3042,8 +3055,11 @@ function setConf(flock) {
               shepherd.writeLog('rpcuser: NOT FOUND');
 
               fs.appendFile(DaemonConfPath, `\nrpcuser=user${randomstring.substring(0, 16)}`, (err) => {
-                if (err)
-                  throw err;
+                if (err) {
+                  shepherd.writeLog(`append daemon conf err: ${err}`);
+                  console.log(`append daemon conf err: ${err}`);
+                }
+                // throw err;
                 console.log('rpcuser: ADDED');
                 shepherd.writeLog('rpcuser: ADDED');
               });
@@ -3067,8 +3083,11 @@ function setConf(flock) {
               shepherd.writeLog('rpcpassword: NOT FOUND');
 
               fs.appendFile(DaemonConfPath, `\nrpcpassword=${randomstring}`, (err) => {
-                if (err)
-                  throw err;
+                if (err) {
+                  shepherd.writeLog(`append daemon conf err: ${err}`);
+                  console.log(`append daemon conf err: ${err}`);
+                }
+                // throw err;
                 console.log('rpcpassword: ADDED');
                 shepherd.writeLog('rpcpassword: ADDED');
               });
@@ -3090,8 +3109,11 @@ function setConf(flock) {
               shepherd.writeLog('server: NOT FOUND');
 
               fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
-                if (err)
-                  throw err;
+                if (err) {
+                  shepherd.writeLog(`append daemon conf err: ${err}`);
+                  console.log(`append daemon conf err: ${err}`);
+                }
+                // throw err;
                 console.log('server: ADDED');
                 shepherd.writeLog('server: ADDED');
               });
@@ -3118,8 +3140,11 @@ function setConf(flock) {
                             '\naddnode=5.9.122.241' +
                             '\naddnode=144.76.94.3',
                             (err) => {
-                if (err)
-                  throw err;
+                if (err) {
+                  shepherd.writeLog(`append daemon conf err: ${err}`);
+                  console.log(`append daemon conf err: ${err}`);
+                }
+                // throw err;
                 console.log('addnode: ADDED');
                 shepherd.writeLog('addnode: ADDED');
               });
