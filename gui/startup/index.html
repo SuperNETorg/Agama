@@ -13,7 +13,7 @@
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/jRoll.min.js"></script>
     <script>if (window.module) module = window.module;</script>
   </head>
-  <body class="agamaMode">
+  <body class="agamaMode loading-window">
     <div class="text-center">
       <div id="agamaMode">
         <div
@@ -46,6 +46,9 @@
           </li>
           <li onClick="closeMainWindow(null, true)">
             <a>Custom</a>
+          </li>
+          <li onClick="startKMDPassive()">
+            <a>KMD (passive)</a>
           </li>
         </ul>
         <button
