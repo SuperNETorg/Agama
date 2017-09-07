@@ -98,14 +98,15 @@ shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
-shepherd.startKMDNative = function(selection) {
+shepherd.startKMDNative = function(selection, isManual) {
   if (selection === 'KMD') {
     const herdData = {
       'ac_name': 'komodod',
       'ac_options': [
         '-daemon=0',
         '-addnode=78.47.196.146',
-      ]
+      ],
+      'manualStart': isManual,
     };
 
     const options = {
@@ -1568,7 +1569,7 @@ shepherd.quitKomodod = function(timeout = 100) {
 }
 
 shepherd.getConf = function(chain) {
-  const _confLocation = chain === 'komodod' ? (os.platform() === 'darwin' ? `${komodoDir}/Komodo.conf` : `${komodoDir}/komodo.conf`) : `${komodoDir}/${chain}/${chain}.conf`;
+  const _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
   // komodoDir
 
   if (fs.existsSync(_confLocation)) {
@@ -2312,48 +2313,59 @@ shepherd.post('/herd', function(req, res) {
   console.log('======= req.body =======');
   console.log(req.body);
 
-  function testCoindPort() {
-    if (!lockDownAddCoin) {
-      const _port = assetChainPorts[req.body.options.ac_name];
+  if (!req.body.options.manualStart) {
+    function testCoindPort() {
+      if (!lockDownAddCoin) {
+        const _port = assetChainPorts[req.body.options.ac_name];
 
-      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
-        // Status is 'open' if currently in use or 'closed' if available
-        if (status === 'open') {
-          console.log(`komodod service start error at port ${_port}, reason: port is closed`);
-          shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-          cache.io.emit('service', {
-            komodod: {
-              error: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
-            },
-          });
+        portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+          // Status is 'open' if currently in use or 'closed' if available
+          if (status === 'open') {
+            console.log(`komodod service start error at port ${_port}, reason: port is closed`);
+            shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
+            cache.io.emit('service', {
+              komodod: {
+                error: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
+              },
+            });
 
-          const obj = {
-            msg: 'error',
-            result: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
-          };
+            const obj = {
+              msg: 'error',
+              result: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
+            };
 
-          res.status(500);
-          res.end(JSON.stringify(obj));
-        } else {
-          herder(req.body.herd, req.body.options);
+            res.status(500);
+            res.end(JSON.stringify(obj));
+          } else {
+            herder(req.body.herd, req.body.options);
 
-          const obj = {
-            msg: 'success',
-            result: 'result',
-          };
+            const obj = {
+              msg: 'success',
+              result: 'result',
+            };
 
-          res.end(JSON.stringify(obj));
-        }
-      });
+            res.end(JSON.stringify(obj));
+          }
+        });
+      }
     }
-  }
 
-  if (req.body.herd === 'komodod') {
-    // check if komodod instance is already running
-    testCoindPort();
-    setTimeout(function() {
+    if (req.body.herd === 'komodod') {
+      // check if komodod instance is already running
       testCoindPort();
-    }, 10000);
+      setTimeout(function() {
+        testCoindPort();
+      }, 10000);
+    } else {
+      herder(req.body.herd, req.body.options);
+
+      const obj = {
+        msg: 'success',
+        result: 'result',
+      };
+
+      res.end(JSON.stringify(obj));
+    }
   } else {
     herder(req.body.herd, req.body.options);
 
@@ -2790,28 +2802,33 @@ function herder(flock, data) {
           console.log(`daemon param ${data.ac_custom_param}`);
 
           coindInstanceRegistry[data.ac_name] = true;
-          let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
-          _arg = _arg.trim().split(' ');
-          execFile(`${komododBin}`, _arg, {
-            maxBuffer: 1024 * 10000 // 10 mb
-          }, function(error, stdout, stderr) {
-            shepherd.writeLog(`stdout: ${stdout}`);
-            shepherd.writeLog(`stderr: ${stderr}`);
+          if (!data.manualStart) {
+            let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
+            _arg = _arg.trim().split(' ');
+            execFile(`${komododBin}`, _arg, {
+              maxBuffer: 1024 * 500000 // 500 mb
+            }, function(error, stdout, stderr) {
+              shepherd.writeLog(`stdout: ${stdout}`);
+              shepherd.writeLog(`stderr: ${stderr}`);
 
-            if (error !== null) {
-              console.log(`exec error: ${error}`);
-              shepherd.writeLog(`exec error: ${error}`);
+              if (error !== null) {
+                console.log(`exec error: ${error}`);
+                shepherd.writeLog(`exec error: ${error}`);
 
-              if (error.toString().indexOf('using -reindex') > -1) {
-                cache.io.emit('service', {
-                  komodod: {
-                    error: 'run -reindex',
-                  }
-                });
+                if (error.toString().indexOf('using -reindex') > -1) {
+                  cache.io.emit('service', {
+                    komodod: {
+                      error: 'run -reindex',
+                    },
+                  });
+                }
               }
-            }
-          });
+            });
+          }
         } else {
+          if (data.manualStart) {
+            coindInstanceRegistry[data.ac_name] = true;
+          }
           console.log(`port ${_port} (${data.ac_name}) is already in use`);
           shepherd.writeLog(`port ${_port} (${data.ac_name}) is already in use`);
         }
@@ -2885,7 +2902,7 @@ shepherd.setConfKMD = function() {
   }
 
   // check if kmd conf exists
-  _fs.access(os.platform() === 'darwin' ? `${komodoDir}/Komodo.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
+  _fs.access(`${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
     if (err) {
       console.log('creating komodo conf');
       shepherd.writeLog(`creating komodo conf in ${komodoDir}/komodo.conf`);
@@ -2922,7 +2939,7 @@ function setConf(flock) {
   let DaemonConfPath;
   switch (flock) {
     case 'komodod':
-      DaemonConfPath = os.platform() === 'darwin' ? `${komodoDir}/Komodo.conf` : `${komodoDir}/komodo.conf`;
+      DaemonConfPath = `${komodoDir}/komodo.conf`;
 
       if (os.platform() === 'win32') {
         DaemonConfPath = path.normalize(DaemonConfPath);
