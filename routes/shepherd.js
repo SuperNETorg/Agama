@@ -220,7 +220,12 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           _type === 'public' ? 'getaddressesbyaccount' : 'z_listaddresses',
           ['']
         ).then(function(_json) {
-          resolve(JSON.parse(_json).result);
+          if (_json === 'Work queue depth exceeded' ||
+              !_json) {
+            resolve({ error: 'daemon is busy' });
+          } else {
+            resolve(JSON.parse(_json).result);
+          }
         });
       });
     }))
@@ -340,12 +345,22 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
 
       _bitcoinRPC(coin, 'listunspent')
       .then(function(__json) {
-        _returnObj.listunspent = JSON.parse(__json);
+        if (__json === 'Work queue depth exceeded' ||
+            !__json) {
+          const returnObj = {
+            msg: 'success',
+            result: _returnObj,
+          };
 
-        calcBalance(
-          result,
-          JSON.parse(__json).result
-        );
+          res.end(JSON.stringify(returnObj));
+        } else {
+          _returnObj.listunspent = JSON.parse(__json);
+
+          calcBalance(
+            result,
+            JSON.parse(__json).result
+          );
+        }
       });
     })
   }
@@ -375,7 +390,8 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ payload: _payload })
+        body: JSON.stringify({ payload: _payload }),
+        timeout: 5000,
       };
 
       request(options, function(error, response, body) {
@@ -391,13 +407,27 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
   }
 
   Promise.all(_promiseStack.map((_call, index) => {
+    let _params;
+    if (_call === 'listtransactions') {
+      _params = [
+        '',
+        300,
+        0
+      ];
+    }
     return new Promise((resolve, reject) => {
       _bitcoinRPC(
         _coin,
-        _call
+        _call,
+        _params
       )
       .then(function(json) {
-        _returnObj[_call] = JSON.parse(json);
+        if (json === 'Work queue depth exceeded' ||
+            !json) {
+          _returnObj[_call] = { error: 'daemon is busy' };
+        } else {
+          _returnObj[_call] = JSON.parse(json);
+        }
         resolve(json);
       });
     });
