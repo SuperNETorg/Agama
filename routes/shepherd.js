@@ -95,10 +95,15 @@ if (os.platform() === 'win32') {
 
 shepherd.appConfigSchema = _appConfig.schema;
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
+shepherd.kmdMainPassiveMode = false;
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
 shepherd.startKMDNative = function(selection, isManual) {
+  if (isManual) {
+    shepherd.kmdMainPassiveMode = true;
+  }
+
   if (selection === 'KMD') {
     const herdData = {
       'ac_name': 'komodod',

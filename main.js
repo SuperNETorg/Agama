@@ -370,6 +370,7 @@ function createWindow(status) {
 				mainWindow.zcashParamsExist = _zcashParamsExist;
 				mainWindow.iguanaIcon = iguanaIcon;
 				mainWindow.testLocation = shepherd.testLocation;
+				mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
 
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
