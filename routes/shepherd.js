@@ -2971,7 +2971,7 @@ shepherd.setConfKMD = function() {
       const _komodoConfSize = fs.lstatSync(`${komodoDir}/komodo.conf`);
 
       if (_komodoConfSize.size === 0) {
-        console.log('creating komodo conf');
+        console.log('err: komodo conf file is empty, creating komodo conf');
         shepherd.writeLog(`creating komodo conf in ${komodoDir}/komodo.conf`);
         setConf('komodod');
       } else {
@@ -3152,6 +3152,32 @@ function setConf(flock) {
           });
         }
 
+        const rpcbind = function() {
+          return new Promise(function(resolve, reject) {
+            const result = 'checking rpcbind...';
+
+            if (status[0].hasOwnProperty('rpcbind')) {
+              console.log('rpcbind: OK');
+              shepherd.writeLog('rpcbind: OK');
+            } else {
+              console.log('rpcbind: NOT FOUND');
+              shepherd.writeLog('rpcbind: NOT FOUND');
+
+              fs.appendFile(DaemonConfPath, '\nrpcbind=127.0.0.1', (err) => {
+                if (err) {
+                  shepherd.writeLog(`append daemon conf err: ${err}`);
+                  console.log(`append daemon conf err: ${err}`);
+                }
+                // throw err;
+                console.log('rpcbind: ADDED');
+                shepherd.writeLog('rpcbind: ADDED');
+              });
+            }
+
+            resolve(result);
+          });
+        }
+
         const server = function() {
           return new Promise(function(resolve, reject) {
             const result = 'checking server...';
@@ -3214,6 +3240,7 @@ function setConf(flock) {
           return rpcpass();
         })
         .then(server)
+        .then(rpcbind)
         .then(addnode);
       });
 
