@@ -160,7 +160,7 @@ const appConfig = {
     },
     daemonOutput: {
       display: false,
-      initDisplay: true,
+      initDisplay: false,
       displayName: 'Output daemon prints (debug)',
       info: 'Output daemon prints to GUI for debug purposes',
       type: 'boolean',
