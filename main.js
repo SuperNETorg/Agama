@@ -170,23 +170,23 @@ function createLoadingWindow() {
 		// Status is 'open' if currently in use or 'closed' if available
 		if (status === 'closed') {
 			server.listen(appConfig.agamaPort, function() {
-				console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+				shepherd.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
 				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
 				// start sockets.io
 				io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
 
 				io.on('connection', function(client) {
-					console.log('EDEX GUI is connected...');
+					shepherd.log('EDEX GUI is connected...');
 					shepherd.writeLog('EDEX GUI is connected...');
 
 					client.on('event', function(data) { // listen for client requests
-						console.log(data);
+						shepherd.log(data);
 					});
 					client.on('disconnect', function(data) {
-						console.log('EDEX GUI is disconnected');
+						shepherd.log('EDEX GUI is disconnected');
 					});
 					client.on('join', function(data) {
-						console.log(data);
+						shepherd.log(data);
 						client.emit('messages', 'Sockets server is listening');
 					});
 				});
@@ -194,11 +194,11 @@ function createLoadingWindow() {
 		} else {
 			willQuitApp = true;
 			server.listen(appConfig.agamaPort + 1, function() {
-				console.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+				shepherd.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
 				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
 			});
 			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/startup/agama-instance-error.html`);
-			console.log('another agama app is already running');
+			shepherd.log('another agama app is already running');
 		}
 	});
 
@@ -407,24 +407,24 @@ function createWindow(status) {
 		function pm2Exit() {
 			const ConnectToPm2 = function() {
 				return new Promise(function(resolve, reject) {
-					console.log('Closing Main Window...');
+					shepherd.log('Closing Main Window...');
 					shepherd.writeLog('exiting app...');
 
 					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod(1000);
 
 					pm2.connect(true, function(err) {
-						console.log('connecting to pm2...');
+						shepherd.log('connecting to pm2...');
 						shepherd.writeLog('connecting to pm2...');
 
 						if (err) {
-							console.log(err);
+							shepherd.log(err);
 						}
 					});
 
 					const result = 'Connecting To Pm2: done';
 
-					console.log(result);
+					shepherd.log(result);
 					shepherd.writeLog(result);
 					resolve(result);
 				})
@@ -432,12 +432,12 @@ function createWindow(status) {
 
 			const KillPm2 = function() {
 				return new Promise(function(resolve, reject) {
-					console.log('killing to pm2...');
+					shepherd.log('killing to pm2...');
 					shepherd.writeLog('killing to pm2...');
 
 					pm2.killDaemon(function(err) {
 						pm2.disconnect();
-						console.log('killed to pm2...');
+						shepherd.log('killed to pm2...');
 						shepherd.writeLog('killed to pm2...');
 
 						if (err)
@@ -447,7 +447,7 @@ function createWindow(status) {
 					const result = 'Killing Pm2: done';
 
 					setTimeout(function() {
-						console.log(result);
+						shepherd.log(result);
 						shepherd.writeLog(result);
 
 						resolve(result);
@@ -459,9 +459,9 @@ function createWindow(status) {
 				return new Promise(function(resolve, reject) {
 					const result = 'Hiding Main Window: done';
 
-					console.log('Exiting App...');
+					shepherd.log('Exiting App...');
 					mainWindow = null;
-					console.log(result);
+					shepherd.log(result);
 					resolve(result);
 				});
 			}
@@ -479,7 +479,7 @@ function createWindow(status) {
 
 					KillPm2(); // required for normal app quit in iguana-less mode
 					app.quit();
-					console.log(result);
+					shepherd.log(result);
 					resolve(result);
 				});
 			}
@@ -529,11 +529,11 @@ app.on('window-all-closed', function() {
 // Emitted before the application starts closing its windows.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
-	console.log('before-quit');
+	shepherd.log('before-quit');
 	shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
 	if (!forceQuitApp && mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
-		console.log('before-quit prevented');
+		shepherd.log('before-quit prevented');
 		shepherd.writeLog('quit app after loading is done');
 		closeAppAfterLoading = true;
 		let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
@@ -547,7 +547,7 @@ app.on('before-quit', function(event) {
 app.on('will-quit', function(event) {
 	if (!forceQuitApp && mainWindow === null && loadingWindow != null) {
 		// loading window is still open
-		console.log('will-quit while loading window active');
+		shepherd.log('will-quit while loading window active');
 		event.preventDefault();
 	}
 });
@@ -556,7 +556,7 @@ app.on('will-quit', function(event) {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', function(event) {
 	if (!forceQuitApp && mainWindow === null && loadingWindow != null) {
-		console.log('quit while loading window active');
+		shepherd.log('quit while loading window active');
 		event.preventDefault();
 	}
 })
