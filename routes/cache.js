@@ -15,7 +15,7 @@ cache.setVar = function(variable, value) {
  */
 cache.dumpCacheBeforeExit = function() {
   if (inMemCache) {
-    console.log('dumping cache before exit');
+    shepherd.log('dumping cache before exit');
     fs.writeFileSync(`${cache.iguanaDir}/shepherd/cache-${inMemPubkey}.json`, JSON.stringify(inMemCache), 'utf8');
   }
 }
@@ -27,7 +27,7 @@ cache.get = function(req, res, next) {
     inMemPubkey = pubkey;
 
     if (!inMemCache) {
-      console.log('serving cache from disk');
+      shepherd.log('serving cache from disk');
 
       if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`)) {
         fs.readFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8', function(err, data) {
@@ -49,13 +49,13 @@ cache.get = function(req, res, next) {
               inMemCache = parsedJSON;
               res.end(JSON.stringify(successObj));
             } catch (e) {
-              console.log('JSON parse error while reading cache data from disk:');
-              console.log(e);
+              shepherd.log('JSON parse error while reading cache data from disk:');
+              shepherd.log(e);
               if (e.toString().indexOf('at position') > -1) {
                 const errorPos = e.toString().split(' ');
 
-                console.log(`JSON error ---> ${data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20)} | error sequence: ${data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1)}`);
-                console.log('attempting to recover JSON data');
+                shepherd.log(`JSON error ---> ${data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20)} | error sequence: ${data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1)}`);
+                shepherd.log('attempting to recover JSON data');
 
                 fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, data.substring(0, errorPos[errorPos.length - 1]), function(err) {
                   const successObj = {
@@ -195,8 +195,8 @@ cache.groomPost = function(req, res) {
         res.end(JSON.stringify(errorObj));
       } else {
         inMemCache = JSON.parse(_payload);
-        console.log('appending groom post to in mem cache');
-        console.log('appending groom post to on disk cache');
+        shepherd.log('appending groom post to in mem cache');
+        shepherd.log('appending groom post to on disk cache');
 
         fs.writeFile(`${cache.iguanaDir}/shepherd/cache-${_filename}.json`, _payload, function(err) {
           if (err) {
@@ -326,8 +326,8 @@ cache.one = function(req, res, next) {
 
     inMemPubkey = pubkey;
     callStack[coin] = 1;
-    console.log(callsArray);
-    console.log(`iguana core port ${iguanaCorePort}`);
+    shepherd.log(callsArray);
+    shepherd.log(`iguana core port ${iguanaCorePort}`);
 
     if (!sessionKey) {
       const errorObj = {
@@ -349,7 +349,7 @@ cache.one = function(req, res, next) {
       internalError = true;
     }
 
-    console.log('cache-one call started');
+    shepherd.log('cache-one call started');
 
     function fixJSON(data) {
       if (data &&
@@ -359,12 +359,12 @@ cache.one = function(req, res, next) {
 
           return parsedJSON;
         } catch (e) {
-          console.log(e);
+          shepherd.log(e);
           if (e.toString().indexOf('at position') > -1) {
             const errorPos = e.toString().split(' ');
 
-            console.log(`JSON error ---> ${data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20)} | error sequence: ${data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1)}`);
-            console.log('attempting to recover JSON data');
+            shepherd.log(`JSON error ---> ${data.substring(errorPos[errorPos.length - 1] - 20, errorPos[errorPos.length - 1] + 20)} | error sequence: ${data.substring(errorPos[errorPos.length - 1], errorPos[errorPos.length - 1] + 1)}`);
+            shepherd.log('attempting to recover JSON data');
             return JSON.parse(data.substring(0, errorPos[errorPos.length - 1]));
           }
           if (e.toString().indexOf('Unexpected end of JSON input')) {
@@ -379,23 +379,23 @@ cache.one = function(req, res, next) {
     if (fs.existsSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`) &&
         coin !== 'all') {
       if (inMemCache) {
-        console.log('cache one from mem');
+        shepherd.log('cache one from mem');
         outObj = inMemCache;
       } else {
         const _file = fs.readFileSync(`${cache.iguanaDir}/shepherd/cache-${pubkey}.json`, 'utf8');
 
-        console.log('cache one from disk');
+        shepherd.log('cache one from disk');
         outObj = fixJSON(_file);
       }
 
       if (!outObj ||
           !outObj.basilisk) {
-        console.log('no local basilisk info');
+        shepherd.log('no local basilisk info');
         outObj['basilisk'] = {};
         outObj['basilisk'][coin] = {};
       } else {
         if (!outObj['basilisk'][coin]) {
-          console.log('no local coin info');
+          shepherd.log('no local coin info');
           outObj['basilisk'][coin] = {};
         }
       }
@@ -438,7 +438,7 @@ cache.one = function(req, res, next) {
           delete _dexUrls.getbalance;
         }
 
-        console.log(`${coin} address ${address}`);
+        shepherd.log(`${coin} address ${address}`);
 
         if (!outObj.basilisk[coin][address]) {
           outObj.basilisk[coin][address] = {};
@@ -524,7 +524,7 @@ cache.one = function(req, res, next) {
                 if (key === 'getbalance' &&
                     coin === 'KMD'/* &&
                   ((_parsedJSON && _parsedJSON.balance === 0) || body === [])*/) {
-                  console.log('fallback to kmd explorer ======>');
+                  shepherd.log('fallback to kmd explorer ======>');
                   request({
                     url: `http://kmd.explorer.supernet.org/api/addr/${address}/?noTxList=1`,
                     method: 'GET'
@@ -558,10 +558,10 @@ cache.one = function(req, res, next) {
                 outObj.basilisk[coin][address][key].data = JSON.parse(body);
                 outObj.basilisk[coin][address][key].timestamp = Date.now(); // add timestamp
                 outObj.basilisk[coin][address][key].status = 'done';
-                console.log(dexUrl);
-                console.log(body);
+                shepherd.log(dexUrl);
+                shepherd.log(body);
                 callStack[coin]--;
-                console.log(`${coin} _stack len ${callStack[coin]}`);
+                shepherd.log(`${coin} _stack len ${callStack[coin]}`);
                 cache.io.emit('messages', {
                   message: {
                     shepherd: {
@@ -585,7 +585,7 @@ cache.one = function(req, res, next) {
                 outObj.basilisk[coin][address][key].timestamp = 1471620867 // add timestamp
                 outObj.basilisk[coin][address][key].status = 'done';
                 callStack[coin]--;
-                console.log(`${coin} _stack len ${callStack[coin]}`);
+                shepherd.log(`${coin} _stack len ${callStack[coin]}`);
                 cache.io.emit('messages', {
                   message: {
                     shepherd: {
@@ -602,9 +602,9 @@ cache.one = function(req, res, next) {
               }
             });
           } else {
-            console.log(`${key} is fresh, check back in ${(cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp))}s`);
+            shepherd.log(`${key} is fresh, check back in ${(cacheGlobLifetime - checkTimestamp(outObj.basilisk[coin][address][key].timestamp))}s`);
             callStack[coin]--;
-            console.log(`${coin} _stack len ${callStack[coin]}`);
+            shepherd.log(`${coin} _stack len ${callStack[coin]}`);
             cache.io.emit('messages', {
               message: {
                 shepherd: {
@@ -637,7 +637,7 @@ cache.one = function(req, res, next) {
           },
         });
         outObj.basilisk[coin].addresses = addrArray;
-        console.log(addrArray);
+        shepherd.log(addrArray);
         writeCache();
 
         const addrCount = outObj.basilisk[coin].addresses ? outObj.basilisk[coin].addresses.length : 0;
@@ -650,7 +650,7 @@ cache.one = function(req, res, next) {
           callsArrayBTC--;
         }
         callStack[coin] = callStack[coin] + addrCount * (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
-        console.log(`${coin} stack len ${callStack[coin]}`);
+        shepherd.log(`${coin} stack len ${callStack[coin]}`);
 
         cache.io.emit('messages', {
           message: {
@@ -713,7 +713,7 @@ cache.one = function(req, res, next) {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
-              console.log(JSON.parse(body).basilisk);
+              shepherd.log(JSON.parse(body).basilisk);
               cache.io.emit('messages', {
                 message: {
                   shepherd: {
@@ -777,7 +777,7 @@ cache.one = function(req, res, next) {
         }
 
         callStack[coin] = callStack[coin] + (coin === 'BTC' || coin === 'SYS' ? callsArrayBTC : callsArray.length);
-        console.log(`${coin} stack len ${callStack[coin]}`);
+        shepherd.log(`${coin} stack len ${callStack[coin]}`);
 
         cache.io.emit('messages', {
           message: {

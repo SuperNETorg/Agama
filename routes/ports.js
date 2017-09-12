@@ -8,7 +8,7 @@ const assetChainPorts = {
   'JUMBLR': '15106',
   'BET': '14250',
   'CRYPTO': '8516',
-  'HODL': '8010',
+  'HODL': '14431',
   'SHARK': '10114',
   'BOTS': '11964',
   'MGW': '12386',
