@@ -371,6 +371,7 @@ function createWindow(status) {
 				mainWindow.iguanaIcon = iguanaIcon;
 				mainWindow.testLocation = shepherd.testLocation;
 				mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
+				mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
 
 				if (appConfig.dev) {
 					mainWindow.loadURL('http://127.0.0.1:3000');
