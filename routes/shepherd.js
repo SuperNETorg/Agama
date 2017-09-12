@@ -36,6 +36,7 @@ var ps = require('ps-node'),
     syncOnlyInstanceInterval = -1,
     guiLog = {},
     rpcConf = {},
+    appRuntimeLog = [],
     lockDownAddCoin = false;
 
 shepherd.appConfig = _appConfig.config;
@@ -99,10 +100,21 @@ shepherd.kmdMainPassiveMode = false;
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
+shepherd.getAppRuntimeLog = function() {
+  return new Promise((resolve, reject) => {
+    resolve(appRuntimeLog);
+  });
+};
+
 shepherd.log = function(msg) {
   if (shepherd.appConfig.dev) {
     console.log(msg);
   }
+
+  appRuntimeLog.push({
+    time: Date.now(),
+    msg: msg,
+  });
 };
 
 shepherd.startKMDNative = function(selection, isManual) {
@@ -1937,6 +1949,7 @@ var mock = require('./mock');
 shepherd.setIO = function(io) {
   shepherd.io = io;
   cache.setVar('io', io);
+  cache.setVar('shepherd', shepherd);
 };
 
 shepherd.setVar = function(_name, _body) {
