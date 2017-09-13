@@ -253,92 +253,108 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
       });
     }))
     .then(result => {
-      function calcBalance(result, json) {
-        if (json &&
-            json.length) {
-          const allAddrArray = json.map(res => res.address).filter((x, i, a) => a.indexOf(x) == i);
+      if (result[0] && result[0].length) {
+        function calcBalance(result, json) {
+          if (json &&
+              json.length) {
+            const allAddrArray = json.map(res => res.address).filter((x, i, a) => a.indexOf(x) == i);
 
-          for (let a = 0; a < allAddrArray.length; a++) {
-            const filteredArray = json.filter(res => res.address === allAddrArray[a]).map(res => res.amount);
+            for (let a = 0; a < allAddrArray.length; a++) {
+              const filteredArray = json.filter(res => res.address === allAddrArray[a]).map(res => res.amount);
 
-            let isNewAddr = true;
-            for (let x = 0; x < result.length && isNewAddr; x++) {
-              for (let y = 0; y < result[x].length && isNewAddr; y++) {
-                if (allAddrArray[a] === result[x][y]) {
-                  isNewAddr = false;
+              let isNewAddr = true;
+              for (let x = 0; x < result.length && isNewAddr; x++) {
+                for (let y = 0; y < result[x].length && isNewAddr; y++) {
+                  if (allAddrArray[a] === result[x][y]) {
+                    isNewAddr = false;
+                  }
                 }
               }
-            }
 
-            if (isNewAddr &&
-                (allAddrArray[a].substring(0, 2) === 'zc' ||
-                allAddrArray[a].substring(0, 2) === 'zt')) {
-              result[1][result[1].length] = allAddrArray[a];
-            } else {
-              result[0][result[0].length] = allAddrArray[a];
-            }
-          }
-        }
-
-        // remove addr duplicates
-        if (result[0]) {
-          result[0] = result[0].filter(function(elem, pos) {
-            return result[0].indexOf(elem) === pos;
-          });
-        }
-        if (result[1]) {
-          result[1] = result[1].filter(function(elem, pos) {
-            return result[1].indexOf(elem) === pos;
-          });
-        }
-
-        let newAddressArray = [];
-        for (let a = 0; a < result.length; a++) {
-          newAddressArray[a] = [];
-
-          if (result[a]) {
-            for (let b = 0; b < result[a].length; b++) {
-              let filteredArray;
-
-              filteredArray = json.filter(res => res.address === result[a][b]).map(res => res.amount);
-
-              let sum = 0;
-              for (let i = 0; i < filteredArray.length; i++) {
-                sum += filteredArray[i];
+              if (isNewAddr &&
+                  (allAddrArray[a].substring(0, 2) === 'zc' ||
+                  allAddrArray[a].substring(0, 2) === 'zt')) {
+                result[1][result[1].length] = allAddrArray[a];
+              } else {
+                result[0][result[0].length] = allAddrArray[a];
               }
-
-              newAddressArray[a][b] = {
-                address: result[a][b],
-                amount: sum,
-                type: a === 0 ? 'public': 'private',
-              };
             }
           }
-        }
 
-        // get zaddr balance
-        if (result[1] &&
-            result[1].length) {
-          Promise.all(result[1].map((_address, index) => {
-            return new Promise((resolve, reject) => {
-              _bitcoinRPC(coin, 'z_getbalance', [_address])
-              .then(function(__json) {
-                __json = JSON.parse(__json);
-                if (__json &&
-                    __json.error) {
-                  resolve(0);
-                } else {
-                  resolve(__json.result)
-                  newAddressArray[1][index] = {
-                    address: _address,
-                    amount: __json.result,
-                    type: 'private',
-                  };
-                }
-              });
+          // remove addr duplicates
+          if (result[0] &&
+              result[0].length) {
+            result[0] = result[0].filter(function(elem, pos) {
+              return result[0].indexOf(elem) === pos;
             });
-          }))
-          .then(zresult => {
+          }
+          if (result[1] &&
+              result[1].length) {
+            result[1] = result[1].filter(function(elem, pos) {
+              return result[1].indexOf(elem) === pos;
+            });
+          }
+
+          let newAddressArray = [];
+          for (let a = 0; a < result.length; a++) {
+            newAddressArray[a] = [];
+
+            if (result[a]) {
+              for (let b = 0; b < result[a].length; b++) {
+                let filteredArray;
+
+                filteredArray = json.filter(res => res.address === result[a][b]).map(res => res.amount);
+
+                let sum = 0;
+                for (let i = 0; i < filteredArray.length; i++) {
+                  sum += filteredArray[i];
+                }
+
+                newAddressArray[a][b] = {
+                  address: result[a][b],
+                  amount: sum,
+                  type: a === 0 ? 'public': 'private',
+                };
+              }
+            }
+          }
+
+          // get zaddr balance
+          if (result[1] &&
+              result[1].length) {
+            Promise.all(result[1].map((_address, index) => {
+              return new Promise((resolve, reject) => {
+                _bitcoinRPC(coin, 'z_getbalance', [_address])
+                .then(function(__json) {
+                  __json = JSON.parse(__json);
+                  if (__json &&
+                      __json.error) {
+                    resolve(0);
+                  } else {
+                    resolve(__json.result)
+                    newAddressArray[1][index] = {
+                      address: _address,
+                      amount: __json.result,
+                      type: 'private',
+                    };
+                  }
+                });
+              });
+            }))
+            .then(zresult => {
+              _returnObj.addresses = {
+                public: newAddressArray[0],
+                private: newAddressArray[1],
+              };
+
+              const returnObj = {
+                msg: 'success',
+                result: _returnObj,
+              };
+
+              res.end(JSON.stringify(returnObj));
+            });
+          } else {
             _returnObj.addresses = {
               public: newAddressArray[0],
               private: newAddressArray[1],
@@ -350,41 +366,41 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
             };
 
             res.end(JSON.stringify(returnObj));
-          });
-        } else {
-          _returnObj.addresses = {
-            public: newAddressArray[0],
-            private: newAddressArray[1],
-          };
-
-          const returnObj = {
-            msg: 'success',
-            result: _returnObj,
-          };
-
-          res.end(JSON.stringify(returnObj));
+          }
         }
+
+        _bitcoinRPC(coin, 'listunspent')
+        .then(function(__json) {
+          if (__json === 'Work queue depth exceeded' ||
+              !__json) {
+            const returnObj = {
+              msg: 'success',
+              result: _returnObj,
+            };
+
+            res.end(JSON.stringify(returnObj));
+          } else {
+            _returnObj.listunspent = JSON.parse(__json);
+
+            calcBalance(
+              result,
+              JSON.parse(__json).result
+            );
+          }
+        });
+      } else {
+        _returnObj.addresses = {
+          public: {},
+          private: {},
+        };
+
+        const returnObj = {
+          msg: 'success',
+          result: _returnObj,
+        };
+
+        res.end(JSON.stringify(returnObj));
       }
-
-      _bitcoinRPC(coin, 'listunspent')
-      .then(function(__json) {
-        if (__json === 'Work queue depth exceeded' ||
-            !__json) {
-          const returnObj = {
-            msg: 'success',
-            result: _returnObj,
-          };
-
-          res.end(JSON.stringify(returnObj));
-        } else {
-          _returnObj.listunspent = JSON.parse(__json);
-
-          calcBalance(
-            result,
-            JSON.parse(__json).result
-          );
-        }
-      });
     })
   }
 
@@ -414,7 +430,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ payload: _payload }),
-        timeout: 10000,
+        timeout: 60000,
       };
 
       request(options, function(error, response, body) {
@@ -2882,7 +2898,7 @@ function herder(flock, data) {
             let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
             _arg = _arg.trim().split(' ');
             execFile(`${komododBin}`, _arg, {
-              maxBuffer: 1024 * 500000 // 500 mb
+              maxBuffer: 1024 * 1000000 // 1000 mb
             }, function(error, stdout, stderr) {
               shepherd.writeLog(`stdout: ${stdout}`);
               shepherd.writeLog(`stderr: ${stderr}`);
