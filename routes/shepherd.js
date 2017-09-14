@@ -129,7 +129,6 @@ shepherd.startKMDNative = function(selection, isManual) {
         '-daemon=0',
         '-addnode=78.47.196.146',
       ],
-      'manualStart': isManual,
     };
 
     const options = {
@@ -2386,7 +2385,7 @@ shepherd.post('/herd', function(req, res) {
   shepherd.log(req.body);
 
   if (req.body.options &&
-      !req.body.options.manualStart) {
+      !shepherd.kmdMainPassiveMode) {
     function testCoindPort(skipError) {
       if (!lockDownAddCoin) {
         const _port = assetChainPorts[req.body.options.ac_name];
@@ -2836,24 +2835,26 @@ function herder(flock, data) {
     shepherd.writeLog(`selected data: ${data}`);
 
     // truncate debug.log
-    try {
-      const _confFileAccess = _fs.accessSync(kmdDebugLogLocation, fs.R_OK | fs.W_OK);
+    if (!shepherd.kmdMainPassiveMode) {
+      try {
+        const _confFileAccess = _fs.accessSync(kmdDebugLogLocation, fs.R_OK | fs.W_OK);
 
-      if (_confFileAccess) {
-        shepherd.log(`error accessing ${kmdDebugLogLocation}`);
-        shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
-      } else {
-        try {
-          fs.unlink(kmdDebugLogLocation);
-          shepherd.log(`truncate ${kmdDebugLogLocation}`);
-          shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
-        } catch (e) {
-          shepherd.log('cant unlink debug.log');
+        if (_confFileAccess) {
+          shepherd.log(`error accessing ${kmdDebugLogLocation}`);
+          shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
+        } else {
+          try {
+            fs.unlink(kmdDebugLogLocation);
+            shepherd.log(`truncate ${kmdDebugLogLocation}`);
+            shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
+          } catch (e) {
+            shepherd.log('cant unlink debug.log');
+          }
         }
+      } catch(e) {
+        shepherd.log(`komodod debug.log access err: ${e}`);
+        shepherd.writeLog(`komodod debug.log access err: ${e}`);
       }
-    } catch(e) {
-      shepherd.log(`komodod debug.log access err: ${e}`);
-      shepherd.writeLog(`komodod debug.log access err: ${e}`);
     }
 
     // get komodod instance port
@@ -2894,7 +2895,7 @@ function herder(flock, data) {
           shepherd.log(`daemon param ${data.ac_custom_param}`);
 
           coindInstanceRegistry[data.ac_name] = true;
-          if (!data.manualStart) {
+          if (!shepherd.kmdMainPassiveMode) {
             let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
             _arg = _arg.trim().split(' ');
             execFile(`${komododBin}`, _arg, {
@@ -2918,7 +2919,7 @@ function herder(flock, data) {
             });
           }
         } else {
-          if (data.manualStart) {
+          if (shepherd.kmdMainPassiveMode) {
             coindInstanceRegistry[data.ac_name] = true;
           }
           shepherd.log(`port ${_port} (${data.ac_name}) is already in use`);

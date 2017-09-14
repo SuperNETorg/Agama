@@ -289,7 +289,7 @@ function createAppSettingsWindow() {
 	// initialise window
 	appSettingsWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 750,
-		height: 820,
+		height: !appConfig.experimentalFeatures ? 570 : 700,
 		frame: false,
 		icon: iguanaIcon,
 		show: false,
