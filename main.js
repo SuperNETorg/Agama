@@ -82,7 +82,7 @@ shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}
 shepherd.setConfKMD();
 
 if (appConfig.killIguanaOnStart) {
-	shepherd.killRogueProcess('iguana');
+	// shepherd.killRogueProcess('iguana');
 }
 
 guiapp.use(function(req, res, next) {
@@ -531,7 +531,8 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	shepherd.log('before-quit');
-	shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
+	// shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
+
 	if (!forceQuitApp && mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
 		shepherd.log('before-quit prevented');
