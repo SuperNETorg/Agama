@@ -116,11 +116,11 @@ function parse_kmdcli_commands(callback) {
  *     "notaryid" : -1,
  *     "pubkey" : "000000000000000000000000000000000000000000000000000000000000000000"
  * }
- * 
+ *
  */
 function command(kmd_command, callback) {
   if (callback) {
     return this.exec(komodocliBin + " " + kmd_command,
-      parse_kmdcli_commands(callback));  
+      parse_kmdcli_commands(callback));
   }
 }
