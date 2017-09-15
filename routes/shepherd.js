@@ -516,7 +516,7 @@ shepherd.testBins = function(daemonName) {
       _fs.access(`${iguanaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, function(err) {
         if (!err) {
           try {
-            _fs.unlink(`${iguanaTestDir}/${daemonName}Test.log`);
+            _fs.unlinkSync(`${iguanaTestDir}/${daemonName}Test.log`);
           } catch (e) {}
         } else {
           shepherd.log(`path ${iguanaTestDir}/${daemonName}Test.log doesnt exist`);
@@ -1368,7 +1368,7 @@ shepherd.updateAgama = function() {
             status: 'done',
           },
         });
-        fs.unlink(`${rootLocation}patch.zip`);
+        fs.unlinkSync(`${rootLocation}patch.zip`);
       } else {
         cache.io.emit('patch', {
           msg: {
@@ -2844,7 +2844,7 @@ function herder(flock, data) {
           shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
         } else {
           try {
-            fs.unlink(kmdDebugLogLocation);
+            fs.unlinkSync(kmdDebugLogLocation);
             shepherd.log(`truncate ${kmdDebugLogLocation}`);
             shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
           } catch (e) {
@@ -3309,8 +3309,8 @@ function setConf(flock) {
     return FixFilePermissions();
   })
   .then(RemoveLines)
-  .then(CheckConf)
-  .then(MakeConfReadOnly);
+  .then(CheckConf);
+  // .then(MakeConfReadOnly);
 }
 
 function getConf(flock) {
