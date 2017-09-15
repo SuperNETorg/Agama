@@ -10,8 +10,9 @@ echo "Build script for Iguana application for Linux x64 platform."
 echo "Preparing electron package $AGAMA_VERSION"
 
 electron-packager . --platform=linux --arch=x64 \
-  --icon=assets/icons/iguana_app_icon_png/128x128.png \
-  --out=build/ --buildVersion=$AGAMA_VERSION \
+  --icon=assets/icons/agama_icons/128x128.png \
+  --out=build/ \
+  --buildVersion=$AGAMA_VERSION \
   --ignore=assets/bin/win64 \
   --ignore=assets/bin/osx \
   --overwrite

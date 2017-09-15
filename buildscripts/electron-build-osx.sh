@@ -10,7 +10,7 @@ echo "Build script for Iguana application for MacOS platform."
 echo "Preparing electron package $AGAMA_VERSION"
 
 electron-packager . --platform=darwin --arch=x64 \
-  --icon=assets/icons/iguana_app_icon.icns \
+  --icon=assets/icons/agama_app_icon.icns \
   --out=build/ --buildVersion=$AGAMA_VERSION \
   --ignore=assets/bin/win64 \
   --ignore=assets/bin/linux64 \

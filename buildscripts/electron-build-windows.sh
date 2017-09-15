@@ -9,9 +9,17 @@ echo
 echo "Build script for Iguana application for Windows x64 platform."
 echo "Preparing electron package $AGAMA_VERSION"
 
-electron-packager . --platform=win32 --arch=ia32 \
-  --icon=assets/icons/iguana_app_icon.ico \
-  --out=build/ --buildVersion=$AGAMA_VERSION \
+electron-packager . --platform=win32 \
+  --arch=ia32 \
+  --icon=assets/icons/agama_app_icon.ico \
+  --out=build/ \
+  --buildVersion=$AGAMA_VERSION \
   --ignore=assets/bin/osx \
   --ignore=assets/bin/linux64 \
-  --overwrite
+  --overwrite \
+  --version-string.CompanyName="SuperNET" \
+  --version-string.FileDescription="Agama" \
+  --version-string.OriginalFilename="Agama" \
+  --version-string.ProductName="Agama" \
+  --version-string.InternalName="Agama" \
+  --app-copyright="Copyright (C) 2017 SuperNET. All rights reserved."
