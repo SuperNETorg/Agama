@@ -82,7 +82,7 @@ shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}
 shepherd.setConfKMD();
 
 if (appConfig.killIguanaOnStart) {
-	// shepherd.killRogueProcess('iguana');
+	shepherd.killRogueProcess('iguana');
 }
 
 guiapp.use(function(req, res, next) {
@@ -173,6 +173,8 @@ function createLoadingWindow() {
 			show: false,
 		});
 	} catch(e) {}
+
+	loadingWindow.setResizable(false);
 
 	// check if agama is already running
 	portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', function(error, status) {
@@ -281,6 +283,8 @@ function createAppCloseWindow() {
 		show: false,
 	});
 
+	appCloseWindow.setResizable(false);
+
 	appCloseWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-closing.html`);
 
   appCloseWindow.webContents.on('did-finish-load', function() {
@@ -303,6 +307,8 @@ function createAppSettingsWindow() {
 		icon: iguanaIcon,
 		show: false,
 	});
+
+	appSettingsWindow.setResizable(false);
 
 	appSettingsWindow.appConfig = appConfig;
 	appSettingsWindow.appConfigSchema = shepherd.appConfigSchema;
@@ -540,7 +546,7 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	shepherd.log('before-quit');
-	// shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
+	shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
 
 	if (!forceQuitApp && mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
