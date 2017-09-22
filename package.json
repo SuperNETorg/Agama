@@ -1,7 +1,7 @@
 {
   "name": "agama_app",
   "productName": "Agama",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "description": "Agama Desktop App",
   "main": "main.js",
   "scripts": {
@@ -10,15 +10,12 @@
   },
   "repository": "https://github.com/SuperNETorg/Agama/",
   "keywords": [
-    "iguana",
     "agama",
-    "superNET",
+    "SuperNET",
     "komodo",
-    "easydex",
-    "instantdex",
     "pax"
   ],
-  "author": "ca333, grewalsatinder",
+  "author": "SuperNET",
   "license": "MIT",
   "devDependencies": {
     "electron": "^1.4.1"
