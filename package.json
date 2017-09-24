@@ -27,7 +27,7 @@
     "adm-zip": "^0.4.7",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
-    "electron": "^1.6.5",
+    "electron": "1.6.5",
     "express": "^4.14.0",
     "fix-path": "^2.1.0",
     "fs-extra": "^1.0.0",
