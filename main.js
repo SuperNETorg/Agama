@@ -7,8 +7,7 @@ const electron = require('electron'),
 			path = require('path'),
 			url = require('url'),
 			os = require('os'),
-			md5 = require('md5'),
-			spawn = require('child_process').spawn,
+			md5 = require('./routes/md5'),
 			exec = require('child_process').exec,
 			{ Menu } = require('electron'),
 			portscanner = require('portscanner'),
@@ -20,11 +19,9 @@ var express = require('express'),
 		fs = require('fs'),
 		fsnode = require('fs'),
 		fs = require('fs-extra'),
-		mkdirp = require('mkdirp'),
 		pm2 = require('pm2'),
 		cluster = require('cluster'),
-		numCPUs = require('os').cpus().length,
-		ipc = require('electron').ipcMain;
+		numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
 
@@ -57,7 +54,7 @@ app.setVersion(appBasicInfo.version);
 shepherd.binFixRights();
 shepherd.createIguanaDirs();
 
-const appSessionHash = md5(Date.now());
+const appSessionHash = md5(Date.now().toString());
 
 shepherd.writeLog(`app init ${appSessionHash}`);
 shepherd.writeLog(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
@@ -277,7 +274,7 @@ function createAppCloseWindow() {
 	// initialise window
 	appCloseWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 500,
-		height: 300,
+		height: 355,
 		frame: false,
 		icon: iguanaIcon,
 		show: false,

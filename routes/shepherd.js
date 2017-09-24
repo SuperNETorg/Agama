@@ -7,15 +7,13 @@ const electron = require('electron'),
       fsnode = require('fs'),
       fs = require('fs-extra'),
       _fs = require('graceful-fs'),
-      mkdirp = require('mkdirp'),
       express = require('express'),
       exec = require('child_process').exec,
       spawn = require('child_process').spawn,
-      md5 = require('md5'),
+      md5 = require('./md5'),
       pm2 = require('pm2'),
       request = require('request'),
       async = require('async'),
-      rimraf = require('rimraf'),
       portscanner = require('portscanner'),
       aes256 = require('nodejs-aes256'),
       AdmZip = require('adm-zip'),
@@ -2521,7 +2519,6 @@ shepherd.post('/setconf', function(req, res) {
 
   if (os.platform() === 'win32' &&
       req.body.chain == 'komodod') {
-    setkomodoconf = spawn(path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
     setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
   } else {
     setConf(req.body.chain);
@@ -2561,7 +2558,7 @@ shepherd.post('/getconf', function(req, res) {
  *  type: GET
  *  params: coin, type
  */
-shepherd.get('/kick', function(req, res, next) {
+/*shepherd.get('/kick', function(req, res, next) {
   const _coin = req.query.coin;
   const _type = req.query.type;
 
@@ -2701,7 +2698,7 @@ shepherd.get('/kick', function(req, res, next) {
 
     res.end(JSON.stringify(successObj));
   }
-});
+});*/
 
 shepherd.readDebugLog = function(fileLocation, lastNLines) {
   return new Promise(
@@ -2749,30 +2746,6 @@ function herder(flock, data) {
     shepherd.log(`selected data: ${data}`);
     shepherd.writeLog('iguana flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
-
-    // MAKE SURE IGUANA DIR IS THERE FOR USER
-    mkdirp(iguanaDir, function(err) {
-    if (err)
-      shepherd.error(err);
-    else
-      fs.readdir(iguanaDir, (err, files) => {
-        files.forEach(file => {
-          //console.log(file);
-        });
-      })
-    });
-
-    // ADD SHEPHERD FOLDER
-    mkdirp(`${iguanaDir}/shepherd`, function(err) {
-    if (err)
-      console.error(err);
-    else
-      fs.readdir(iguanaDir, (err, files) => {
-        files.forEach(file => {
-          //console.log(file);
-        });
-      })
-    });
 
     // COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
     fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function(err) {
