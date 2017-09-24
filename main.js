@@ -1,4 +1,4 @@
-// main proc for EasyDEX GUI
+// main proc for Agama
 // this app spawns iguana in background in nontech-mode
 
 const electron = require('electron'),
@@ -7,9 +7,7 @@ const electron = require('electron'),
 			path = require('path'),
 			url = require('url'),
 			os = require('os'),
-			md5 = require('md5'),
-			spawn = require('child_process').spawn,
-			exec = require('child_process').exec,
+			md5 = require('./routes/md5.js'),
 			{ Menu } = require('electron'),
 			portscanner = require('portscanner'),
 			osPlatform = os.platform(),
@@ -20,11 +18,7 @@ var express = require('express'),
 		fs = require('fs'),
 		fsnode = require('fs'),
 		fs = require('fs-extra'),
-		mkdirp = require('mkdirp'),
-		pm2 = require('pm2'),
-		cluster = require('cluster'),
-		numCPUs = require('os').cpus().length,
-		ipc = require('electron').ipcMain;
+		numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
 
@@ -56,7 +50,7 @@ app.setVersion(appBasicInfo.version);
 shepherd.binFixRights();
 shepherd.createAgamaDirs();
 
-const appSessionHash = md5(Date.now());
+const appSessionHash = md5(Date.now().toString());
 
 shepherd.writeLog(`app init ${appSessionHash}`);
 shepherd.writeLog(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
@@ -69,6 +63,17 @@ shepherd.writeLog(`platform: ${osPlatform}`);
 shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
+shepherd.log(`app init ${appSessionHash}`);
+shepherd.log(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
+shepherd.log('sys info:');
+shepherd.log(`totalmem_readable: ${formatBytes(os.totalmem())}`);
+shepherd.log(`arch: ${os.arch()}`);
+shepherd.log(`cpu: ${os.cpus()[0].model}`);
+shepherd.log(`cpu_cores: ${os.cpus().length}`);
+shepherd.log(`platform: ${osPlatform}`);
+shepherd.log(`os_release: ${os.release()}`);
+shepherd.log(`os_type: ${os.type()}`);
+
 var appConfig = shepherd.loadLocalConfig(); // load app config
 appConfig['daemonOutput'] = false; // shadow setting
 
@@ -76,6 +81,7 @@ let __defaultAppSettings = require('./routes/appConfig.js').config;
 __defaultAppSettings['daemonOutput'] = false; // shadow setting
 const _defaultAppSettings = __defaultAppSettings;
 
+shepherd.log(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
 shepherd.setConfKMD();
@@ -403,53 +409,19 @@ function createWindow(status) {
 		// DEVTOOLS - only for dev purposes - ca333
 		// mainWindow.webContents.openDevTools()
 
-		function pm2Exit() {
-			const ConnectToPm2 = function() {
+		function appExit() {
+			const CloseDaemons = function() {
 				return new Promise(function(resolve, reject) {
 					shepherd.log('Closing Main Window...');
 					shepherd.writeLog('exiting app...');
 
 					shepherd.quitKomodod(1000);
 
-					pm2.connect(true, function(err) {
-						shepherd.log('connecting to pm2...');
-						shepherd.writeLog('connecting to pm2...');
-
-						if (err) {
-							shepherd.log(err);
-						}
-					});
-
-					const result = 'Connecting To Pm2: done';
+					const result = 'Closing daemons: done';
 
 					shepherd.log(result);
 					shepherd.writeLog(result);
 					resolve(result);
-				})
-			}
-
-			const KillPm2 = function() {
-				return new Promise(function(resolve, reject) {
-					shepherd.log('killing to pm2...');
-					shepherd.writeLog('killing to pm2...');
-
-					pm2.killDaemon(function(err) {
-						pm2.disconnect();
-						shepherd.log('killed to pm2...');
-						shepherd.writeLog('killed to pm2...');
-
-						if (err)
-							throw err;
-					});
-
-					const result = 'Killing Pm2: done';
-
-					setTimeout(function() {
-						shepherd.log(result);
-						shepherd.writeLog(result);
-
-						resolve(result);
-					}, 2000);
 				})
 			}
 
@@ -475,7 +447,6 @@ function createWindow(status) {
 				return new Promise(function(resolve, reject) {
 					const result = 'Quiting App: done';
 
-					KillPm2(); // required for normal app quit in iguana-less mode
 					app.quit();
 					shepherd.log(result);
 					resolve(result);
@@ -483,10 +454,7 @@ function createWindow(status) {
 			}
 
 			const closeApp = function() {
-				ConnectToPm2()
-				.then(function(result) {
-					return KillPm2();
-				})
+				CloseDaemons()
 				.then(HideMainWindow)
 				.then(HideAppClosingWindow)
 				.then(QuitApp);
@@ -509,7 +477,7 @@ function createWindow(status) {
 
 		// if window closed we kill iguana proc
 		mainWindow.on('closed', function() {
-			pm2Exit();
+			appExit();
 		});
 	}
 }

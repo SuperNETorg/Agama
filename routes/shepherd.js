@@ -7,15 +7,12 @@ const electron = require('electron'),
       fsnode = require('fs'),
       fs = require('fs-extra'),
       _fs = require('graceful-fs'),
-      mkdirp = require('mkdirp'),
       express = require('express'),
       exec = require('child_process').exec,
       spawn = require('child_process').spawn,
-      md5 = require('md5'),
-      pm2 = require('pm2'),
+      md5 = require('./md5.js'),
       request = require('request'),
       async = require('async'),
-      rimraf = require('rimraf'),
       portscanner = require('portscanner'),
       aes256 = require('nodejs-aes256'),
       AdmZip = require('adm-zip'),
@@ -88,7 +85,8 @@ shepherd.getAppRuntimeLog = function() {
 };
 
 shepherd.log = function(msg) {
-  if (shepherd.appConfig.dev) {
+  if (shepherd.appConfig.dev ||
+      shepherd.appConfig.debug) {
     console.log(msg);
   }
 
@@ -562,7 +560,7 @@ shepherd.testBins = function(daemonName) {
           }
         });
 
-        pm2.connect(true,function(err) { //start up pm2 god
+        /*pm2.connect(true,function(err) { //start up pm2 god
           if (err) {
             shepherd.error(err);
             process.exit(2);
@@ -598,7 +596,7 @@ shepherd.testBins = function(daemonName) {
               // throw err;
             }
           });
-        });
+        });*/
 
         setTimeout(function() {
           const options = {
@@ -2033,58 +2031,6 @@ shepherd.post('/herd', function(req, res) {
 
 /*
  *  type: POST
- *  params: herdname
- */
-shepherd.post('/herdlist', function(req, res) {
-  shepherd.log(req.body.herdname);
-
-  pm2.connect(true, function(err) {
-    if (err) {
-      shepherd.writeLog(`herdlist err: ${err}`);
-      shepherd.log(`herdlist err:: ${err}`);
-    }
-    pm2.describe(req.body.herdname, function(err, list) {
-      pm2.disconnect(); // disconnect after getting proc info list
-
-      if (err) {
-        shepherd.writeLog(`pm2.describe err: ${err}`);
-        shepherd.log(`pm2.describe err: ${err}`);
-      }
-
-      shepherd.log(list[0].pm2_env.status) // print status of IGUANA proc
-      shepherd.log(list[0].pid) // print pid of IGUANA proc
-      shepherd.writeLog(list[0].pm2_env.status);
-      shepherd.writeLog(list[0].pid);
-
-      const obj = {
-        herdname: req.body.herdname,
-        status: list[0].pm2_env.status,
-        pid: list[0].pid,
-      };
-
-      res.end(JSON.stringify(obj));
-     });
-  });
-});
-
-/*
- *  type: POST
- */
-shepherd.post('/slay', function(req, res) {
-  shepherd.log('======= req.body =======');
-  shepherd.log(req.body);
-
-  slayer(req.body.slay);
-  const obj = {
-    msg: 'success',
-    result: 'result',
-  };
-
-  res.end(JSON.stringify(obj));
-});
-
-/*
- *  type: POST
  */
 shepherd.post('/setconf', function(req, res) {
   shepherd.log('======= req.body =======');
@@ -2092,7 +2038,6 @@ shepherd.post('/setconf', function(req, res) {
 
   if (os.platform() === 'win32' &&
       req.body.chain == 'komodod') {
-    setkomodoconf = spawn(path.join(__dirname, '../build/artifacts.supernet.org/latest/windows/genkmdconf.bat'));
     setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
   } else {
     setConf(req.body.chain);
@@ -2239,12 +2184,12 @@ shepherd.get('/kick', function(req, res, next) {
       shepherd.log('deleting ' + currentKickItem.type + (currentKickItem.match ? ' ' + currentKickItem.match : '') + ' ' + iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
       if (currentKickItem.type === 'folder' ||
           currentKickItem.type === 'file') {
-        rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}`, function(err) {
+        /*rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}`, function(err) {
           if (err) {
             shepherd.writeLog(`kickstart err: ${err}`);
             shepherd.log(`kickstart err: ${err}`);
           }
-        });
+        });*/
       } else if (currentKickItem.type === 'pattern') {
         let dirItems = fs.readdirSync(`${iguanaDir}/currentKickItem.name.replace('[coin]', _coin)`);
 
@@ -2252,12 +2197,12 @@ shepherd.get('/kick', function(req, res, next) {
             dirItems.length) {
           for (let j = 0; j < dirItems.length; j++) {
             if (dirItems[j].indexOf(currentKickItem.match) > -1) {
-              rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}/${dirItems[j]}`, function(err) {
+              /*rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}/${dirItems[j]}`, function(err) {
                 if (err) {
                   shepherd.writeLog(`kickstart err: ${err}`);
                   shepherd.log(`kickstart err: ${err}`);
                 }
-              });
+              });*/
 
               shepherd.log(`deleting ${dirItems[j]}`);
             }
@@ -2424,7 +2369,7 @@ function herder(flock, data) {
     }
   }
 
-  if (flock === 'zcashd') {
+  if (flock === 'zcashd') { // TODO: fix(?)
     let kmdDebugLogLocation = `${zcashDir}/debug.log`;
 
     shepherd.log('zcashd flock selected...');
@@ -2432,7 +2377,7 @@ function herder(flock, data) {
     shepherd.writeLog('zcashd flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
 
-    pm2.connect(true, function(err) { // start up pm2 god
+    /*pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
         shepherd.error(err);
         process.exit(2);
@@ -2454,20 +2399,8 @@ function herder(flock, data) {
         }
         // throw err;
       });
-    });
+    });*/
   }
-}
-
-function slayer(flock) {
-  shepherd.log(flock);
-
-  pm2.delete(flock, function(err, ret) {
-    pm2.disconnect();
-    shepherd.writeLog(`deleting flock ${flock}`);
-    shepherd.writeLog(ret);
-
-    shepherd.log(ret);
-  });
 }
 
 shepherd.setConfKMD = function() {
@@ -2802,7 +2735,6 @@ function setConf(flock) {
   })
   .then(RemoveLines)
   .then(CheckConf);
-  // .then(MakeConfReadOnly);
 }
 
 function getConf(flock) {
