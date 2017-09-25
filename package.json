@@ -33,6 +33,7 @@
     "portscanner": "^2.1.1",
     "ps-node": "^0.1.5",
     "remote-file-size": "^3.0.3",
-    "request": "^2.80.0"
+    "request": "^2.80.0",
+    "socket.io": "^1.7.3"
   }
 }

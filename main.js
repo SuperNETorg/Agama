@@ -107,7 +107,7 @@ process.once('loaded', () => {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
 		app.setAboutPanelOptions({
 			applicationName: app.getName(),
-			applicationVersion: app.getVersion(),
+			applicationVersion: `app.getVersion().replace('version=', '')}-beta`,
 			copyright: 'Released under the MIT license',
 			credits: 'SuperNET Team'
 		})

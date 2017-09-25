@@ -2496,16 +2496,16 @@ function setConf(flock) {
     return new Promise(function(resolve, reject) {
       const result = 'Check Conf file exists is done'
 
-      fs.ensureFile(DaemonConfPath, function(err) {
-        shepherd.log(err); // => null
-      });
-
-      setTimeout(function() {
+      const confFileExist = fs.ensureFileSync(DaemonConfPath);
+      if (confFileExist) {
         shepherd.log(result);
         shepherd.writeLog(`setconf ${result}`);
 
         resolve(result);
-      }, 2000);
+      } else {
+        shepherd.log('conf file doesnt exist');
+        resolve('conf file doesnt exist');
+      }
     });
   }
 
@@ -2514,13 +2514,10 @@ function setConf(flock) {
       const result = 'Conf file permissions updated to Read/Write';
 
       fsnode.chmodSync(DaemonConfPath, '0666');
+      shepherd.log(result);
+      shepherd.writeLog(`setconf ${result}`);
 
-      setTimeout(function() {
-        shepherd.log(result);
-        shepherd.writeLog(`setconf ${result}`);
-
-        resolve(result);
-      }, 1000);
+      resolve(result);
     });
   }
 
@@ -2539,16 +2536,13 @@ function setConf(flock) {
         fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
           if (err)
             return shepherd.log(err);
+
+          fsnode.chmodSync(DaemonConfPath, '0666');
+          shepherd.writeLog(`setconf ${result}`);
+          shepherd.log(result);
+          resolve(result);
         });
       });
-
-      fsnode.chmodSync(DaemonConfPath, '0666');
-      setTimeout(function() {
-        shepherd.writeLog(`setconf ${result}`);
-        shepherd.log(result);
-
-        resolve(result);
-      }, 2000);
     });
   }
 
@@ -2565,7 +2559,7 @@ function setConf(flock) {
               shepherd.log('rpcuser: OK');
               shepherd.writeLog('rpcuser: OK');
             } else {
-              const randomstring = md5(Math.random() * Math.random() * 999);
+              const randomstring = md5((Math.random() * Math.random() * 999).toString());
 
               shepherd.log('rpcuser: NOT FOUND');
               shepherd.writeLog('rpcuser: NOT FOUND');
@@ -2593,7 +2587,7 @@ function setConf(flock) {
               shepherd.log('rpcpassword: OK');
               shepherd.writeLog('rpcpassword: OK');
             } else {
-              var randomstring = md5(Math.random() * Math.random() * 999);
+              var randomstring = md5((Math.random() * Math.random() * 999).toString());
 
               shepherd.log('rpcpassword: NOT FOUND');
               shepherd.writeLog('rpcpassword: NOT FOUND');
@@ -2705,27 +2699,10 @@ function setConf(flock) {
         .then(addnode);
       });
 
-      setTimeout(function() {
-        shepherd.log(result);
-        shepherd.writeLog(`checkconf addnode ${result}`);
+      shepherd.log(result);
+      shepherd.writeLog(`checkconf addnode ${result}`);
 
-        resolve(result);
-      }, 2000);
-    });
-  }
-
-  const MakeConfReadOnly = function() {
-    return new Promise(function(resolve, reject) {
-      const result = 'Conf file permissions updated to Read Only';
-
-      fsnode.chmodSync(DaemonConfPath, '0400');
-
-      setTimeout(function() {
-        shepherd.log(result);
-        shepherd.writeLog(`MakeConfReadOnly ${result}`);
-
-        resolve(result);
-      }, 1000);
+      resolve(result);
     });
   }
 
