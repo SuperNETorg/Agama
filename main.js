@@ -30,6 +30,9 @@ if (osPlatform === 'linux') {
 var shepherd = require('./routes/shepherd');
 var guiapp = express();
 
+const nativeCoindList = shepherd.scanNativeCoindBins();
+shepherd.setVar('nativeCoindList', nativeCoindList);
+
 let localVersion;
 let localVersionFile = shepherd.readVersionFile();
 
@@ -85,6 +88,7 @@ shepherd.log(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
 shepherd.setConfKMD();
+shepherd.setConfKMD('CHIPS');
 
 guiapp.use(function(req, res, next) {
 	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:3000');
@@ -187,7 +191,7 @@ function createLoadingWindow() {
 				// start sockets.io
 				io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
 
-				io.on('connection', function(client) {
+				/*io.on('connection', function(client) {
 					shepherd.log('EDEX GUI is connected...');
 					shepherd.writeLog('EDEX GUI is connected...');
 
@@ -201,7 +205,7 @@ function createLoadingWindow() {
 						shepherd.log(data);
 						client.emit('messages', 'Sockets server is listening');
 					});
-				});
+				});*/
 			});
 		} else {
 			willQuitApp = true;
@@ -383,6 +387,7 @@ function createWindow(status) {
 		mainWindow.testLocation = shepherd.testLocation;
 		mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
 		mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
+		mainWindow.nativeCoindList = nativeCoindList;
 
 		if (appConfig.dev) {
 			mainWindow.loadURL('http://127.0.0.1:3000');

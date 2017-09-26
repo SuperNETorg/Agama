@@ -11,6 +11,9 @@ const appConfig = {
     roundValues: false,
     experimentalFeatures: false,
     dataDir: '',
+    dex: {
+      walletUnlockTimeout: 3600,
+    },
   },
   schema: {
     host: {
@@ -78,6 +81,15 @@ const appConfig = {
       displayName: 'Output daemon prints (debug)',
       info: 'Output daemon prints to GUI for debug purposes',
       type: 'boolean',
+    },
+    dex: {
+      display: false,
+      displayName: 'dex',
+      walletUnlockTimeout: {
+        display: true,
+        displayName: 'walletUnlockTimeout',
+        type: 'number',
+      },
     },
   },
 };
