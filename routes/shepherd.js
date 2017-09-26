@@ -1674,8 +1674,6 @@ shepherd.getConf = function(chain) {
       } else {
         rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
       }
-
-      console.log(JSON.stringify(parsedRpcConfig, null, '\t'));
     } else {
       shepherd.log(`${_confLocation} is empty`);
     }
@@ -1766,8 +1764,8 @@ shepherd.post('/cli', function(req, res, next) {
               'result': result,
             };
 
-            console.log('bitcoinrpc debug ====>');
-            console.log(result);
+            // shepherd.log('bitcoinrpc debug ====>');
+            // console.log(result);
 
             res.end(JSON.stringify(_obj));
           }, function(result) {
@@ -1783,7 +1781,7 @@ shepherd.post('/cli', function(req, res, next) {
             error: 'bitcoinrpc debug error',
             result: 'error',
           });
-          console.log('bitcoinrpc debug error');
+          // console.log('bitcoinrpc debug error');
         }
       } else {
         if (_chain === 'CHIPS' &&
@@ -2101,7 +2099,6 @@ shepherd.post('/debuglog', function(req, res) {
   let _ac = req.body.ac;
   let _lastNLines = req.body.lastLines;
   let _location;
-  console.log(JSON.stringify(req.body, null, '\t'));
 
   if (os.platform() === 'darwin') {
     komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`;
@@ -2721,12 +2718,11 @@ function herder(flock, data, coind) {
   }
 
   if (flock === 'coind') {
-     console.log(JSON.stringify(shepherd.nativeCoindList[coind.toLowerCase()], null, '\t'));
      const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
      let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}/debug.log`;
 
-     console.log(`coind ${coind} flock selected...`);
-     console.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
+     shepherd.log(`coind ${coind} flock selected...`);
+     shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
      shepherd.writeLog(`coind ${coind} flock selected...`);
      shepherd.writeLog(`selected data: ${data}`);
 
@@ -2734,30 +2730,29 @@ function herder(flock, data, coind) {
      try {
        _fs.access(coindDebugLogLocation, fs.constants.R_OK, function(err) {
          if (err) {
-           console.log(`error accessing ${coindDebugLogLocation}`);
+           shepherd.log(`error accessing ${coindDebugLogLocation}`);
            shepherd.writeLog(`error accessing ${coindDebugLogLocation}`);
          } else {
-           console.log(`truncate ${coindDebugLogLocation}`);
+           shepherd.log(`truncate ${coindDebugLogLocation}`);
            shepherd.writeLog(`truncate ${coindDebugLogLocation}`);
            fs.unlink(coindDebugLogLocation);
          }
        });
      } catch(e) {
-       console.log(`coind ${coind} debug.log access err: ${e}`);
+       shepherd.log(`coind ${coind} debug.log access err: ${e}`);
        shepherd.writeLog(`coind ${coind} debug.log access err: ${e}`);
      }
 
      // get komodod instance port
      const _port = shepherd.nativeCoindList[coind.toLowerCase()].port;
      const coindBin = `${coindRootDir}/${coind.toLowerCase()}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}d`;
-     console.log('coind bin ' + coindBin);
 
      try {
        // check if coind instance is already running
        portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
          // Status is 'open' if currently in use or 'closed' if available
          if (status === 'closed') {
-           console.log(`exec ${coindBin} ${data.ac_options.join(' ')}`);
+           shepherd.log(`exec ${coindBin} ${data.ac_options.join(' ')}`);
            shepherd.writeLog(`exec ${coindBin} ${data.ac_options.join(' ')}`);
 
            coindInstanceRegistry[coind] = true;
@@ -2770,17 +2765,17 @@ function herder(flock, data, coind) {
              shepherd.writeLog(`stderr: ${stderr}`);
 
              if (error !== null) {
-               console.log(`exec error: ${error}`);
+               shepherd.log(`exec error: ${error}`);
                shepherd.writeLog(`exec error: ${error}`);
              }
            });
          } else {
-           console.log(`port ${_port} (${coind}) is already in use`);
+           shepherd.log(`port ${_port} (${coind}) is already in use`);
            shepherd.writeLog(`port ${_port} (${coind}) is already in use`);
          }
        });
      } catch(e) {
-       console.log(`failed to start ${coind} err: ${e}`);
+       shepherd.log(`failed to start ${coind} err: ${e}`);
        shepherd.writeLog(`failed to start ${coind} err: ${e}`);
      }
   }
