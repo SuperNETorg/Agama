@@ -1,38 +1,140 @@
-const electron = require('electron'),
-      app = electron.app,
-      BrowserWindow = electron.BrowserWindow,
-      path = require('path'),
-      url = require('url'),
-      os = require('os'),
-      fsnode = require('fs'),
-      fs = require('fs-extra'),
-      _fs = require('graceful-fs'),
-      express = require('express'),
-      exec = require('child_process').exec,
-      spawn = require('child_process').spawn,
-      md5 = require('./md5.js'),
-      request = require('request'),
-      async = require('async'),
-      portscanner = require('portscanner'),
-      aes256 = require('nodejs-aes256'),
-      AdmZip = require('adm-zip'),
-      remoteFileSize = require('remote-file-size'),
-      Promise = require('bluebird'),
-      {shell} = require('electron'),
-      {execFile} = require('child_process');
+const electron = require('electron');
+const app = electron.app;
+const BrowserWindow = electron.BrowserWindow;
+const path = require('path');
+const url = require('url');
+const os = require('os');
+const fsnode = require('fs');
+const fs = require('fs-extra');
+const _fs = require('graceful-fs');
+const express = require('express');
+const exec = require('child_process').exec;
+const spawn = require('child_process').spawn;
+const md5 = require('./md5.js');
+const request = require('request');
+const async = require('async');
+const portscanner = require('portscanner');
+const aes256 = require('nodejs-aes256');
+const AdmZip = require('adm-zip');
+const remoteFileSize = require('remote-file-size');
+const Promise = require('bluebird');
+const {shell} = require('electron');
+const {execFile} = require('child_process');
 
 const fixPath = require('fix-path');
-var ps = require('ps-node'),
-    setconf = require('../private/setconf.js'),
-    nativeCoind = require('./nativeCoind.js'),
-    assetChainPorts = require('./ports.js'),
-    _appConfig = require('./appConfig.js'),
-    shepherd = express.Router(),
-    coindInstanceRegistry = {},
-    guiLog = {},
-    rpcConf = {},
-    appRuntimeLog = [],
-    lockDownAddCoin = false;
+var ps = require('ps-node');
+var setconf = require('../private/setconf.js');
+var nativeCoind = require('./nativeCoind.js');
+var assetChainPorts = require('./ports.js');
+var _appConfig = require('./appConfig.js');
+var shepherd = express.Router();
+var coindInstanceRegistry = {};
+var guiLog = {};
+var rpcConf = {};
+var appRuntimeLog = [];
+var lockDownAddCoin = false;
+
+const electrumJSCore = require('./electrumjs/electrumjs.core.js');
+const electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
+const electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
+const electrumServers = {
+  /*zcash: {
+    address: '173.212.225.176',
+    port: 50032,
+    proto: 'tcp',
+  },*/
+  komodo: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50011,
+    proto: 'tcp',
+    txfee: 10000,
+  },
+  dogecoin: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50015,
+    proto: 'tcp',
+    txfee: 100000000,
+  },
+  viacoin: { // !estimatefee
+    address: 'vialectrum.bitops.me',
+    port: 50002,
+    proto: 'ssl',
+    txfee: 100000,
+  },
+  vertcoin: {
+    address: '173.212.225.176',
+    port: 50088,
+    proto: 'tcp',
+    txfee: 100000,
+  },
+  namecoin: {
+    address: '173.212.225.176',
+    port: 50036,
+    proto: 'tcp',
+    txfee: 100000,
+  },
+  monacoin: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50002,
+    proto: 'tcp',
+    txfee: 100000,
+  },
+  litecoin: {
+    address: '173.212.225.176',
+    port: 50012,
+    proto: 'tcp',
+    txfee: 10000,
+  },
+  faircoin: {
+    address: '173.212.225.176',
+    port: 50005,
+    proto: 'tcp',
+    txfee: 1000000,
+  },
+  digibyte: {
+    address: '173.212.225.176',
+    port: 50022,
+    proto: 'tcp',
+    txfee: 100000,
+  },
+  dash: {
+    address: '173.212.225.176',
+    port: 50098,
+    proto: 'tcp',
+    txfee: 10000,
+  },
+  crown: {
+    address: '173.212.225.176',
+    port: 50041,
+    proto: 'tcp',
+    txfee: 10000,
+  },
+  bitcoin: {
+    address: '173.212.225.176',
+    port: 50001,
+    proto: 'tcp',
+  },
+  argentum: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50081,
+    proto: 'tcp',
+    txfee: 50000,
+  },
+  chips: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50076,
+    proto: 'tcp',
+    txfee: 10000,
+  },
+};
+
+let blockchain = {
+  komodo: {
+    height: 0,
+  },
+}
+
+const bitcoinJS = require('bitcoinjs-lib');
 
 shepherd.appConfig = _appConfig.config;
 
@@ -95,46 +197,708 @@ shepherd.kmdMainPassiveMode = false;
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
-/*
-  *  list native coind
-  *  type:
-  *  params:
-  */
- shepherd.get('/coind/list', function(req, res, next) {
-   const successObj = {
-     'msg': 'success',
-     'result': shepherd.nativeCoindList,
-   };
+shepherd.get('/electrum/getbalance', function(req, res, next) {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
 
-   res.end(JSON.stringify(successObj));
- });
+  ecl.connect();
+  ecl.blockchainAddressGetBalance(req.query.address)
+  .then((json) => {
+    ecl.close();
+    console.log('electrum getbalance ==>');
+    console.log(0.00000001 * json.confirmed);
 
- shepherd.scanNativeCoindBins = function() {
-   let nativeCoindList = {};
-
-   // check if coind bins are present in agama
-   for (let key in nativeCoind) {
-     nativeCoindList[key] = {
-       name: nativeCoind[key].name,
-       port: nativeCoind[key].port,
-       bin: nativeCoind[key].bin,
-       bins: {
-         daemon: false,
-         cli: false,
-       }
+     const successObj = {
+       'msg': 'success',
+       'result': {
+          balance: 0.00000001 * json.confirmed,
+        },
      };
 
-     if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}d${os.platform() === 'win32' ? '.exe' : ''}`)) {
-       nativeCoindList[key].bins.daemon = true;
-     }
+     res.end(JSON.stringify(successObj));
+  });
+});
 
-     if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}-cli${os.platform() === 'win32' ? '.exe' : ''}`)) {
-       nativeCoindList[key].bins.cli = true;
-     }
-   }
+shepherd.get('/electrum/listtransactions', function(req, res, next) {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
 
-   return nativeCoindList;
- }
+  if (!req.query.full) {
+    ecl.connect();
+    ecl.blockchainAddressGetHistory(req.query.address)
+    .then((json) => {
+      ecl.close();
+      console.log('electrum listtransactions ==>');
+      console.log(json);
+
+       const successObj = {
+         'msg': 'success',
+         'result': {
+            listtransactions: json,
+          },
+       };
+
+       res.end(JSON.stringify(successObj));
+    });
+  } else {
+    // !expensive call!
+    // TODO: limit e.g. 1-10, 10-20 etc
+    const MAX_TX = 10;
+    ecl.connect();
+
+    ecl.blockchainNumblocksSubscribe()
+    .then(function(currentHeight) {
+      // TODO: block time, confs
+      ecl.blockchainAddressGetHistory(req.query.address)
+      .then((json) => {
+        if (json &&
+            json.length) {
+          json = json.slice(0, MAX_TX);
+          console.log(json.length);
+          let _rawtx = [];
+
+          // get raw tx
+          for (let i = 0; i < json.length; i++) {
+            ecl.blockchainTransactionGet(json[i]['tx_hash'])
+            .then((_json) => {
+              console.log('electrum gettransaction ==>');
+              console.log(i + ' | ' + (json.length - 1));
+              console.log(_json);
+
+              // decode tx
+              const _network = electrumJSNetworks[req.query.network];
+              const decodedTx = electrumJSTxDecoder(_json, _network);
+
+              // TODO: multi vin
+              if (decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {
+                ecl.blockchainBlockGetHeader(json[i].height)
+                .then((blockInfo) => {
+                  _rawtx.push({
+                    network: decodedTx.network,
+                    format: decodedTx.format,
+                    inputs: decodedTx.inputs,
+                    outputs: decodedTx.outputs,
+                    height: json[i].height,
+                    timestamp: blockInfo.timestamp,
+                    confirmations: currentHeight - json[i].height,
+                    miner: true,
+                  });
+
+                  if (i === json.length - 1) {
+                    ecl.close();
+                    console.log('electrum gettransaction array ==>');
+                    console.log(_rawtx);
+
+                    const successObj = {
+                      'msg': 'success',
+                      'result': {
+                        listtransactions: _rawtx,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
+                });
+              } else {
+                // get vin tx, decode
+                ecl.blockchainBlockGetHeader(json[i].height)
+                .then((blockInfo) => {
+                  ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
+                  .then((__json) => {
+                    console.log('electrum decoderawtx input tx ==>');
+                    console.log(__json);
+
+                    const decodedVin = electrumJSTxDecoder(__json, _network);
+
+                    _rawtx.push({
+                      network: decodedTx.network,
+                      format: decodedTx.format,
+                      inputs: decodedVin.outputs[decodedTx.inputs[0].n],
+                      outputs: decodedTx.outputs,
+                      height: json[i].height,
+                      timestamp: blockInfo.timestamp,
+                      confirmations: currentHeight - json[i].height,
+                    });
+
+                    if (i === json.length - 1) {
+                      ecl.close();
+                      console.log('electrum gettransaction array ==>');
+                      console.log(_rawtx);
+
+                      const successObj = {
+                        'msg': 'success',
+                        'result': {
+                          listtransactions: _rawtx,
+                        },
+                      };
+
+                      res.end(JSON.stringify(successObj));
+                    }
+                  });
+                });
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+});
+
+shepherd.get('/electrum/gettransaction', function(req, res, next) {
+  // TODO: block time, confs, current height
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainTransactionGet(req.query.txid)
+  .then((json) => {
+    ecl.close();
+    console.log('electrum gettransaction ==>');
+    console.log(json);
+
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        gettransaction: json,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.parseTransactionAddresses = function(tx, targetAddress) {
+  // TODO: - mined flag
+  //       - multi vin multi vout
+  //       - detect change address
+  let result = [];
+  let _parse = {
+    inputs: {},
+    outputs: {},
+  };
+  let addressFound = false;
+
+  for (let key in _parse) {
+    if (!tx[key].length) {
+      _parse[key] = [];
+      _parse[key].push(tx[key]);
+    } else {
+      _parse[key] = tx[key];
+    }
+
+    for (let i = 0; i < _parse[key].length; i++) {
+      console.log(key + ' ==>');
+      console.log(_parse[key][i]);
+      if (key === 'outputs' ||
+          (key === 'inputs' && _parse[key][i].scriptPubKey.addresses && _parse[key][i].value)) {
+        if (!targetAddress || (targetAddress === _parse[key][i].scriptPubKey.addresses[0] && !addressFound)) {
+          let _type;
+
+          if (tx.miner) {
+            _type = 'miner';
+          } else {
+            _type = key === 'inputs' ? 'out' : 'in';
+          }
+          result.push({
+            type: _type, // flip
+            value: _parse[key][i].value,
+            address: _parse[key][i].scriptPubKey.addresses[0],
+            timestamp: tx.timestamp,
+            txid: tx.format.txid,
+            confirmations: tx.confirmations,
+          });
+
+          addressFound = true;
+        }
+      }
+    }
+  }
+
+  console.log('parseTransactionAddresses result ==>');
+  console.log(result);
+  return result;
+}
+
+shepherd.get('/electrum/getblockinfo', function(req, res, next) {
+  shepherd.electrumGetBlockInfo(req.query.height, req.query.network)
+  .then(function(json) {
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        getblockinfo: json,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.electrumGetBlockInfo = function(height, network) {
+  return new Promise((resolve, reject) => {
+    const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+    ecl.connect();
+    ecl.blockchainBlockGetHeader(height)
+    .then((json) => {
+      ecl.close();
+      console.log('electrum getblockinfo ==>');
+      console.log(json);
+
+      resolve(json);
+    });
+  });
+}
+
+shepherd.get('/electrum/getcurrentblock', function(req, res, next) {
+  shepherd.electrumGetCurrentBlock(req.query.network)
+  .then(function(json) {
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        getcurrentblock: json,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.electrumGetCurrentBlock = function(network) {
+  return new Promise((resolve, reject) => {
+    const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+    ecl.connect();
+    ecl.blockchainNumblocksSubscribe()
+    .then((json) => {
+      ecl.close();
+      console.log('electrum currentblock ==>');
+      console.log(json);
+
+      resolve(json);
+    });
+  });
+}
+
+shepherd.get('/electrum/formatlisttransactions', function(req, res, next) {
+  const tx = [{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"92766e00c81df6c1f174faad44be46ab526f301c7eeee266404a366ba6fa31fc","version":1,"locktime":1485514057},"inputs":{"satoshi":999988875,"value":"9.99988875","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 e21749ae92bb1a0ef51dea76ec4b7905aa2428ba OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914e21749ae92bb1a0ef51dea76ec4b7905aa2428ba88ac","type":"pubkeyhash","addresses":["RVtegwER6B13FNLFUTr6QrkX433Kb17Lgn"]}},"outputs":[{"satoshi":999488649,"value":"9.99488649","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 24af38fcb13bbc171b0b42bb017244a53b6bb2fa OP_EQUALVERIFY OP_CHECKSIG","hex":"76a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac","type":"pubkeyhash","addresses":["RCdAK6sXYYfHxLQKzxcKSxgmwwxbGAgnTR"]}},{"satoshi":500000,"value":"0.00500000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":172447,"timestamp":1485514474,"confirmations":340906},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"6bbc3220670b952a487160d694d690a19dc75d0fe3738af104682082d8c40f5c","version":1,"locktime":1485514057},"inputs":{"satoshi":200000000,"value":"2.00000000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 6b24e73f48da0511fb3d979cddf3e2c03cd1967e OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9146b24e73f48da0511fb3d979cddf3e2c03cd1967e88ac","type":"pubkeyhash","addresses":["RK3ib8RZ9n4LAmUUNyv8DnLF8UeT4R2utg"]}},"outputs":[{"satoshi":199899774,"value":"1.99899774","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 46be5565e078d94e4bc60c6515393fbe86577f9e OP_EQUALVERIFY OP_CHECKSIG","hex":"76a91446be5565e078d94e4bc60c6515393fbe86577f9e88ac","type":"pubkeyhash","addresses":["RFjFPZ4UY82sLtUUBX3TvmwmAUUqULiM3L"]}},{"satoshi":100000,"value":"0.00100000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":172447,"timestamp":1485514474,"confirmations":340906},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"ae35cc98ef9208886ef394792b1bba1cde953804adb66a3d192a89d1a1c48995","version":1,"locktime":1485514057},"inputs":{"satoshi":199899774,"value":"1.99899774","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 46be5565e078d94e4bc60c6515393fbe86577f9e OP_EQUALVERIFY OP_CHECKSIG","hex":"76a91446be5565e078d94e4bc60c6515393fbe86577f9e88ac","type":"pubkeyhash","addresses":["RFjFPZ4UY82sLtUUBX3TvmwmAUUqULiM3L"]}},"outputs":[{"satoshi":198899548,"value":"1.98899548","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 e6f9a1f85aaaae45106edee7a1d3c601dfcd3819 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914e6f9a1f85aaaae45106edee7a1d3c601dfcd381988ac","type":"pubkeyhash","addresses":["RWLUYRMxZCxPh8HeFBF9SwDtD2k85StQow"]}},{"satoshi":1000000,"value":"0.01000000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":172447,"timestamp":1485514474,"confirmations":340906},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"ddce005757ed1f05574305a480a02a50d9a5afbcd9f996ce6df7a7872f646117","version":1,"locktime":0},"inputs":{"satoshi":100000,"value":"0.00100000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},{"satoshi":80000,"value":"0.00080000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 dca218733633ce1e80faf0ccdb70cb9e41ac11fa OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914dca218733633ce1e80faf0ccdb70cb9e41ac11fa88ac","type":"pubkeyhash","addresses":["RVPnvK49QRmbRYN3SgtFszWzFKNARcB3AH"]}}],"height":279595,"timestamp":1492345900,"confirmations":233758},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"5a45a6ab8d6c2d89cf0463a7cc593122160e6774437da0292b2bf805bf4f238f","version":1,"locktime":0},"inputs":{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},{"satoshi":490000,"value":"0.00490000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 dca218733633ce1e80faf0ccdb70cb9e41ac11fa OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914dca218733633ce1e80faf0ccdb70cb9e41ac11fa88ac","type":"pubkeyhash","addresses":["RVPnvK49QRmbRYN3SgtFszWzFKNARcB3AH"]}}],"height":279678,"timestamp":1492350916,"confirmations":233675},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"4be872597ed9c1be1d7dd36b98d1fb27d644487e46aaf059435fb0a89d4ecfc3","version":1,"locktime":1493189104},"inputs":{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":990000,"value":"0.00990000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293273,"timestamp":1493189165,"confirmations":220080},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"ea88bf3549df6b04aa45715b995f04f40a9768683f8e98fa69566c91adf1d323","version":1,"locktime":1493208534},"inputs":{"satoshi":990000,"value":"0.00990000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":970000,"value":"0.00970000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293583,"timestamp":1493208548,"confirmations":219770},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"323680e838cb644075508530fb0ef0072ee40c4fbc40c2a8828a8a82e077bf64","version":1,"locktime":1493211930},"inputs":{"satoshi":970000,"value":"0.00970000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":950000,"value":"0.00950000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293648,"timestamp":1493211935,"confirmations":219705},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"a8f12a0842822c81622c9021e54e7ab99044b061be482e4f16bd20cce064c918","version":1,"locktime":1493212481},"inputs":{"satoshi":950000,"value":"0.00950000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},{"satoshi":930000,"value":"0.00930000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293661,"timestamp":1493212543,"confirmations":219692},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"7da6b8fa066130571be8c08ef95851602050332f95fc3b1ca8dc497fcb2df4f9","version":1,"locktime":1493213728},"inputs":{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":920000,"value":"0.00920000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293682,"timestamp":1493213772,"confirmations":219671}];
+  let result = [];
+
+  for (let i = 0; i < tx.length; i++) {
+    result = result.concat(shepherd.parseTransactionAddresses(tx[i], 'RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd'));
+  }
+
+  const successObj = {
+    'msg': 'success',
+    result,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.get('/electrum/decoderawtx', function(req, res, next) {
+  const _network = electrumJSNetworks[req.query.network];
+  const _rawtx = req.query.rawtx;
+  // const _rawtx = '0100000001dd6d064f5665f8454293ecaa9dbb55accf4f7e443d35f3b5ab7760f54b6c15fe000000006a473044022056355585a4a501ec9afc96aa5df124cf29ad3ac6454b47cd07cd7d89ec95ec2b022074c4604ee349d30e5336f210598e4dc576bf16ebeb67eeac3f4e82f56e930fee012103b90ba01af308757054e0484bb578765d5df59c4a57adbb94e2419df5e7232a63feffffff0289fc923b000000001976a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac20a10700000000001976a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac49258b58';
+  const decodedTx = electrumJSTxDecoder(_rawtx, _network);
+
+  if (req.query.parseonly ||
+      decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        decodedTx: {
+          network: decodedTx.network,
+          format: decodedTx.format,
+          inputs: decodedTx.inputs,
+          outputs: decodedTx.outputs,
+        },
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  } else {
+    const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+    ecl.connect();
+    ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
+    .then((json) => {
+      ecl.close();
+      console.log('electrum decoderawtx input tx ==>');
+      console.log(json);
+
+      const decodedVin = electrumJSTxDecoder(json, _network);
+
+      const successObj = {
+        'msg': 'success',
+        'result': {
+          decodedTx: {
+            network: decodedTx.network,
+            format: decodedTx.format,
+            inputs: decodedVin.outputs[decodedTx.inputs[0].n],
+            outputs: decodedTx.outputs,
+          },
+        },
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  }
+});
+
+// simple case
+shepherd.buildTestTx = function(sendTo, changeAddress, wif, network) {
+  // single utxo
+  const _utxo = {"height":400118,"value":20000,"tx_hash":"764cb67ef9d92942b0a3ef5f9c62ad2a552de07f575e1ab935c3cf45ace00cc8","tx_pos":0};
+  const _valToSpend = 10000;
+
+  var key = bitcoinJS.ECPair.fromWIF(wif, electrumJSNetworks['komodo']);
+  var tx = new bitcoinJS.TransactionBuilder(electrumJSNetworks[network]);
+  console.log(key);
+  console.log(key.getAddress().toString());
+
+  // electrumServers[].txfee
+  const _txSize = shepherd.estimateTxSize(1, 2);
+  const _feeEstimateByte = shepherd.estimateFee('small');
+  const _feeEstimateTx = Math.floor(_txSize * _feeEstimateByte);
+  const _change = _utxo.value - _valToSpend - _feeEstimateTx;
+
+  console.log('val to spend ' + _valToSpend);
+  console.log('change value ' + _change);
+
+  tx.addInput(_utxo['tx_hash'], _utxo['tx_pos']);
+  tx.addOutput(sendTo, _valToSpend);
+  tx.addOutput(changeAddress, _change);
+
+  console.log('estimate tx size ' + _txSize);
+  console.log('fee per byte ' + _feeEstimateByte);
+  console.log('tx fee ' + _feeEstimateTx);
+  console.log(tx);
+  // (in)15000 - (out)12000 = (fee)3000, this is the miner fee
+
+  tx.sign(0, key);
+  const rawtx = tx.build().toHex();
+  console.log(rawtx);
+
+  return rawtx;
+}
+
+shepherd.get('/electrum/txbuildtest', function(req, res, next) {
+  const rawtx = shepherd.buildTestTx(
+    'RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd',
+    'RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd',
+    'UrA1TCN2j9iMYKBLkKGMo9MbndBNYVW9nJV9RdViR9CoVK82ApFb',
+    'komodo'
+  );
+
+  const successObj = {
+    'msg': 'success',
+    'result': {
+      rawtx: rawtx,
+    },
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.findUtxoSet = function(utxoList, target) {
+  // utxoList = [{"height":427959,"value":20000,"tx_hash":"3f7da2daef2ea59fd40eb28d2be04a17839f2073c16ea291b1b03a3d799fec3b","tx_pos":0},{"height":428139,"value":20000,"tx_hash":"aa4afdece59c46a6a1e34d6ae7bf2c46b282de0ce6ef1753e8766c08e87bdb36","tx_pos":0},{"height":428216,"value":20000,"tx_hash":"3ec5e982083ffc617aaa75e68e69f9da5f07faadcd870e144f6451c34936ee24","tx_pos":0},{"height":433459,"value":20000,"tx_hash":"b943330cb034f36c6d9f03c57a2e1f0a3970378825336b505d51d1f2561af3fe","tx_pos":0},{"height":459573,"value":100000,"tx_hash":"7fee95da75e9b77bf9cd03b460fcf04c31ce4dbe4bdfa1e66256c9beb1fe2308","tx_pos":0},{"height":505916,"value":20000,"tx_hash":"aa92df15b20a10543750db58fc6e885205d1eee3438ef79f01d3c4ec2616e7aa","tx_pos":0},{"height":505916,"value":90000,"tx_hash":"aa92df15b20a10543750db58fc6e885205d1eee3438ef79f01d3c4ec2616e7aa","tx_pos":1},{"height":505931,"value":20000,"tx_hash":"dd1ab56c0e3f63e3650aeca3e2aa4ecea54cca22e97932e48341e299c4640ef9","tx_pos":0},{"height":505931,"value":100000,"tx_hash":"dd1ab56c0e3f63e3650aeca3e2aa4ecea54cca22e97932e48341e299c4640ef9","tx_pos":1},{"height":505937,"value":20000,"tx_hash":"7bed6729de8be9b61b85716d8d1615d751c1dbb2bd2defd6f9c76354a591586c","tx_pos":0},{"height":505937,"value":70000,"tx_hash":"7bed6729de8be9b61b85716d8d1615d751c1dbb2bd2defd6f9c76354a591586c","tx_pos":1},{"height":506038,"value":20000,"tx_hash":"f47f4d5e2aaee19f98ebdf97deac3c471b919b71312a073d1b45dfc27fb64d24","tx_pos":0},{"height":506045,"value":20000,"tx_hash":"e8a92b174b768a050b4801ea497cdb9651d4647f20ec5a77b5af0d6558fdf468","tx_pos":0},{"height":506057,"value":20000,"tx_hash":"758ae45606ee43b55d72ec57284abac54c34b34badf4986b3d9e53e5aaf227d8","tx_pos":0},{"height":514498,"value":18902,"tx_hash":"b3918bc40a8ba4fb26383bdd54b8519d14200b7f2c700adb2ceea46d5ca36590","tx_pos":0},{"height":514722,"value":10000,"tx_hash":"a6c46b2168964f2e6f18a8cba40eac10a30a6bcc363b773696265f8450c5a881","tx_pos":0},{"height":514722,"value":4820,"tx_hash":"a6c46b2168964f2e6f18a8cba40eac10a30a6bcc363b773696265f8450c5a881","tx_pos":1}];
+  let result = [];
+  let sum = 0;
+
+  function findUtxoSubset() {
+    if (utxoList[0].value >= target) {
+      result.push(utxoList[0]);
+    } else {
+      for (let i = 0; i < utxoList.length; i++) {
+        if (sum < target) {
+          sum += Number(utxoList[i].value);
+          result.push(utxoList[i]);
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  // search time
+  const startTime = process.hrtime();
+  const res = findUtxoSubset();
+  const diff = process.hrtime(startTime);
+
+  const change = sum - target;
+
+  // console.log('utxo set search result: ', result);
+  console.log('target: ' + target);
+  console.log('total utxos: ' + utxoList.length);
+  console.log('utxo sum: ' + sum);
+  console.log('change: ' + change);
+  console.log(`Time: ${ (diff[0] * 1e9 + diff[1]) / 1000000} ms`);
+
+  return {
+    set: result,
+    change
+  };
+}
+
+shepherd.get('/electrum/subset', function(req, res, next) {
+  const _utxoSet = shepherd.findUtxoSet(null, Number(req.query.target) + Number(electrumServers[req.query.network].txfee)); // target + txfee
+
+  const successObj = {
+    'msg': 'success',
+    'result': {
+      utxoSet: _utxoSet.set,
+      change: _utxoSet.change,
+    },
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+// single sig
+shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) {
+  var key = bitcoinJS.ECPair.fromWIF(wif, electrumJSNetworks[network]);
+  var tx = new bitcoinJS.TransactionBuilder(electrumJSNetworks[network]);
+
+  console.log('buildSignedTx priv key ' + wif);
+  console.log('buildSignedTx pub key ' + key.getAddress().toString());
+  console.log('buildSignedTx std tx fee ' + electrumServers[network].txfee);
+
+  for (let i = 0; i < utxo.length; i++) {
+    tx.addInput(utxo[i]['tx_hash'], utxo[i]['tx_pos']);
+  }
+
+  tx.addOutput(sendTo, Number(spendValue));
+  tx.addOutput(changeAddress, Number(changeValue));
+
+  console.log('buildSignedTx unsigned tx data');
+  console.log(tx);
+
+  for (let i = 0; i < utxo.length; i++) {
+    tx.sign(i, key);
+  }
+
+  const rawtx = tx.build().toHex();
+  console.log('buildSignedTx signed tx hex');
+  console.log(rawtx);
+
+  return rawtx;
+}
+
+shepherd.get('/electrum/createrawtx', function(req, res, next) {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+  const outputAddress = req.query.address;
+  const changeAddress = req.query.change;
+  const wif = req.query.wif;
+  const value = req.query.value;
+  const network = req.query.network;
+  const push = req.query.push;
+
+  ecl.connect();
+  ecl.blockchainAddressListunspent(changeAddress)
+  .then((utxoList) => {
+    ecl.close();
+
+    console.log('electrum listunspent ==>');
+
+    const _utxoSet = shepherd.findUtxoSet(utxoList, Number(req.query.value) + Number(electrumServers[req.query.network].txfee)); // target + txfee
+
+    const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, _utxoSet.set, _utxoSet.change, value);
+
+    if (!push) {
+      const successObj = {
+        'msg': 'success',
+        'result': {
+          utxoSet: _utxoSet.set,
+          change: _utxoSet.change,
+          wif,
+          value,
+          outputAddress,
+          changeAddress,
+          network,
+          rawtx: _rawtx,
+        },
+      };
+
+      res.end(JSON.stringify(successObj));
+    } else {
+      const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+      ecl.connect();
+      ecl.blockchainTransactionBroadcast(_rawtx)
+      .then((txid) => {
+        ecl.close();
+
+        const successObj = {
+          'msg': 'success',
+          'result': {
+            utxoSet: _utxoSet.set,
+            change: _utxoSet.change,
+            wif,
+            value,
+            outputAddress,
+            changeAddress,
+            network,
+            rawtx: _rawtx,
+            txid,
+          },
+        };
+
+        res.end(JSON.stringify(successObj));
+      });
+    }
+  });
+});
+
+/*shepherd.buildTestTx = function(address, wif, network) {
+  const _utxo = [{"value":20000,"tx_hash":"2bb1a6d807ddfd1614317028748a6feddc585255c105438e3fa7e6384e607944","height":358804,"tx_pos":0},{"value":20000,"tx_hash":"764cb67ef9d92942b0a3ef5f9c62ad2a552de07f575e1ab935c3cf45ace00cc8","height":400118,"tx_pos":0},{"value":20000,"tx_hash":"3f7da2daef2ea59fd40eb28d2be04a17839f2073c16ea291b1b03a3d799fec3b","height":427959,"tx_pos":0},{"value":20000,"tx_hash":"aa4afdece59c46a6a1e34d6ae7bf2c46b282de0ce6ef1753e8766c08e87bdb36","height":428139,"tx_pos":0},{"value":20000,"tx_hash":"3ec5e982083ffc617aaa75e68e69f9da5f07faadcd870e144f6451c34936ee24","height":428216,"tx_pos":0},{"value":20000,"tx_hash":"b943330cb034f36c6d9f03c57a2e1f0a3970378825336b505d51d1f2561af3fe","height":433459,"tx_pos":0},{"value":100000,"tx_hash":"7fee95da75e9b77bf9cd03b460fcf04c31ce4dbe4bdfa1e66256c9beb1fe2308","height":459573,"tx_pos":0},{"value":20000,"tx_hash":"aa92df15b20a10543750db58fc6e885205d1eee3438ef79f01d3c4ec2616e7aa","height":505916,"tx_pos":0},{"value":90000,"tx_hash":"aa92df15b20a10543750db58fc6e885205d1eee3438ef79f01d3c4ec2616e7aa","height":505916,"tx_pos":1},{"value":20000,"tx_hash":"dd1ab56c0e3f63e3650aeca3e2aa4ecea54cca22e97932e48341e299c4640ef9","height":505931,"tx_pos":0},{"value":100000,"tx_hash":"dd1ab56c0e3f63e3650aeca3e2aa4ecea54cca22e97932e48341e299c4640ef9","height":505931,"tx_pos":1},{"value":20000,"tx_hash":"7bed6729de8be9b61b85716d8d1615d751c1dbb2bd2defd6f9c76354a591586c","height":505937,"tx_pos":0},{"value":70000,"tx_hash":"7bed6729de8be9b61b85716d8d1615d751c1dbb2bd2defd6f9c76354a591586c","height":505937,"tx_pos":1},{"value":20000,"tx_hash":"f47f4d5e2aaee19f98ebdf97deac3c471b919b71312a073d1b45dfc27fb64d24","height":506038,"tx_pos":0},{"value":20000,"tx_hash":"e8a92b174b768a050b4801ea497cdb9651d4647f20ec5a77b5af0d6558fdf468","height":506045,"tx_pos":0},{"value":20000,"tx_hash":"758ae45606ee43b55d72ec57284abac54c34b34badf4986b3d9e53e5aaf227d8","height":506057,"tx_pos":0}];
+
+  var key = bitcoinJS.ECPair.fromWIF('UrA1TCN2j9iMYKBLkKGMo9MbndBNYVW9nJV9RdViR9CoVK82ApFb', electrumJSNetworks['komodo']);
+  var tx = new bitcoinJS.TransactionBuilder(electrumJSNetworks['komodo']);
+  console.log(key);
+  console.log(key.getAddress().toString());
+
+  // electrumServers[].txfee
+  const _txSize = shepherd.estimateTxSize(1, 1);
+  const _feeEstimateByte = shepherd.estimateFee('small');
+  const _feeEstimateTx = Math.floor(_txSize * _feeEstimateByte);
+  console.log('output val ' + (20000 - _feeEstimateTx));
+
+  // 20000
+  tx.addInput('2bb1a6d807ddfd1614317028748a6feddc585255c105438e3fa7e6384e607944', 0);
+  tx.addOutput('RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd', 20000 - _feeEstimateTx);
+
+  console.log('estimate tx size ' + _txSize);
+  console.log('fee per byte ' + _feeEstimateByte);
+  console.log('tx fee ' + _feeEstimateTx);
+  console.log(tx);
+  // (in)15000 - (out)12000 = (fee)3000, this is the miner fee
+
+  tx.sign(0, key);
+  const rawtx = tx.build().toHex();
+  console.log(rawtx);
+
+  return rawtx;
+}*/
+
+shepherd.get('/electrum/pushtx', function(req, res, next) {
+  const rawtx = req.query.rawtx;
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainTransactionBroadcast(rawtx)
+  .then((json) => {
+    ecl.close();
+    console.log('electrum pushtx ==>');
+    console.log(json);
+
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        txid: json,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.get('/electrum/listunspent', function(req, res, next) {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainAddressListunspent(req.query.address)
+  .then((json) => {
+    ecl.close();
+    console.log('electrum listunspent ==>');
+
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        listunspent: json,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.get('/electrum/estimatefee', function(req, res, next) {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainEstimatefee(req.query.blocks)
+  .then((json) => {
+    ecl.close();
+    console.log('electrum estimatefee ==>');
+
+    const successObj = {
+      'msg': 'success',
+      'result': {
+        estimatefee: json,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.estimateTxSize = function(numVins, numOuts) {
+  // in x 180 + out x 34 + 10 plus or minus in
+  return numVins * 180 + numOuts * 34 + 11;
+}
+
+shepherd.estimateFee = function(type) {
+  return 20;
+
+  if (type === 'small') {
+    return 0.00005 / 1024 * 100000000;
+  }
+  if (type === 'medium') {
+    return 0.0001 / 1024 * 100000000;
+  }
+  if (type === 'high') {
+    return 0.0003 / 1024 * 100000000;
+  }
+}
+
+/*
+ *  list native coind
+ *  type:
+ *  params:
+ */
+shepherd.get('/coind/list', function(req, res, next) {
+  const successObj = {
+    'msg': 'success',
+    'result': shepherd.nativeCoindList,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.scanNativeCoindBins = function() {
+  let nativeCoindList = {};
+
+  // check if coind bins are present in agama
+  for (let key in nativeCoind) {
+    nativeCoindList[key] = {
+      name: nativeCoind[key].name,
+      port: nativeCoind[key].port,
+      bin: nativeCoind[key].bin,
+      bins: {
+        daemon: false,
+        cli: false,
+      },
+    };
+
+    if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}d${os.platform() === 'win32' ? '.exe' : ''}`)) {
+      nativeCoindList[key].bins.daemon = true;
+    }
+
+    if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}-cli${os.platform() === 'win32' ? '.exe' : ''}`)) {
+      nativeCoindList[key].bins.cli = true;
+    }
+  }
+
+  return nativeCoindList;
+}
 
 shepherd.getAppRuntimeLog = function() {
   return new Promise((resolve, reject) => {
@@ -734,7 +1498,7 @@ shepherd.testBins = function(daemonName) {
           shepherd.writeLog(`exec error: ${error}`);
 
           if (error.toString().indexOf('using -reindex') > -1) {
-            cache.io.emit('service', {
+            shepherd.io.emit('service', {
               komodod: {
                 error: 'run -reindex',
               }
@@ -1182,7 +1946,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
   const _os = os.platform();
   shepherd.log(`checking bins: ${_os}`);
 
-  cache.io.emit('patch', {
+  shepherd.io.emit('patch', {
     patch: {
       type: 'bins-check',
       status: 'progress',
@@ -2163,7 +2927,7 @@ shepherd.post('/herd', function(req, res) {
             if (!skipError) {
               shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
               shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-              cache.io.emit('service', {
+              shepherd.io.emit('service', {
                 komodod: {
                   error: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
                 },
@@ -2548,7 +3312,7 @@ function herder(flock, data, coind) {
                 shepherd.writeLog(`exec error: ${error}`);
 
                 if (error.toString().indexOf('using -reindex') > -1) {
-                  cache.io.emit('service', {
+                  shepherd.io.emit('service', {
                     komodod: {
                       error: 'run -reindex',
                     },
@@ -2647,7 +3411,7 @@ function herder(flock, data, coind) {
                 shepherd.writeLog(`exec error: ${error}`);
 
                 if (error.toString().indexOf('using -reindex') > -1) {
-                  cache.io.emit('service', {
+                  shepherd.io.emit('service', {
                     komodod: {
                       error: 'run -reindex',
                     },
@@ -2667,7 +3431,7 @@ function herder(flock, data, coind) {
                 shepherd.writeLog(`exec error: ${error}`);
 
                 if (error.toString().indexOf('using -reindex') > -1) {
-                  cache.io.emit('service', {
+                  shepherd.io.emit('service', {
                     komodod: {
                       error: 'run -reindex',
                     },
@@ -3091,7 +3855,7 @@ function setConf(flock, coind) {
                   '\naddnode=5.9.122.241' +
                   '\naddnode=144.76.94.3';
                 }
-                shepherd.log('addnode: NOT FOUND')
+                shepherd.log('addnode: NOT FOUND');
                 fs.appendFile(DaemonConfPath, nodesList, (err) => {
                   if (err) {
                     shepherd.writeLog(`append daemon conf err: ${err}`);
