@@ -67,6 +67,12 @@ var decodeOutput = function(tx, network) {
 
     switch(vout.scriptPubKey.type) {
       case 'pubkeyhash':
+        vout.scriptPubKey.addresses.push(bitcoin.address.fromOutputScript(out.script, network));
+        break;
+      case 'pubkey':
+        const pubKeyBuffer = new Buffer(vout.scriptPubKey.asm.split(' ')[0], 'hex');
+        vout.scriptPubKey.addresses.push(bitcoin.ECPair.fromPublicKeyBuffer(pubKeyBuffer, network).getAddress());
+        break;
       case 'scripthash':
         vout.scriptPubKey.addresses.push(bitcoin.address.fromOutputScript(out.script, network));
         break;
