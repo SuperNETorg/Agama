@@ -91,15 +91,19 @@ var decodeOutput = function(tx, network) {
 }
 
 var TxDecoder = module.exports = function(rawtx, network) {
-  const _tx = bitcoin.Transaction.fromHex(rawtx);
+  try {
+    const _tx = bitcoin.Transaction.fromHex(rawtx);
 
-  return {
-    tx: _tx,
-    network: network,
-    format: decodeFormat(_tx),
-    inputs: decodeInput(_tx),
-    outputs: decodeOutput(_tx, network),
-  };
+    return {
+      tx: _tx,
+      network: network,
+      format: decodeFormat(_tx),
+      inputs: decodeInput(_tx),
+      outputs: decodeOutput(_tx, network),
+    };
+  } catch (e) {
+    return {};
+  }
 }
 
 TxDecoder.prototype.decode = function() {

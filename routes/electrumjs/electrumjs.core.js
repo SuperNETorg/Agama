@@ -70,13 +70,13 @@ const createRecursiveParser = function(maxDepth, delimiter) {
   return recursiveParser;
 }
 
-
 const createPromiseResult = function(resolve, reject) {
   return (err, result) => {
     if (err) {
       console.log('electrum error:');
       console.log(err);
-      reject(err);
+      resolve(err);
+      // reject(err);
     } else {
       resolve(result);
     }
@@ -98,7 +98,7 @@ class MessageParser {
 
       this.buffer = res.buffer;
 
-      if(res.code === 0) {
+      if (res.code === 0) {
         break;
       }
     }

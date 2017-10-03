@@ -36,7 +36,9 @@ var guiLog = {};
 var rpcConf = {};
 var appRuntimeLog = [];
 var lockDownAddCoin = false;
-var electrumCoins = {};
+var electrumCoins = {
+  auth: false,
+};
 
 const electrumJSCore = require('./electrumjs/electrumjs.core.js');
 const electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
@@ -47,6 +49,13 @@ const electrumServers = {
     port: 50032,
     proto: 'tcp',
   },*/
+  revs: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50050,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'REVS',
+  },
   komodo: { // !estimatefee
     address: '173.212.225.176',
     port: 50011,
@@ -237,8 +246,8 @@ shepherd.seedToWif = function(seed, network, iguana) {
 
   key.compressed = true;
 
-  console.log('seedtowif priv key' + key.privateWif);
-  console.log('seedtowif pub key' + key.publicAddress);
+  console.log('seedtowif priv key ' + key.privateWif);
+  console.log('seedtowif pub key ' + key.publicAddress);
 
   return {
     priv: key.privateWif,
@@ -259,11 +268,38 @@ shepherd.get('/electrum/seedtowif', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.get('/electrum/login', function(req, res, next) {
-  const keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
+shepherd.findNetworkObj = function(coin) {
+  for (let key in electrumServers) {
+    if (electrumServers[key].abbr === coin) {
+      return key;
+    }
+  }
+}
 
-  electrumCoins[coin].priv = keys.priv;
-  electrumCoins[coin].pub = keys.pub;
+shepherd.get('/electrum/login', function(req, res, next) {
+  for (let key in electrumCoins) {
+    if (key !== 'auth') {
+      const keys = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(key), req.query.iguana);
+
+      electrumCoins[key].priv = keys.priv;
+      electrumCoins[key].pub = keys.pub;
+    }
+  }
+
+  electrumCoins.auth = true;
+
+  console.log(JSON.stringify(electrumCoins, null, '\t'));
+
+  const successObj = {
+    msg: 'success',
+    result: 'true'
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.get('/electrum/dev/logout', function(req, res, next) {
+  electrumCoins.auth = false;
 
   const successObj = {
     msg: 'success',
@@ -279,7 +315,7 @@ shepherd.get('/electrum/bip39/seed', function(req, res, next) {
   var crypto = require('crypto');
 
   // what you describe as 'seed'
-  var  randomBytes = crypto.randomBytes(16); // 128 bits is enough
+  var randomBytes = crypto.randomBytes(16); // 128 bits is enough
 
   // your 12 word phrase
   var mnemonic = bip39.entropyToMnemonic(randomBytes.toString('hex'));
@@ -336,6 +372,7 @@ shepherd.addElectrumCoin = function(coin, serverID) {
           ip: electrumServers[key].address,
           port: electrumServers[key].port,
         },
+        txfee: electrumServers[key].txfee,
       };
 
       return true;
@@ -359,12 +396,11 @@ shepherd.get('/electrum/coins/add', function(req, res, next) {
 });
 
 shepherd.get('/electrum/coins', function(req, res, next) {
-  let _electrumCoins = Object.assign({}, electrumCoins);
+  let _electrumCoins = JSON.parse(JSON.stringify(electrumCoins)); // deep cloning
 
-  for (let key in electrumServers) {
-    if (_electrumCoins[key].wif) {
-      _electrumCoins[key].wif = null;
-      _electrumCoins[key].priv = null;
+  for (let key in _electrumCoins) {
+    if (_electrumCoins[key].priv) {
+      delete _electrumCoins[key].priv;
     }
   }
 
@@ -377,19 +413,22 @@ shepherd.get('/electrum/coins', function(req, res, next) {
 });
 
 shepherd.get('/electrum/getbalance', function(req, res, next) {
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
   ecl.connect();
   ecl.blockchainAddressGetBalance(req.query.address)
   .then((json) => {
     ecl.close();
     console.log('electrum getbalance ==>');
-    console.log(0.00000001 * json.confirmed);
+    console.log(json);
 
     const successObj = {
       msg: 'success',
       result: {
         balance: 0.00000001 * json.confirmed,
+        unconfirmed: json.unconfirmed,
+        sats: json.confirmed,
       },
     };
 
@@ -397,8 +436,23 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
   });
 });
 
-shepherd.get('/electrum/listtransactions', function(req, res, next) {
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+shepherd.sortTransactions = function(transactions) {
+  return transactions.sort(function(b, a) {
+    if (a.height < b.height) {
+      return -1;
+    }
+
+    if (a.height > b.height) {
+      return 1;
+    }
+
+    return 0;
+  });
+}
+
+/*shepherd.get('/electrum/listtransactions', function(req, res, next) {
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
   if (!req.query.full) {
     ecl.connect();
@@ -407,6 +461,8 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
       ecl.close();
       console.log('electrum listtransactions ==>');
       console.log(json);
+
+      json = shepherd.sortTransactions(json);
 
       const successObj = {
         msg: 'success',
@@ -430,6 +486,7 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
       .then((json) => {
         if (json &&
             json.length) {
+          json = shepherd.sortTransactions(json);
           json = json.slice(0, MAX_TX);
           console.log(json.length);
           let _rawtx = [];
@@ -443,7 +500,7 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
               console.log(_json);
 
               // decode tx
-              const _network = electrumJSNetworks[req.query.network];
+              const _network = electrumJSNetworks[network];
               const decodedTx = electrumJSTxDecoder(_json, _network);
 
               // TODO: multi vin
@@ -502,10 +559,17 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                       console.log('electrum gettransaction array ==>');
                       console.log(_rawtx);
 
+                      let result = [];
+
+                      for (let i = 0; i < _rawtx.length; i++) {
+                        result = result.concat(shepherd.parseTransactionAddresses(_rawtx[i], req.query.address));
+                      }
+
                       const successObj = {
                         msg: 'success',
                         result: {
-                          listtransactions: _rawtx,
+                          //listtransactions: _rawtx,
+                          listtransactions: result,
                         },
                       };
 
@@ -520,7 +584,274 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
       });
     });
   }
+});*/
+
+shepherd.get('/electrum/listtransactions', function(req, res, next) {
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  if (!req.query.full) {
+    ecl.connect();
+    ecl.blockchainAddressGetHistory(req.query.address)
+    .then((json) => {
+      ecl.close();
+      console.log('electrum listtransactions ==>');
+      console.log(json);
+
+      json = shepherd.sortTransactions(json);
+
+      const successObj = {
+        msg: 'success',
+        result: {
+          listtransactions: json,
+        },
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  } else {
+    // !expensive call!
+    // TODO: limit e.g. 1-10, 10-20 etc
+    const MAX_TX = 10;
+    ecl.connect();
+
+    ecl.blockchainNumblocksSubscribe()
+    .then(function(currentHeight) {
+      ecl.blockchainAddressGetHistory(req.query.address)
+      .then((json) => {
+        if (json &&
+            json.length) {
+          json = shepherd.sortTransactions(json);
+          json = json.slice(0, MAX_TX);
+          console.log(json.length);
+          let _rawtx = [];
+
+          // get raw tx
+          for (let i = 0; i < json.length; i++) {
+            ecl.blockchainBlockGetHeader(json[i].height)
+            .then((blockInfo) => {
+              ecl.blockchainTransactionGet(json[i]['tx_hash'])
+              .then((_rawtxJSON) => {
+                console.log('electrum gettransaction ==>');
+                console.log(i + ' | ' + (_rawtxJSON.length - 1));
+                console.log(_rawtxJSON);
+
+                // decode tx
+                const _network = electrumJSNetworks[network];
+                const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+
+                let txInputs = [];
+
+                console.log('decodedtx =>');
+                console.log(decodedTx.outputs);
+
+                if (decodedTx.inputs) {
+                  for (let j = 0; j < decodedTx.inputs.length; j++) {
+                    if (decodedTx.inputs[j].txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
+                      ecl.blockchainTransactionGet(decodedTx.inputs[j].txid)
+                      .then((rawInput) => {
+                        console.log('electrum raw input tx ==>');
+                        //console.log
+                        const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
+                        console.log(decodedVinVout.outputs[decodedTx.inputs[j].n]);
+                        txInputs.push(decodedVinVout.outputs[decodedTx.inputs[j].n]);
+
+                        if (j === decodedTx.inputs.length - 1) {
+                          const _parsedTx = {
+                            network: decodedTx.network,
+                            format: decodedTx.format,
+                            inputs: txInputs,
+                            outputs: decodedTx.outputs,
+                            height: json[i].height,
+                            timestamp: blockInfo.timestamp,
+                            confirmations: currentHeight - json[i].height,
+                          };
+
+                          const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+
+                          if (formattedTx.type) {
+                            _rawtx.push(formattedTx);
+                          } else {
+                            _rawtx.push(formattedTx[0]);
+                            _rawtx.push(formattedTx[1]);
+                          }
+
+                          if (i === json.length - 1) {
+                            ecl.close();
+                            console.log('electrum gettransaction array ==>');
+                            console.log(_rawtx);
+
+                            const successObj = {
+                              msg: 'success',
+                              result: {
+                                listtransactions: _rawtx,
+                              },
+                            };
+
+                            res.end(JSON.stringify(successObj));
+                          }
+                        }
+                      });
+                    } else {
+                      if (j === decodedTx.inputs.length - 1) {
+                        const _parsedTx = {
+                          network: decodedTx.network,
+                          format: decodedTx.format,
+                          inputs: txInputs,
+                          outputs: decodedTx.outputs,
+                          height: json[i].height,
+                          timestamp: blockInfo.timestamp,
+                          confirmations: currentHeight - json[i].height,
+                        };
+
+                        const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+
+                        if (formattedTx.type) {
+                          _rawtx.push(formattedTx);
+                        } else {
+                          _rawtx.push(formattedTx[0]);
+                          _rawtx.push(formattedTx[1]);
+                        }
+
+                        if (i === json.length - 1) {
+                          ecl.close();
+                          console.log('electrum gettransaction array ==>');
+                          console.log(_rawtx);
+
+                          const successObj = {
+                            msg: 'success',
+                            result: {
+                              listtransactions: _rawtx,
+                            },
+                          };
+
+                          res.end(JSON.stringify(successObj));
+                        }
+                      }
+                    }
+                  }
+                } else {
+                  const _parsedTx = {
+                    network: decodedTx.network,
+                    format: 'cant parse',
+                    inputs: 'cant parse',
+                    outputs: 'cant parse',
+                    height: json[i].height,
+                    timestamp: blockInfo.timestamp,
+                    confirmations: currentHeight - json[i].height,
+                  };
+
+                  const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+                  _rawtx.push(formattedTx);
+
+                  if (i === json.length - 1) {
+                    ecl.close();
+                    console.log('electrum gettransaction array ==>');
+                    console.log(_rawtx);
+
+                    const successObj = {
+                      msg: 'success',
+                      result: {
+                        listtransactions: _rawtx,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
+                }
+              });
+            });
+          }
+        } else {
+          const successObj = {
+            msg: 'success',
+            result: {
+              listtransactions: [],
+            },
+          };
+
+          res.end(JSON.stringify(successObj));
+        }
+      });
+    });
+  }
 });
+
+              // TODO: multi vin
+              /*if (decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {
+                ecl.blockchainBlockGetHeader(json[i].height)
+                .then((blockInfo) => {
+                  _rawtx.push({
+                    network: decodedTx.network,
+                    format: decodedTx.format,
+                    inputs: decodedTx.inputs,
+                    outputs: decodedTx.outputs,
+                    height: json[i].height,
+                    timestamp: blockInfo.timestamp,
+                    confirmations: currentHeight - json[i].height,
+                    miner: true,
+                  });
+
+                  if (i === json.length - 1) {
+                    ecl.close();
+                    console.log('electrum gettransaction array ==>');
+                    console.log(_rawtx);
+
+                    const successObj = {
+                      msg: 'success',
+                      result: {
+                        listtransactions: _rawtx,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
+                });
+              } else {
+                // get vin tx, decode
+                ecl.blockchainBlockGetHeader(json[i].height)
+                .then((blockInfo) => {
+                  ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
+                  .then((__json) => {
+                    console.log('electrum decoderawtx input tx ==>');
+                    console.log(__json);
+
+                    const decodedVin = electrumJSTxDecoder(__json, _network);
+
+                    _rawtx.push({
+                      network: decodedTx.network,
+                      format: decodedTx.format,
+                      inputs: decodedVin.outputs[decodedTx.inputs[0].n],
+                      outputs: decodedTx.outputs,
+                      height: json[i].height,
+                      timestamp: blockInfo.timestamp,
+                      confirmations: currentHeight - json[i].height,
+                    });
+
+                    if (i === json.length - 1) {
+                      ecl.close();
+                      console.log('electrum gettransaction array ==>');
+                      console.log(_rawtx);
+
+                      let result = [];
+
+                      for (let i = 0; i < _rawtx.length; i++) {
+                        result = result.concat(shepherd.parseTransactionAddresses(_rawtx[i], req.query.address));
+                      }
+
+                      const successObj = {
+                        msg: 'success',
+                        result: {
+                          //listtransactions: _rawtx,
+                          listtransactions: result,
+                        },
+                      };
+
+                      res.end(JSON.stringify(successObj));
+                    }
+                  });
+                });
+              }*/
 
 shepherd.get('/electrum/gettransaction', function(req, res, next) {
   // TODO: block time, confs, current height
@@ -544,8 +875,83 @@ shepherd.get('/electrum/gettransaction', function(req, res, next) {
   });
 });
 
+shepherd.get('/electrum/gettransactiontest', function(req, res, next) {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainTransactionGet(req.query.txid)
+  .then((json) => {
+    console.log('electrum gettransaction ==>');
+    console.log(json);
+    const _network = electrumJSNetworks[req.query.network];
+    const decodedTx = electrumJSTxDecoder(json, _network);
+    let txInputs = [];
+
+    console.log('decodedtx =>');
+    console.log(decodedTx.outputs);
+
+    for (let i = 0; i < decodedTx.inputs.length; i++) {
+      if (decodedTx.inputs[i].txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
+        ecl.blockchainTransactionGet(decodedTx.inputs[i].txid)
+        .then((rawInput) => {
+          console.log('electrum raw input tx ==>');
+          //console.log
+          const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
+          console.log(decodedVinVout.outputs[decodedTx.inputs[i].n]);
+          txInputs.push(decodedVinVout.outputs[decodedTx.inputs[i].n]);
+
+          if (i === decodedTx.inputs.length - 1) {
+            const _parsedTx = {
+              network: decodedTx.network,
+              format: decodedTx.format,
+              inputs: txInputs,
+              outputs: decodedTx.outputs,
+              height: json[i].height,
+              timestamp: 0/*blockInfo.timestamp*/,
+              confirmations: 0 /*currentHeight - json[i].height*/,
+            };
+            shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+
+            ecl.close();
+            const successObj = {
+              msg: 'success',
+              result: {
+                gettransaction: _parsedTx,
+              },
+            };
+
+            res.end(JSON.stringify(successObj));
+          }
+        });
+      } else {
+        if (i === decodedTx.inputs.length - 1) {
+          const _parsedTx = {
+            network: decodedTx.network,
+            format: decodedTx.format,
+            inputs: txInputs,
+            outputs: decodedTx.outputs,
+            height: json[i].height,
+            timestamp: 0/*blockInfo.timestamp*/,
+            confirmations: 0 /*currentHeight - json[i].height*/,
+          };
+          shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+
+          const successObj = {
+            msg: 'success',
+            result: {
+              gettransaction: _parsedTx,
+            },
+          };
+
+          res.end(JSON.stringify(successObj));
+        }
+      }
+    }
+  });
+});
+
 shepherd.parseTransactionAddresses = function(tx, targetAddress) {
-  // TODO: - mined flag
+  // TODO: - sum vins / sum vouts to the same address
   //       - multi vin multi vout
   //       - detect change address
   let result = [];
@@ -554,6 +960,21 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
     outputs: {},
   };
   let addressFound = false;
+  let _sum = {
+    inputs: 0,
+    outputs: 0,
+  };
+
+  if (tx.format === 'cant parse') {
+    return {
+      type: 'unknown',
+      amount: 'unknown',
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    }
+  }
 
   for (let key in _parse) {
     if (!tx[key].length) {
@@ -566,19 +987,28 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
     for (let i = 0; i < _parse[key].length; i++) {
       console.log(key + ' ==>');
       console.log(_parse[key][i]);
-      if (key === 'outputs' ||
-          (key === 'inputs' && _parse[key][i].scriptPubKey.addresses && _parse[key][i].value)) {
+      console.log(Number(_parse[key][i].value));
+
+      if (_parse[key][i].scriptPubKey &&
+          _parse[key][i].scriptPubKey.addresses &&
+          _parse[key][i].scriptPubKey.addresses[0] === targetAddress &&
+          _parse[key][i].value) {
+        _sum[key] += Number(_parse[key][i].value);
+      }
+
+      /*if (key === 'outputs' ||
+          (key === 'inputs' && _parse[key][i].scriptPubKey && _parse[key][i].scriptPubKey.addresses && _parse[key][i].value)) {
         if (!targetAddress || (targetAddress === _parse[key][i].scriptPubKey.addresses[0] && !addressFound)) {
           let _type;
 
           if (tx.miner) {
             _type = 'miner';
           } else {
-            _type = key === 'inputs' ? 'out' : 'in';
+            _type = key === 'inputs' ? 'sent' : 'received';
           }
           result.push({
             type: _type, // flip
-            value: _parse[key][i].value,
+            amount: Number(_parse[key][i].value),
             address: _parse[key][i].scriptPubKey.addresses[0],
             timestamp: tx.timestamp,
             txid: tx.format.txid,
@@ -587,11 +1017,62 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
 
           addressFound = true;
         }
-      }
+      }*/
     }
   }
 
+  if (_sum.inputs > 0 &&
+      _sum.outputs > 0) {
+    // vin + change, break into two tx
+    result = [{ // reorder since tx sort by default is from newest to oldest
+      type: 'sent',
+      amount: Number(_sum.inputs),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    }, {
+      type: 'received',
+      amount: Number(_sum.outputs),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    }];
+  } else if (_sum.inputs === 0 && _sum.outputs > 0) {
+    result = {
+      type: 'received',
+      amount: Number(_sum.outputs),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    };
+  } else if (_sum.inputs > 0 && _sum.outputs === 0) {
+    result = {
+      type: 'sent',
+      amount: Number(_sum.inputs),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    };
+  } else {
+    // (?)
+    result = {
+      type: 'other',
+      amount: 'unknown',
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    };
+  }
+
   console.log('parseTransactionAddresses result ==>');
+
+  console.log(_sum);
+
   console.log(result);
   return result;
 }
@@ -783,14 +1264,15 @@ shepherd.findUtxoSet = function(utxoList, target) {
   let sum = 0;
 
   function findUtxoSubset() {
-    if (utxoList[0].value >= target) {
+    if (Number(utxoList[0].value) >= Number(target)) {
+      sum = utxoList[0].value;
       result.push(utxoList[0]);
     } else {
       for (let i = 0; i < utxoList.length; i++) {
-        if (sum < target) {
-          sum += Number(utxoList[i].value);
-          result.push(utxoList[i]);
-        } else {
+        sum += Number(utxoList[i].value);
+        result.push(utxoList[i]);
+
+        if (sum >= Number(target)) {
           break;
         }
       }
@@ -845,8 +1327,14 @@ shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, cha
   }
 
   tx.addOutput(sendTo, Number(spendValue));
-  tx.addOutput(changeAddress, Number(changeValue));
+  if (changeValue > 0) {
+    tx.addOutput(changeAddress, Number(changeValue));
+  }
 
+  console.log('buildSignedTx unsigned tx data vin');
+  console.log(tx.tx.ins);
+  console.log('buildSignedTx unsigned tx data vout');
+  console.log(tx.tx.outs);
   console.log('buildSignedTx unsigned tx data');
   console.log(tx);
 
@@ -861,14 +1349,35 @@ shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, cha
   return rawtx;
 }
 
+shepherd.maxSpendBalance = function(utxoList, fee) {
+  let maxSpendBalance = 0;
+
+  for (let i = 0; i < utxoList.length; i++) {
+    maxSpendBalance += Number(utxoList[i].value);
+  }
+
+  if (fee) {
+    return Number(maxSpendBalance) - Number(fee);
+  } else {
+    return maxSpendBalance;
+  }
+}
+
 shepherd.get('/electrum/createrawtx', function(req, res, next) {
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
   const outputAddress = req.query.address;
   const changeAddress = req.query.change;
-  const wif = req.query.wif;
+  let wif = req.query.wif;
   const value = req.query.value;
-  const network = req.query.network;
   const push = req.query.push;
+  const fee = electrumServers[network].txfee;
+
+  console.log(electrumCoins[req.query.coin]);
+
+  if (req.query.gui) {
+    wif = electrumCoins[req.query.coin].priv;
+  }
 
   ecl.connect();
   ecl.blockchainAddressListunspent(changeAddress)
@@ -877,9 +1386,21 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
 
     console.log('electrum listunspent ==>');
 
-    const _utxoSet = shepherd.findUtxoSet(utxoList, Number(req.query.value) + Number(electrumServers[req.query.network].txfee)); // target + txfee
+    let _value = Number(value) + Number(fee);
+    let _utxoSet = shepherd.findUtxoSet(utxoList, _value); // target + txfee
 
-    const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, _utxoSet.set, _utxoSet.change, value);
+    if (Number(value) >= shepherd.maxSpendBalance(utxoList, fee)) {
+      _value = shepherd.maxSpendBalance(utxoList, fee);
+      _utxoSet = {
+        set: utxoList,
+        change: 0,
+      };
+    }
+
+    console.log('maxspend ' + shepherd.maxSpendBalance(utxoList, fee));
+    console.log('value ' + value);
+
+    const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, _utxoSet.set, _utxoSet.change, _utxoSet.change <= 0 ? _value : value);
 
     if (!push) {
       const successObj = {
@@ -887,7 +1408,8 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
         result: {
           utxoSet: _utxoSet.set,
           change: _utxoSet.change,
-          wif,
+          // wif,
+          fee,
           value,
           outputAddress,
           changeAddress,
@@ -898,7 +1420,7 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
 
       res.end(JSON.stringify(successObj));
     } else {
-      const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+      const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
       ecl.connect();
       ecl.blockchainTransactionBroadcast(_rawtx)
@@ -3007,7 +3529,9 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
   let electrumCoinsList = [];
 
   for (let key in electrumCoins) {
-    electrumCoinsList.push(electrumCoins[key].abbr);
+    if (key !== 'auth') {
+      electrumCoinsList.push(electrumCoins[key].abbr);
+    }
   }
 
   for (let key in coindInstanceRegistry) {
@@ -3017,6 +3541,7 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
   successObj = {
     native: nativeCoindList,
     spv: electrumCoinsList,
+    total: Object.keys(electrumCoins).length - 1 + Object.keys(nativeCoindList).length,
   };
 
   res.end(JSON.stringify(successObj));
@@ -3026,14 +3551,27 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/SuperNET/activehandle', function(req, res, next) { // not finished
+shepherd.get('/auth/status', function(req, res, next) { // not finished
   let successObj;
+  let _status = false;
+
+  if (Object.keys(coindInstanceRegistry).length) {
+    if (Object.keys(electrumCoins).length > 1 && electrumCoins.auth) {
+      _status = true;
+    } else if (Object.keys(electrumCoins).length === 1 && !electrumCoins.auth) {
+      _status = true;
+    }
+  } else if (Object.keys(electrumCoins).length > 1 && electrumCoins.auth) {
+    _status = true;
+  } else if (Object.keys(electrumCoins).length === 1 && !Object.keys(coindInstanceRegistry).length) {
+    _status = true;
+  }
 
   successObj = {
     pubkey: 'nativeonly',
     result: 'success',
     handle: '',
-    status: Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
+    status: _status ? 'unlocked' : 'locked',
     duration: 2507830,
   };
 
