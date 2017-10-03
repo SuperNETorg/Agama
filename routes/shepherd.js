@@ -194,9 +194,9 @@ if (os.platform() === 'linux') {
 }
 
 if (os.platform() === 'win32') {
-  var agamaDir = `${process.env.APPDATA}/agama`;
+  var agamaDir = `${process.env.APPDATA}/Agama`;
       agamaDir = path.normalize(agamaDir);
-      agamaTestDir = `${process.env.APPDATA}/agama/test`;
+      agamaTestDir = `${process.env.APPDATA}/Agama/test`;
       agamaTestDir = path.normalize(agamaTestDir);
       komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
       komododBin = path.normalize(komododBin),
