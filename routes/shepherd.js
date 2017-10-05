@@ -40,6 +40,7 @@ var lockDownAddCoin = false;
 var electrumCoins = {
   auth: false,
 };
+var electrumKeys = {};
 
 const electrumJSCore = require('./electrumjs/electrumjs.core.js');
 const electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
@@ -247,8 +248,8 @@ shepherd.seedToWif = function(seed, network, iguana) {
 
   key.compressed = true;
 
-  console.log('seedtowif priv key ' + key.privateWif);
-  console.log('seedtowif pub key ' + key.publicAddress);
+  shepherd.log(`seedtowif priv key ${key.privateWif}`);
+  shepherd.log(`seedtowif pub key ${key.publicAddress}`);
 
   return {
     priv: key.privateWif,
@@ -278,18 +279,19 @@ shepherd.findNetworkObj = function(coin) {
 }
 
 shepherd.get('/electrum/login', function(req, res, next) {
-  for (let key in electrumCoins) {
-    if (key !== 'auth') {
-      const keys = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(key), req.query.iguana);
+  for (let key in electrumServers) {
+    const _abbr = electrumServers[key].abbr;
+    const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
 
-      electrumCoins[key].priv = keys.priv;
-      electrumCoins[key].pub = keys.pub;
-    }
+    electrumKeys[_abbr] = {
+      priv,
+      pub,
+    };
   }
 
   electrumCoins.auth = true;
 
-  console.log(JSON.stringify(electrumCoins, null, '\t'));
+  shepherd.log(JSON.stringify(electrumKeys, null, '\t'));
 
   const successObj = {
     msg: 'success',
@@ -301,6 +303,7 @@ shepherd.get('/electrum/login', function(req, res, next) {
 
 shepherd.get('/electrum/dev/logout', function(req, res, next) {
   electrumCoins.auth = false;
+  electrumKeys = {};
 
   const successObj = {
     msg: 'success',
@@ -348,8 +351,8 @@ shepherd.get('/electrum/bip39/seed', function(req, res, next) {
   console.log(key2.keyPair.toWIF());
 
   const hdnode = bitcoinJS.HDNode.fromSeedBuffer(seed, electrumJSNetworks.komodo).deriveHardened(0).derive(0).derive(1);
-  console.log('Address: ' + hdnode.getAddress());
-  console.log('Private key (WIF): ' + hdnode.keyPair.toWIF());
+  console.log(`address: ${hdnode.getAddress()}`);
+  console.log(`priv (WIF): ${hdnode.keyPair.toWIF()}`);
 });
 
 shepherd.get('/electrum/servers', function(req, res, next) {
@@ -373,7 +376,7 @@ shepherd.addElectrumCoin = function(coin, serverID) {
           ip: electrumServers[key].address,
           port: electrumServers[key].port,
         },
-        txfee: electrumServers[key].txfee,
+        txfee: 'calculated' /*electrumServers[key].txfee*/,
       };
 
       return true;
@@ -381,9 +384,16 @@ shepherd.addElectrumCoin = function(coin, serverID) {
   }
 }
 
-shepherd.removeElectrumCoin = function(coin, serverID) {
-  // TODO
-}
+shepherd.get('/electrum/coins/remove', function(req, res, next) {
+  delete electrumCoins[req.query.coin];
+
+  const successObj = {
+    msg: 'success',
+    result,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
 
 shepherd.get('/electrum/coins/add', function(req, res, next) {
   const result = shepherd.addElectrumCoin(req.query.coin);
@@ -400,8 +410,8 @@ shepherd.get('/electrum/coins', function(req, res, next) {
   let _electrumCoins = JSON.parse(JSON.stringify(electrumCoins)); // deep cloning
 
   for (let key in _electrumCoins) {
-    if (_electrumCoins[key].priv) {
-      delete _electrumCoins[key].priv;
+    if (electrumKeys[key]) {
+      _electrumCoins[key].pub = electrumKeys[key].pub;
     }
   }
 
@@ -414,16 +424,16 @@ shepherd.get('/electrum/coins', function(req, res, next) {
 });
 
 shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
-  const timestampDiff = (Math.floor(Date.now() / 1000) - locktime - 777);
-  const currentTimeHours = Math.floor(timestampDiff / 3600);
-  const currentTimeMinutes = Math.floor((timestampDiff - (currentTimeHours * 3600)) / 60);
-  const currentTimeSeconds = timestampDiff - (currentTimeHours * 3600) - (currentTimeMinutes * 60);
+  const timestampDiff = Math.floor(Date.now() / 1000) - locktime - 777;
+  const hoursPassed = Math.floor(timestampDiff / 3600);
+  const minutesPassed = Math.floor((timestampDiff - (hoursPassed * 3600)) / 60);
+  const secondsPassed = timestampDiff - (hoursPassed * 3600) - (minutesPassed * 60);
   let timestampDiffMinutes = timestampDiff / 60;
   let interest = 0;
 
   console.log(`locktime ${locktime}`);
   console.log(`minutes converted ${timestampDiffMinutes}`);
-  console.log(`passed ${currentTimeHours}h ${currentTimeMinutes}m ${currentTimeSeconds}s`);
+  console.log(`passed ${hoursPassed}h ${minutesPassed}m ${secondsPassed}s`);
 
   // calc interest
   if (timestampDiffMinutes >= 60) {
@@ -443,7 +453,11 @@ shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
     console.log(`denominator ${denominator}`);
 
     // TODO: check if interest is > 5% yr
+    // calc ytd and 5% for 1 yr
     const numerator = Number(value) * 0.00000001 / 20; // assumes 5%!
+    // const hoursInOneYear = 365 * 24;
+    // const hoursDiff = hoursInOneYear - hoursPassed;
+
     interest = ((Number(value) * 0.00000001) / 10512000) * timestampDiffMinutes;
     console.log(`interest ${interest}`);
   }
@@ -505,9 +519,9 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
                       balance: 0.00000001 * json.confirmed,
                       unconfirmed: json.unconfirmed,
                       sats: json.confirmed,
-                      interest: interestTotal,
+                      interest: Number(interestTotal.toFixed(8)),
                       interestSats: Math.floor(interestTotal * 100000000),
-                      total: (0.00000001 * json.confirmed) + interestTotal,
+                      total: Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)),
                       totalSats: json.confirmed + Math.floor(interestTotal * 100000000),
                     },
                   };
@@ -918,14 +932,14 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
     // vin + change, break into two tx
     result = [{ // reorder since tx sort by default is from newest to oldest
       type: 'sent',
-      amount: Number(_sum.inputs),
+      amount: Number(_sum.inputs.toFixed(8)),
       address: targetAddress,
       timestamp: tx.timestamp,
       txid: tx.format.txid,
       confirmations: tx.confirmations,
     }, {
       type: 'received',
-      amount: Number(_sum.outputs),
+      amount: Number(_sum.outputs.toFixed(8)),
       address: targetAddress,
       timestamp: tx.timestamp,
       txid: tx.format.txid,
@@ -934,7 +948,7 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
   } else if (_sum.inputs === 0 && _sum.outputs > 0) {
     result = {
       type: 'received',
-      amount: Number(_sum.outputs),
+      amount: Number(_sum.outputs.toFixed(8)),
       address: targetAddress,
       timestamp: tx.timestamp,
       txid: tx.format.txid,
@@ -943,7 +957,7 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
   } else if (_sum.inputs > 0 && _sum.outputs === 0) {
     result = {
       type: 'sent',
-      amount: Number(_sum.inputs),
+      amount: Number(_sum.inputs.toFixed(8)),
       address: targetAddress,
       timestamp: tx.timestamp,
       txid: tx.format.txid,
@@ -1344,6 +1358,11 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
       .then((txid) => {
         ecl.close();
 
+        if (!inputs &&
+            !outputs) {
+          txid = 'error';
+        }
+
         const successObj = {
           msg: 'success',
           result: {
@@ -1422,7 +1441,6 @@ shepherd.listunspent = function(ecl, address, network, full) {
                     txid: _utxo[i]['tx_hash'],
                     vout: _utxo[i]['tx_pos'],
                     address,
-                    // "scriptPubKey": "76a9140e78f3f7daf736f58eee93ccd3bfaa7b2b35f49a88ac",
                     amount: Number(_utxo[i].value) * 0.00000001,
                     amountSats: _utxo[i].value,
                     interest: interest,
@@ -1435,7 +1453,6 @@ shepherd.listunspent = function(ecl, address, network, full) {
                     txid: _utxo[i]['tx_hash'],
                     vout: _utxo[i]['tx_pos'],
                     address,
-                    // "scriptPubKey": "76a9140e78f3f7daf736f58eee93ccd3bfaa7b2b35f49a88ac",
                     amount: Number(_utxo[i].value) * 0.00000001,
                     amountSats: _utxo[i].value,
                     confirmations: currentHeight - _utxo[i].height,
@@ -1450,15 +1467,6 @@ shepherd.listunspent = function(ecl, address, network, full) {
                 if (i === _utxo.length - 1) {
                   ecl.close();
                   resolve(formattedUtxoList);
-
-                  /*const successObj = {
-                    msg: 'success',
-                    result: {
-                      listunspent: formattedUtxoList,
-                    },
-                  };
-
-                  res.end(JSON.stringify(successObj));*/
                 }
               });
             }
@@ -1466,14 +1474,6 @@ shepherd.listunspent = function(ecl, address, network, full) {
         } else {
           ecl.close();
           resolve([]);
-          /*const successObj = {
-            msg: 'success',
-            result: {
-              listunspent: [],
-            },
-          };
-
-          res.end(JSON.stringify(successObj));*/
         }
       });
     });
