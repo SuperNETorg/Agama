@@ -507,7 +507,9 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
                 const _network = electrumJSNetworks[network];
                 const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
 
-                interestTotal += shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxo[i].value);
+                if (decodedTx.format.locktime > 0) {
+                  interestTotal += shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxo[i].value);
+                }
                 console.log('decoded tx =>');
                 console.log(decodedTx);
                 console.log(decodedTx.format.locktime);
@@ -521,8 +523,8 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
                       sats: json.confirmed,
                       interest: Number(interestTotal.toFixed(8)),
                       interestSats: Math.floor(interestTotal * 100000000),
-                      total: Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)),
-                      totalSats: json.confirmed + Math.floor(interestTotal * 100000000),
+                      total: interestTotal > 0 ? Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)) : 0,
+                      totalSats: interestTotal > 0 ?json.confirmed + Math.floor(interestTotal * 100000000) : 0,
                     },
                   };
 
@@ -539,8 +541,8 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
                 sats: json.confirmed,
                 interest: 0,
                 interestSats: 0,
-                total: 0.00000001 * json.confirmed,
-                totalSats: json.confirmed,
+                total: 0,
+                totalSats: 0,
               },
             };
 
@@ -1183,6 +1185,8 @@ shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, cha
     tx.addOutput(changeAddress, Number(changeValue));
   }
 
+  tx.setLockTime(Math.floor(Date.now() / 1000) - 777);
+
   console.log('buildSignedTx unsigned tx data vin');
   console.log(tx.tx.ins);
   console.log('buildSignedTx unsigned tx data vout');
@@ -1226,7 +1230,7 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
   const fee = electrumServers[network].txfee;
 
   if (req.query.gui) {
-    wif = electrumCoins[req.query.coin].priv;
+    wif = electrumKeys[req.query.coin].priv;
   }
 
   ecl.connect();
@@ -1331,6 +1335,15 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
       _change = _change + (totalInterest - _feeOverhead);
     }
 
+    let vinSum = 0;
+    for (let i = 0; i < inputs.length; i++) {
+      vinSum += inputs[i].value;
+    }
+
+    console.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`);
+    const _estimatedFee = vinSum - outputs[0].value - _change;
+    console.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`);
+
     const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, inputs, _change, value);
 
     if (!push) {
@@ -1433,7 +1446,8 @@ shepherd.listunspent = function(ecl, address, network, full) {
                 if (network === 'komodo') {
                   let interest = 0;
 
-                  if (Number(_utxo[i].value) * 0.00000001 >= 10) {
+                  if (Number(_utxo[i].value) * 0.00000001 >= 10 &&
+                      decodedTx.format.locktime > 0) {
                     interest = shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxo[i].value);
                   }
 
