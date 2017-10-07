@@ -38,7 +38,7 @@
           onClick="toggleDropdown()">
           <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
         </div>
-        <ul class="dropdown-menu hide">
+        <ul class="dropdown-menu native hide">
           <li onClick="closeMainWindow()">
             <a>KMD + REVS + JUMBLR</a>
           </li>
@@ -49,6 +49,31 @@
             <a>KMD (passive)</a>
           </li>
         </ul>
+
+        <button
+          id="spvBtn"
+          onClick="startSPV('KMD')"
+          class="btn btn-primary btn-mode btn-native margin-left-20">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-flash.png"> KMD lite
+        </button>
+        <div
+          id="spvBtnCarret"
+          class="btn btn-primary btn-caret"
+          onClick="toggleDropdown('lite')">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
+        </div>
+        <ul class="dropdown-menu lite hide">
+          <li onClick="startSPV('KMD+REVS+JUMBLR')">
+            <a>Lite: KMD + REVS + JUMBLR</a>
+          </li>
+          <li onClick="startSPV('CHIPS')">
+            <a>CHIPS lite</a>
+          </li>
+          <li onClick="closeMainWindow(null, true)">
+            <a>Custom</a>
+          </li>
+        </ul>
+
         <div class="margin-top-20 settings-stick-to-right">
           <button
             id="settingsBtn"
@@ -56,7 +81,7 @@
             class="btn btn-info btn-mode">
             <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cogs.png"> Settings
           </button>
-          <button class="btn btn-primary btn-mode" onClick="closeMainWindow(null, true)">Custom</button>
+          <button class="btn btn-primary btn-mode hide" onClick="closeMainWindow(null, true)">Custom</button>
         </div>
       </div>
     </div>
