@@ -303,10 +303,6 @@ class ElectrumJSCore extends Client {
     return this.request('blockchain.address.get_mempool', [address]);
   }
 
-  blockchainAddressGetProof(address) {
-    return this.request('blockchain.address.get_proof', [address]);
-  }
-
   blockchainAddressListunspent(address) {
     return this.request('blockchain.address.listunspent', [address]);
   }
@@ -345,10 +341,6 @@ class ElectrumJSCore extends Client {
 
   blockchainTransactionGetMerkle(tx_hash, height) {
     return this.request('blockchain.transaction.get_merkle', [tx_hash, height]);
-  }
-
-  blockchainUtxoGetAddress(tx_hash, index) {
-    return this.request('blockchain.utxo.get_address', [tx_hash, index]);
   }
 }
 
