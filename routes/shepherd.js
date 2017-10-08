@@ -25,6 +25,7 @@ const CoinKey = require('coinkey')
 const bitcoinJS = require('bitcoinjs-lib');
 const coinSelect = require('coinselect');
 const fixPath = require('fix-path');
+var crypto = require('crypto')
 
 var ps = require('ps-node');
 var setconf = require('../private/setconf.js');
@@ -484,6 +485,12 @@ shepherd.get('/electrum/bip39/seed', function(req, res, next) {
   console.log(`priv (WIF): ${hdnode.keyPair.toWIF()}`);
 });
 
+shepherd.get('/electrum/merkletest', function(req, res, next) {
+  function _sha256(data) {
+    return crypto.createHash('sha256').update(data).digest();
+  }
+});
+
 shepherd.get('/electrum/servers', function(req, res, next) {
   if (req.query.abbr) {
     let _electrumServers = {};
@@ -841,7 +848,7 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                             confirmations: currentHeight - json[i].height,
                           };
 
-                          const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+                          const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
 
                           if (formattedTx.type) {
                             _rawtx.push(formattedTx);
@@ -878,7 +885,7 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                           confirmations: currentHeight - json[i].height,
                         };
 
-                        const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+                        const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
 
                         if (formattedTx.type) {
                           _rawtx.push(formattedTx);
@@ -915,7 +922,7 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                     confirmations: currentHeight - json[i].height,
                   };
 
-                  const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
+                  const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
                   _rawtx.push(formattedTx);
 
                   if (i === json.length - 1) {
@@ -1047,7 +1054,7 @@ shepherd.get('/electrum/gettransactiontest', function(req, res, next) {
   });
 });
 
-shepherd.parseTransactionAddresses = function(tx, targetAddress) {
+shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
   // TODO: - sum vins / sum vouts to the same address
   //       - multi vin multi vout
   //       - detect change address
@@ -1058,6 +1065,10 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
   };
   let addressFound = false;
   let _sum = {
+    inputs: 0,
+    outputs: 0,
+  };
+  let _total = {
     inputs: 0,
     outputs: 0,
   };
@@ -1086,6 +1097,8 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
       console.log(_parse[key][i]);
       console.log(Number(_parse[key][i].value));
 
+      _total[key] += Number(_parse[key][i].value);
+
       if (_parse[key][i].scriptPubKey &&
           _parse[key][i].scriptPubKey.addresses &&
           _parse[key][i].scriptPubKey.addresses[0] === targetAddress &&
@@ -1113,6 +1126,15 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress) {
       txid: tx.format.txid,
       confirmations: tx.confirmations,
     }];
+
+    if (network === 'komodo') {
+      const vinVoutDiff = _total.inputs - _total.outputs;
+      console.log('vinVoutDiff ' + vinVoutDiff);
+
+      if (vinVoutDiff < 0) {
+        result[1].interest = Number(vinVoutDiff.toFixed(8));
+      }
+    }
   } else if (_sum.inputs === 0 && _sum.outputs > 0) {
     result = {
       type: 'received',
