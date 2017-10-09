@@ -173,11 +173,7 @@ const electrumServers = {
   },
 };
 
-let blockchain = {
-  komodo: {
-    height: 0,
-  },
-}
+const CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';
 
 shepherd.appConfig = _appConfig.config;
 
@@ -342,6 +338,14 @@ shepherd.findNetworkObj = function(coin) {
   }
 }
 
+shepherd.findCoinName = function(network) {
+  for (let key in electrumServers) {
+    if (key === network) {
+      return electrumServers[key].abbr;
+    }
+  }
+}
+
 shepherd.get('/electrum/servers/test', function(req, res, next) {
   const ecl = new electrumJSCore(req.query.port, req.query.address, 'tcp'); // tcp or tls
 
@@ -485,10 +489,128 @@ shepherd.get('/electrum/bip39/seed', function(req, res, next) {
   console.log(`priv (WIF): ${hdnode.keyPair.toWIF()}`);
 });
 
-shepherd.get('/electrum/merkletest', function(req, res, next) {
-  function _sha256(data) {
+// get merkle root
+shepherd.getMerkleRoot = function(txid, proof, pos) {
+  const reverse = require('buffer-reverse');
+  let hash = txid;
+  let serialized;
+  const _sha256 = function(data) {
     return crypto.createHash('sha256').update(data).digest();
   }
+
+  console.log(`txid ${txid}`);
+  console.log(`pos ${pos}`);
+  console.log('proof');
+  console.log(proof);
+
+  for (i = 0; i < proof.length; i++) {
+    const _hashBuff = new Buffer(hash, 'hex');
+    const _proofBuff = new Buffer(proof[i], 'hex');
+
+    if ((pos & 1) == 0) {
+      serialized = Buffer.concat([reverse(_hashBuff), reverse(_proofBuff)]);
+    } else {
+      serialized = Buffer.concat([reverse(_proofBuff), reverse(_hashBuff)]);
+    }
+
+    hash = reverse(_sha256(_sha256(serialized))).toString('hex');
+    pos /= 2;
+  }
+
+  return hash;
+}
+
+shepherd.verifyMerkle = function(txid, height, serverList, mainServer) {
+  // select random server
+  const getRandomIntInclusive = function(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    return Math.floor(Math.random() * (max - min + 1)) + min; // the maximum is inclusive and the minimum is inclusive
+  }
+
+  const _rnd = getRandomIntInclusive(0, serverList.length - 1);
+  const randomServer = serverList[_rnd];
+  const _randomServer = randomServer.split(':');
+  const _mainServer = mainServer.split(':');
+
+  let ecl = new electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
+
+  return new Promise((resolve, reject) => {
+    console.log(`main server: ${mainServer}`);
+    console.log(`verification server: ${randomServer}`);
+    ecl.connect();
+    ecl.blockchainTransactionGetMerkle(txid, height)
+    .then((merkleData) => {
+      console.log('electrum getmerkle =>');
+      console.log(merkleData);
+      ecl.close();
+
+      const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
+      console.log(_res);
+
+      ecl = new electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
+      ecl.connect();
+      ecl.blockchainBlockGetHeader(height)
+      .then((blockInfo) => {
+        ecl.close();
+        console.log('blockinfo =>');
+        console.log(blockInfo);
+        console.log(blockInfo['merkle_root']);
+
+        if (blockInfo &&
+            blockInfo['merkle_root']) {
+          if (_res === blockInfo['merkle_root']) {
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        } else {
+          resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+        }
+      });
+    });
+  });
+}
+
+shepherd.verifyMerkleByCoin = function(coin, txid, height) {
+  const _serverList = electrumCoins[coin].serverList;
+
+  console.log(electrumCoins[coin].server);
+  console.log(electrumCoins[coin].serverList);
+
+  return new Promise((resolve, reject) => {
+    if (_serverList !== 'none') {
+      let _filteredServerList = [];
+
+      for (let i = 0; i < _serverList.length; i++) {
+        if (_serverList[i] !== electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port) {
+          _filteredServerList.push(_serverList[i]);
+        }
+      }
+
+      shepherd.verifyMerkle(txid, height, _filteredServerList, electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port)
+      .then((proof) => {
+        resolve(proof);
+      });
+    } else {
+      resolve(false);
+    }
+  });
+}
+
+shepherd.get('/electrum/merkle/verify', function(req, res, next) {
+  shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
+  .then((verifyMerkleRes) => {
+    const successObj = {
+      msg: 'success',
+      result: {
+        merkleProof: verifyMerkleRes,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
 });
 
 shepherd.get('/electrum/servers', function(req, res, next) {
@@ -979,81 +1101,6 @@ shepherd.get('/electrum/gettransaction', function(req, res, next) {
   });
 });
 
-shepherd.get('/electrum/gettransactiontest', function(req, res, next) {
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
-
-  ecl.connect();
-  ecl.blockchainTransactionGet(req.query.txid)
-  .then((json) => {
-    console.log('electrum gettransaction ==>');
-    console.log(json);
-    const _network = shepherd.getNetworkData(req.query.network);
-    const decodedTx = electrumJSTxDecoder(json, _network);
-    let txInputs = [];
-
-    console.log('decodedtx =>');
-    console.log(decodedTx.outputs);
-
-    for (let i = 0; i < decodedTx.inputs.length; i++) {
-      if (decodedTx.inputs[i].txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
-        ecl.blockchainTransactionGet(decodedTx.inputs[i].txid)
-        .then((rawInput) => {
-          console.log('electrum raw input tx ==>');
-          //console.log
-          const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
-          console.log(decodedVinVout.outputs[decodedTx.inputs[i].n]);
-          txInputs.push(decodedVinVout.outputs[decodedTx.inputs[i].n]);
-
-          if (i === decodedTx.inputs.length - 1) {
-            const _parsedTx = {
-              network: decodedTx.network,
-              format: decodedTx.format,
-              inputs: txInputs,
-              outputs: decodedTx.outputs,
-              height: json[i].height,
-              timestamp: 0/*blockInfo.timestamp*/,
-              confirmations: 0 /*currentHeight - json[i].height*/,
-            };
-            shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
-
-            ecl.close();
-            const successObj = {
-              msg: 'success',
-              result: {
-                gettransaction: _parsedTx,
-              },
-            };
-
-            res.end(JSON.stringify(successObj));
-          }
-        });
-      } else {
-        if (i === decodedTx.inputs.length - 1) {
-          const _parsedTx = {
-            network: decodedTx.network,
-            format: decodedTx.format,
-            inputs: txInputs,
-            outputs: decodedTx.outputs,
-            height: json[i].height,
-            timestamp: 0/*blockInfo.timestamp*/,
-            confirmations: 0 /*currentHeight - json[i].height*/,
-          };
-          shepherd.parseTransactionAddresses(_parsedTx, req.query.address);
-
-          const successObj = {
-            msg: 'success',
-            result: {
-              gettransaction: _parsedTx,
-            },
-          };
-
-          res.end(JSON.stringify(successObj));
-        }
-      }
-    }
-  });
-});
-
 shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
   // TODO: - sum vins / sum vouts to the same address
   //       - multi vin multi vout
@@ -1063,7 +1110,6 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
     inputs: {},
     outputs: {},
   };
-  let addressFound = false;
   let _sum = {
     inputs: 0,
     outputs: 0,
@@ -1127,9 +1173,8 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
       confirmations: tx.confirmations,
     }];
 
-    if (network === 'komodo') {
+    if (network === 'komodo') { // calc claimed interest amount
       const vinVoutDiff = _total.inputs - _total.outputs;
-      console.log('vinVoutDiff ' + vinVoutDiff);
 
       if (vinVoutDiff < 0) {
         result[1].interest = Number(vinVoutDiff.toFixed(8));
@@ -1232,22 +1277,6 @@ shepherd.electrumGetCurrentBlock = function(network) {
     });
   });
 }
-
-shepherd.get('/electrum/formatlisttransactions', function(req, res, next) {
-  const tx = [{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"92766e00c81df6c1f174faad44be46ab526f301c7eeee266404a366ba6fa31fc","version":1,"locktime":1485514057},"inputs":{"satoshi":999988875,"value":"9.99988875","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 e21749ae92bb1a0ef51dea76ec4b7905aa2428ba OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914e21749ae92bb1a0ef51dea76ec4b7905aa2428ba88ac","type":"pubkeyhash","addresses":["RVtegwER6B13FNLFUTr6QrkX433Kb17Lgn"]}},"outputs":[{"satoshi":999488649,"value":"9.99488649","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 24af38fcb13bbc171b0b42bb017244a53b6bb2fa OP_EQUALVERIFY OP_CHECKSIG","hex":"76a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac","type":"pubkeyhash","addresses":["RCdAK6sXYYfHxLQKzxcKSxgmwwxbGAgnTR"]}},{"satoshi":500000,"value":"0.00500000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":172447,"timestamp":1485514474,"confirmations":340906},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"6bbc3220670b952a487160d694d690a19dc75d0fe3738af104682082d8c40f5c","version":1,"locktime":1485514057},"inputs":{"satoshi":200000000,"value":"2.00000000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 6b24e73f48da0511fb3d979cddf3e2c03cd1967e OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9146b24e73f48da0511fb3d979cddf3e2c03cd1967e88ac","type":"pubkeyhash","addresses":["RK3ib8RZ9n4LAmUUNyv8DnLF8UeT4R2utg"]}},"outputs":[{"satoshi":199899774,"value":"1.99899774","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 46be5565e078d94e4bc60c6515393fbe86577f9e OP_EQUALVERIFY OP_CHECKSIG","hex":"76a91446be5565e078d94e4bc60c6515393fbe86577f9e88ac","type":"pubkeyhash","addresses":["RFjFPZ4UY82sLtUUBX3TvmwmAUUqULiM3L"]}},{"satoshi":100000,"value":"0.00100000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":172447,"timestamp":1485514474,"confirmations":340906},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"ae35cc98ef9208886ef394792b1bba1cde953804adb66a3d192a89d1a1c48995","version":1,"locktime":1485514057},"inputs":{"satoshi":199899774,"value":"1.99899774","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 46be5565e078d94e4bc60c6515393fbe86577f9e OP_EQUALVERIFY OP_CHECKSIG","hex":"76a91446be5565e078d94e4bc60c6515393fbe86577f9e88ac","type":"pubkeyhash","addresses":["RFjFPZ4UY82sLtUUBX3TvmwmAUUqULiM3L"]}},"outputs":[{"satoshi":198899548,"value":"1.98899548","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 e6f9a1f85aaaae45106edee7a1d3c601dfcd3819 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914e6f9a1f85aaaae45106edee7a1d3c601dfcd381988ac","type":"pubkeyhash","addresses":["RWLUYRMxZCxPh8HeFBF9SwDtD2k85StQow"]}},{"satoshi":1000000,"value":"0.01000000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":172447,"timestamp":1485514474,"confirmations":340906},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"ddce005757ed1f05574305a480a02a50d9a5afbcd9f996ce6df7a7872f646117","version":1,"locktime":0},"inputs":{"satoshi":100000,"value":"0.00100000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},{"satoshi":80000,"value":"0.00080000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 dca218733633ce1e80faf0ccdb70cb9e41ac11fa OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914dca218733633ce1e80faf0ccdb70cb9e41ac11fa88ac","type":"pubkeyhash","addresses":["RVPnvK49QRmbRYN3SgtFszWzFKNARcB3AH"]}}],"height":279595,"timestamp":1492345900,"confirmations":233758},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"5a45a6ab8d6c2d89cf0463a7cc593122160e6774437da0292b2bf805bf4f238f","version":1,"locktime":0},"inputs":{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},{"satoshi":490000,"value":"0.00490000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 dca218733633ce1e80faf0ccdb70cb9e41ac11fa OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914dca218733633ce1e80faf0ccdb70cb9e41ac11fa88ac","type":"pubkeyhash","addresses":["RVPnvK49QRmbRYN3SgtFszWzFKNARcB3AH"]}}],"height":279678,"timestamp":1492350916,"confirmations":233675},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"4be872597ed9c1be1d7dd36b98d1fb27d644487e46aaf059435fb0a89d4ecfc3","version":1,"locktime":1493189104},"inputs":{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":990000,"value":"0.00990000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293273,"timestamp":1493189165,"confirmations":220080},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"ea88bf3549df6b04aa45715b995f04f40a9768683f8e98fa69566c91adf1d323","version":1,"locktime":1493208534},"inputs":{"satoshi":990000,"value":"0.00990000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":970000,"value":"0.00970000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293583,"timestamp":1493208548,"confirmations":219770},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"323680e838cb644075508530fb0ef0072ee40c4fbc40c2a8828a8a82e077bf64","version":1,"locktime":1493211930},"inputs":{"satoshi":970000,"value":"0.00970000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":950000,"value":"0.00950000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293648,"timestamp":1493211935,"confirmations":219705},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"a8f12a0842822c81622c9021e54e7ab99044b061be482e4f16bd20cce064c918","version":1,"locktime":1493212481},"inputs":{"satoshi":950000,"value":"0.00950000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},{"satoshi":930000,"value":"0.00930000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293661,"timestamp":1493212543,"confirmations":219692},{"network":{"messagePrefix":"\u0019Komodo Signed Message:\n","bip32":{"public":76067358,"private":76066276},"pubKeyHash":60,"scriptHash":85,"wif":188,"dustThreshold":1000},"format":{"txid":"7da6b8fa066130571be8c08ef95851602050332f95fc3b1ca8dc497fcb2df4f9","version":1,"locktime":1493213728},"inputs":{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}},"outputs":[{"satoshi":10000,"value":"0.00010000","n":0,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 7651d8965e4078652fdf59e14d1ccee61c290656 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9147651d8965e4078652fdf59e14d1ccee61c29065688ac","type":"pubkeyhash","addresses":["RL4orv22Xch7PhM5w9jUHhVQhX6kF6GkfS"]}},{"satoshi":920000,"value":"0.00920000","n":1,"scriptPubKey":{"asm":"OP_DUP OP_HASH160 2f4c0f91fc06ac228c120aee41741d0d39096832 OP_EQUALVERIFY OP_CHECKSIG","hex":"76a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac","type":"pubkeyhash","addresses":["RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd"]}}],"height":293682,"timestamp":1493213772,"confirmations":219671}];
-  let result = [];
-
-  for (let i = 0; i < tx.length; i++) {
-    result = result.concat(shepherd.parseTransactionAddresses(tx[i], 'RDbGxL8QYdEp8sMULaVZS2E6XThcTKT9Jd'));
-  }
-
-  const successObj = {
-    msg: 'success',
-    result,
-  };
-
-  res.end(JSON.stringify(successObj));
-});
 
 shepherd.get('/electrum/decoderawtx', function(req, res, next) {
   const _network = shepherd.getNetworkData(req.query.network);
@@ -1356,8 +1385,6 @@ shepherd.get('/electrum/subset', function(req, res, next) {
 
 // single sig
 shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) {
-  console.log(`net ${network}`);
-  console.log(shepherd.getNetworkData(network));
   let key = bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
   let tx = new bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
 
@@ -1415,6 +1442,7 @@ shepherd.maxSpendBalance = function(utxoList, fee) {
 }
 
 shepherd.get('/electrum/createrawtx', function(req, res, next) {
+  // txid 64 char
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
   const outputAddress = req.query.address;
@@ -1429,166 +1457,209 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
   }
 
   ecl.connect();
-  shepherd.listunspent(ecl, changeAddress, network, network === 'komodo' ? true : false)
+  shepherd.listunspent(ecl, changeAddress, network, network === 'komodo' ? true : false, true)
   .then((utxoList) => {
     ecl.close();
 
-    let utxoListFormatted = [];
-    let totalInterest = 0;
-    let totalInterestUTXOCount = 0;
-    let interestClaimThreshold = 200;
+    if (utxoList &&
+        utxoList.length) {
+      let utxoListFormatted = [];
+      let totalInterest = 0;
+      let totalInterestUTXOCount = 0;
+      let interestClaimThreshold = 200;
+      let utxoVerified = true;
 
-    for (let i = 0; i < utxoList.length; i++) {
-      if (network === 'komodo') {
-        utxoListFormatted.push({
-          txid: utxoList[i].txid,
-          vout: utxoList[i].vout,
-          value: Number(utxoList[i].amountSats),
-          interestSats: Number(utxoList[i].interestSats),
-        });
+      for (let i = 0; i < utxoList.length; i++) {
+        if (network === 'komodo') {
+          utxoListFormatted.push({
+            txid: utxoList[i].txid,
+            vout: utxoList[i].vout,
+            value: Number(utxoList[i].amountSats),
+            interestSats: Number(utxoList[i].interestSats),
+            verified: utxoList[i].verified ? utxoList[i].verified : false,
+          });
 
-        if (Number(utxoList[i].interestSats) > interestClaimThreshold) {
-          totalInterest += Number(utxoList[i].interestSats);
-          totalInterestUTXOCount++;
+          if (Number(utxoList[i].interestSats) > interestClaimThreshold) {
+            totalInterest += Number(utxoList[i].interestSats);
+            totalInterestUTXOCount++;
+          }
+        } else {
+          utxoListFormatted.push({
+            txid: utxoList[i]['tx_hash'],
+            vout: utxoList[i]['tx_pos'],
+            value: Number(utxoList[i].value),
+            height: utxoList[i].height,
+            verified: utxoList[i].verified ? utxoList[i].verified : false,
+          });
         }
-      } else {
-        utxoListFormatted.push({
-          txid: utxoList[i]['tx_hash'],
-          vout: utxoList[i]['tx_pos'],
-          value: Number(utxoList[i].value),
-          height: utxoList[i].height,
-        });
       }
-    }
 
-    console.log('electrum listunspent ==>');
-    console.log(utxoListFormatted);
+      console.log('electrum listunspent ==>');
+      console.log(utxoListFormatted);
 
-    let targets = [{
-      address: outputAddress,
-      value: value > Number(shepherd.maxSpendBalance(utxoListFormatted)) ? Number(shepherd.maxSpendBalance(utxoListFormatted)) : value,
-    }];
-    console.log('targets =>');
-    console.log(targets);
-    const feeRate = 20; // sats/byte
-
-    // default coin selection algo blackjack with fallback to accumulative
-    // make a first run, calc approx tx fee
-    // if ins and outs are empty reduce max spend by txfee
-    let { inputs, outputs, fee } = coinSelect(utxoListFormatted, targets, feeRate);
-
-    console.log('coinselect res =>');
-    console.log('coinselect inputs =>');
-    console.log(inputs);
-    console.log('coinselect outputs =>');
-    console.log(outputs);
-    console.log('coinselect calculated fee =>');
-    console.log(fee);
-
-    if (!inputs &&
-        !outputs) {
-      targets[0].value = targets[0].value - electrumServers[network].txfee;
-      console.log('second run');
-      console.log('coinselect adjusted targets =>');
+      const _maxSpendBalance = Number(shepherd.maxSpendBalance(utxoListFormatted));
+      let targets = [{
+        address: outputAddress,
+        value: value > _maxSpendBalance ? _maxSpendBalance : value,
+      }];
+      console.log('targets =>');
       console.log(targets);
+      const feeRate = 20; // sats/byte
 
-      const secondRun = coinSelect(utxoListFormatted, targets, feeRate);
-      inputs = secondRun.inputs;
-      outputs = secondRun.outputs;
-      fee = secondRun.fee;
+      // default coin selection algo blackjack with fallback to accumulative
+      // make a first run, calc approx tx fee
+      // if ins and outs are empty reduce max spend by txfee
+      let { inputs, outputs, fee } = coinSelect(utxoListFormatted, targets, feeRate);
 
+      console.log('coinselect res =>');
       console.log('coinselect inputs =>');
       console.log(inputs);
       console.log('coinselect outputs =>');
       console.log(outputs);
-      console.log('coinselect fee =>');
+      console.log('coinselect calculated fee =>');
       console.log(fee);
-    }
 
-    let _change = 0;
+      if (!inputs &&
+          !outputs) {
+        targets[0].value = targets[0].value - electrumServers[network].txfee;
+        console.log('second run');
+        console.log('coinselect adjusted targets =>');
+        console.log(targets);
 
-    if (outputs.length === 2) {
-      _change = outputs[1].value;
-    }
+        const secondRun = coinSelect(utxoListFormatted, targets, feeRate);
+        inputs = secondRun.inputs;
+        outputs = secondRun.outputs;
+        fee = secondRun.fee;
 
-    const _maxSpend = shepherd.maxSpendBalance(utxoListFormatted);
+        console.log('coinselect inputs =>');
+        console.log(inputs);
+        console.log('coinselect outputs =>');
+        console.log(outputs);
+        console.log('coinselect fee =>');
+        console.log(fee);
+      }
 
-    console.log(`maxspend ${_maxSpend} (${_maxSpend * 0.00000001})`);
-    console.log(`value ${value}`);
-    console.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`);
-    console.log(`changeto ${changeAddress} amount ${_change} (${_change * 0.00000001})`);
+      let _change = 0;
 
-    // account for KMD interest
-    if (network === 'komodo' &&
-        totalInterest > 0) {
-      // account for extra vout
-      const _feeOverhead = outputs.length === 1 ? shepherd.estimateTxSize(0, 1) * feeRate : 0;
+      if (outputs &&
+          outputs.length === 2) {
+        _change = outputs[1].value;
+      }
 
-      console.log(`max interest to claim ${totalInterest} (${totalInterest * 0.00000001})`);
-      console.log('estimated fee overhead ' + _feeOverhead);
-      console.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`);
-      _change = _change + (totalInterest - _feeOverhead);
-    }
-
-    let vinSum = 0;
-    for (let i = 0; i < inputs.length; i++) {
-      vinSum += inputs[i].value;
-    }
-
-    console.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`);
-    const _estimatedFee = vinSum - outputs[0].value - _change;
-    console.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`);
-
-    const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, inputs, _change, value);
-
-    if (!push) {
-      const successObj = {
-        msg: 'success',
-        result: {
-          utxoSet: inputs,
-          change: _change,
-          // wif,
-          fee,
-          value,
-          outputAddress,
-          changeAddress,
-          network,
-          rawtx: _rawtx,
-        },
-      };
-
-      res.end(JSON.stringify(successObj));
-    } else {
-      const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
-
-      ecl.connect();
-      ecl.blockchainTransactionBroadcast(_rawtx)
-      .then((txid) => {
-        ecl.close();
-
-        if (!inputs &&
-            !outputs) {
-          txid = 'error';
+      // check if any outputs are unverified
+      if (inputs &&
+          inputs.length) {
+        for (let i = 0; i < inputs.length; i++) {
+          if (!inputs[i].verified) {
+            utxoVerified = false;
+            break;
+          }
         }
+      }
 
+      const _maxSpend = shepherd.maxSpendBalance(utxoListFormatted);
+
+      if (value > _maxSpend) {
         const successObj = {
-          msg: 'success',
-          result: {
-            utxoSet: inputs,
-            change: _change,
-            fee,
-            // wif,
-            value,
-            outputAddress,
-            changeAddress,
-            network,
-            rawtx: _rawtx,
-            txid,
-          },
+          msg: 'error',
+          result: `Spend value is too large. Max available amount is ${Number((_maxSpend * 0.00000001.toFixed(8)))}`,
         };
 
         res.end(JSON.stringify(successObj));
-      });
+      } else {
+        console.log(`maxspend ${_maxSpend} (${_maxSpend * 0.00000001})`);
+        console.log(`value ${value}`);
+        console.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`);
+        console.log(`changeto ${changeAddress} amount ${_change} (${_change * 0.00000001})`);
+
+        // account for KMD interest
+        if (network === 'komodo' &&
+            totalInterest > 0) {
+          // account for extra vout
+          const _feeOverhead = outputs.length === 1 ? shepherd.estimateTxSize(0, 1) * feeRate : 0;
+
+          console.log(`max interest to claim ${totalInterest} (${totalInterest * 0.00000001})`);
+          console.log('estimated fee overhead ' + _feeOverhead);
+          console.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`);
+          _change = _change + (totalInterest - _feeOverhead);
+        }
+
+        if (!inputs &&
+            !outputs) {
+          const successObj = {
+            msg: 'error',
+            result: 'Cant find best fit utxo. Try lower amount.',
+          };
+
+          res.end(JSON.stringify(successObj));
+        } else {
+          let vinSum = 0;
+
+          for (let i = 0; i < inputs.length; i++) {
+            vinSum += inputs[i].value;
+          }
+
+          console.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`);
+          const _estimatedFee = vinSum - outputs[0].value - _change;
+          console.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`);
+
+          const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, inputs, _change, value);
+
+          if (!push) {
+            const successObj = {
+              msg: 'success',
+              result: {
+                utxoSet: inputs,
+                change: _change,
+                // wif,
+                fee,
+                value,
+                outputAddress,
+                changeAddress,
+                network,
+                rawtx: _rawtx,
+                utxoVerified,
+              },
+            };
+
+            res.end(JSON.stringify(successObj));
+          } else {
+            const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+            ecl.connect();
+            ecl.blockchainTransactionBroadcast(_rawtx)
+            .then((txid) => {
+              ecl.close();
+
+              const successObj = {
+                msg: 'success',
+                result: {
+                  utxoSet: inputs,
+                  change: _change,
+                  fee,
+                  // wif,
+                  value,
+                  outputAddress,
+                  changeAddress,
+                  network,
+                  rawtx: _rawtx,
+                  txid,
+                  utxoVerified,
+                },
+              };
+
+              res.end(JSON.stringify(successObj));
+            });
+          }
+        }
+      }
+    } else {
+      const successObj = {
+        msg: 'error',
+        result: utxoList,
+      };
+
+      res.end(JSON.stringify(successObj));
     }
   });
 });
@@ -1615,74 +1686,124 @@ shepherd.get('/electrum/pushtx', function(req, res, next) {
   });
 });
 
-shepherd.listunspent = function(ecl, address, network, full) {
+shepherd.listunspent = function(ecl, address, network, full, verify) {
+  let _atLeastOneDecodeTxFailed = false;
+
   if (full) {
     return new Promise(function(resolve, reject) {
       ecl.connect();
       ecl.blockchainAddressListunspent(address)
-      .then((_utxo) => {
-        if (_utxo &&
-            _utxo.length) {
+      .then((_utxoJSON) => {
+        if (_utxoJSON &&
+            _utxoJSON.length) {
           let formattedUtxoList = [];
+          let _utxo = [];
 
           ecl.blockchainNumblocksSubscribe()
-          .then(function(currentHeight) {
-            for (let i = 0; i < _utxo.length; i++) {
-              ecl.blockchainTransactionGet(_utxo[i]['tx_hash'])
-              .then((_rawtxJSON) => {
-                console.log('electrum gettransaction ==>');
-                console.log(i + ' | ' + (_rawtxJSON.length - 1));
-                console.log(_rawtxJSON);
+          .then((currentHeight) => {
+            // filter out unconfirmed utxos
+            for (let i = 0; i < _utxoJSON.length; i++) {
+              if (Number(currentHeight) - Number(_utxoJSON[i].height) !== 0) {
+                _utxo.push(_utxoJSON[i]);
+              }
+            }
 
-                // decode tx
-                const _network = shepherd.getNetworkData(network);
-                const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+            if (!_utxo.length) { // no confirmed utxo
+              resolve('no valid utxo');
+            } else {
+              Promise.all(_utxo.map((_utxoItem, index) => {
+                return new Promise((resolve, reject) => {
+                  ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                  .then((_rawtxJSON) => {
+                    console.log('electrum gettransaction ==>');
+                    console.log(index + ' | ' + (_rawtxJSON.length - 1));
+                    console.log(_rawtxJSON);
 
-                if (network === 'komodo') {
-                  let interest = 0;
+                    // decode tx
+                    const _network = shepherd.getNetworkData(network);
+                    const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
 
-                  if (Number(_utxo[i].value) * 0.00000001 >= 10 &&
-                      decodedTx.format.locktime > 0) {
-                    interest = shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxo[i].value);
-                  }
+                    console.log('decoded tx =>');
+                    console.log(decodedTx);
 
-                  formattedUtxoList.push({
-                    txid: _utxo[i]['tx_hash'],
-                    vout: _utxo[i]['tx_pos'],
-                    address,
-                    amount: Number(_utxo[i].value) * 0.00000001,
-                    amountSats: _utxo[i].value,
-                    interest: interest,
-                    interestSats: Math.floor(interest * 100000000),
-                    confirmations: currentHeight - _utxo[i].height,
-                    spendable: true
+                    if (!decodedTx) {
+                      _atLeastOneDecodeTxFailed = true;
+                      resolve('cant decode tx');
+                    } else {
+                      if (network === 'komodo') {
+                        let interest = 0;
+
+                        if (Number(_utxoItem.value) * 0.00000001 >= 10 &&
+                            decodedTx.format.locktime > 0) {
+                          interest = shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                        }
+
+                        let _resolveObj = {
+                          txid: _utxoItem['tx_hash'],
+                          vout: _utxoItem['tx_pos'],
+                          address,
+                          amount: Number(_utxoItem.value) * 0.00000001,
+                          amountSats: _utxoItem.value,
+                          interest: interest,
+                          interestSats: Math.floor(interest * 100000000),
+                          confirmations: currentHeight - _utxoItem.height,
+                          spendable: true,
+                          verified: false,
+                        };
+
+                        // merkle root verification agains another electrum server
+                        if (verify) {
+                          shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
+                          .then((verifyMerkleRes) => {
+                            _resolveObj.verified = verifyMerkleRes;
+                            resolve(_resolveObj);
+                          });
+                        } else {
+                          resolve(_resolveObj);
+                        }
+                      } else {
+                        let _resolveObj = {
+                          txid: _utxoItem['tx_hash'],
+                          vout: _utxoItem['tx_pos'],
+                          address,
+                          amount: Number(_utxoItem.value) * 0.00000001,
+                          amountSats: _utxoItem.value,
+                          confirmations: currentHeight - _utxoItem.height,
+                          spendable: true,
+                          verified: false,
+                        };
+
+                        // merkle root verification agains another electrum server
+                        if (verify) {
+                          shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
+                          .then((verifyMerkleRes) => {
+                            _resolveObj.verified = verifyMerkleRes;
+                            resolve(_resolveObj);
+                          });
+                        } else {
+                          resolve(_resolveObj);
+                        }
+                      }
+                    }
                   });
+                });
+              }))
+              .then(promiseResult => {
+                ecl.close();
+
+                if (!_atLeastOneDecodeTxFailed) {
+                  console.log(promiseResult);
+                  resolve(promiseResult);
                 } else {
-                  formattedUtxoList.push({
-                    txid: _utxo[i]['tx_hash'],
-                    vout: _utxo[i]['tx_pos'],
-                    address,
-                    amount: Number(_utxo[i].value) * 0.00000001,
-                    amountSats: _utxo[i].value,
-                    confirmations: currentHeight - _utxo[i].height,
-                    spendable: true
-                  });
-                }
-
-                console.log('decoded tx =>');
-                console.log(decodedTx);
-                console.log(decodedTx.format.locktime);
-
-                if (i === _utxo.length - 1) {
-                  ecl.close();
-                  resolve(formattedUtxoList);
+                  console.log('listunspent error, cant decode tx(s)');
+                  resolve('decode error');
                 }
               });
             }
           });
         } else {
           ecl.close();
-          resolve([]);
+          resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
         }
       });
     });
@@ -1692,7 +1813,13 @@ shepherd.listunspent = function(ecl, address, network, full) {
       ecl.blockchainAddressListunspent(address)
       .then((json) => {
         ecl.close();
-        resolve(json);
+
+        if (json &&
+            json.length) {
+          resolve(json);
+        } else {
+          resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+        }
       });
     });
   }
@@ -1702,31 +1829,28 @@ shepherd.get('/electrum/listunspent', function(req, res, next) {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
-  if (req.query.full) {
-    shepherd.listunspent(ecl, req.query.address, network, true)
+  if (req.query.full &&
+      req.query.full === 'true') {
+    shepherd.listunspent(ecl, req.query.address, network, true, req.query.verify)
     .then((listunspent) => {
       console.log('electrum listunspent ==>');
 
       const successObj = {
         msg: 'success',
-        result: {
-          listunspent,
-        },
+        result: listunspent,
       };
 
       res.end(JSON.stringify(successObj));
     });
   } else {
     shepherd.listunspent(ecl, req.query.address, network)
-    .then((json) => {
+    .then((listunspent) => {
       ecl.close();
       console.log('electrum listunspent ==>');
 
       const successObj = {
         msg: 'success',
-        result: {
-          listunspent: json,
-        },
+        result: listunspent,
       };
 
       res.end(JSON.stringify(successObj));

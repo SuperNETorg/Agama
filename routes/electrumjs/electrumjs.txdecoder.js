@@ -102,7 +102,7 @@ var TxDecoder = module.exports = function(rawtx, network) {
       outputs: decodeOutput(_tx, network),
     };
   } catch (e) {
-    return {};
+    return false;
   }
 }
 
