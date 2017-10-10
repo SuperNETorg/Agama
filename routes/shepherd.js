@@ -542,33 +542,44 @@ shepherd.verifyMerkle = function(txid, height, serverList, mainServer) {
     ecl.connect();
     ecl.blockchainTransactionGetMerkle(txid, height)
     .then((merkleData) => {
-      console.log('electrum getmerkle =>');
-      console.log(merkleData);
-      ecl.close();
-
-      const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
-      console.log(_res);
-
-      ecl = new electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
-      ecl.connect();
-      ecl.blockchainBlockGetHeader(height)
-      .then((blockInfo) => {
+      if (merkleData &&
+          merkleData.merkle &&
+          merkleData.pos) {
+        console.log('electrum getmerkle =>');
+        console.log(merkleData);
         ecl.close();
-        console.log('blockinfo =>');
-        console.log(blockInfo);
-        console.log(blockInfo['merkle_root']);
 
-        if (blockInfo &&
-            blockInfo['merkle_root']) {
-          if (_res === blockInfo['merkle_root']) {
-            resolve(true);
+        const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
+        console.log(_res);
+
+        ecl = new electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
+        ecl.connect();
+        ecl.blockchainBlockGetHeader(height)
+        .then((blockInfo) => {
+          if (blockInfo &&
+              blockInfo['merkle_root']) {
+            ecl.close();
+            console.log('blockinfo =>');
+            console.log(blockInfo);
+            console.log(blockInfo['merkle_root']);
+
+            if (blockInfo &&
+                blockInfo['merkle_root']) {
+              if (_res === blockInfo['merkle_root']) {
+                resolve(true);
+              } else {
+                resolve(false);
+              }
+            } else {
+              resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+            }
           } else {
-            resolve(false);
+            resolve(f);
           }
-        } else {
-          resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
-        }
-      });
+        });
+      } else {
+        resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+      }
     });
   });
 }
@@ -736,17 +747,8 @@ shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
 
     console.log(`minutes if statement ${timestampDiffMinutes}`);
 
-    let denominator = (365 * 24 * 60) / timestampDiffMinutes;
-
-    if (denominator === 0) {
-      denominator = 1; // max KOMODO_INTEREST per transfer, do it at least annually!
-    }
-
-    console.log(`denominator ${denominator}`);
-
     // TODO: check if interest is > 5% yr
     // calc ytd and 5% for 1 yr
-    const numerator = Number(value) * 0.00000001 / 20; // assumes 5%!
     // const hoursInOneYear = 365 * 24;
     // const hoursDiff = hoursInOneYear - hoursPassed;
 
@@ -764,66 +766,93 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
   ecl.connect();
   ecl.blockchainAddressGetBalance(req.query.address)
   .then((json) => {
-    if (network === 'komodo') {
-      ecl.connect();
-      ecl.blockchainAddressListunspent(req.query.address)
-      .then((utxoList) => {
-        if (utxoList &&
-            utxoList.length) {
-          // filter out < 10 KMD amounts
-          let _utxo = [];
+    if (json &&
+        json.hasOwnProperty('confirmed') &&
+        json.hasOwnProperty('unconfirmed')) {
+      if (network === 'komodo') {
+        ecl.connect();
+        ecl.blockchainAddressListunspent(req.query.address)
+        .then((utxoList) => {
+          if (utxoList &&
+              utxoList.length) {
+            // filter out < 10 KMD amounts
+            let _utxo = [];
 
-          for (let i = 0; i < utxoList.length; i++) {
-            console.log(`utxo ${utxoList[i]['tx_hash']} sats ${utxoList[i].value} value ${Number(utxoList[i].value) * 0.00000001}`);
+            for (let i = 0; i < utxoList.length; i++) {
+              console.log(`utxo ${utxoList[i]['tx_hash']} sats ${utxoList[i].value} value ${Number(utxoList[i].value) * 0.00000001}`);
 
-            if (Number(utxoList[i].value) * 0.00000001 >= 10) {
-              _utxo.push(utxoList[i]);
+              if (Number(utxoList[i].value) * 0.00000001 >= 10) {
+                _utxo.push(utxoList[i]);
+              }
             }
-          }
 
-          console.log('filtered utxo list =>');
-          console.log(_utxo);
+            console.log('filtered utxo list =>');
+            console.log(_utxo);
 
-          if (_utxo &&
-              _utxo.length) {
-            let interestTotal = 0;
+            if (_utxo &&
+                _utxo.length) {
+              let interestTotal = 0;
 
-            for (let i = 0; i < _utxo.length; i++) {
-              ecl.blockchainTransactionGet(_utxo[i]['tx_hash'])
-              .then((_rawtxJSON) => {
-                console.log('electrum gettransaction ==>');
-                console.log(i + ' | ' + (_rawtxJSON.length - 1));
-                console.log(_rawtxJSON);
+              Promise.all(_utxo.map((_utxoItem, index) => {
+                return new Promise((resolve, reject) => {
+                  ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                  .then((_rawtxJSON) => {
+                    console.log('electrum gettransaction ==>');
+                    console.log(index + ' | ' + (_rawtxJSON.length - 1));
+                    console.log(_rawtxJSON);
 
-                // decode tx
-                const _network = shepherd.getNetworkData(network);
-                const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+                    // decode tx
+                    const _network = shepherd.getNetworkData(network);
+                    const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
 
-                if (decodedTx.format.locktime > 0) {
-                  interestTotal += shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxo[i].value);
-                }
-                console.log('decoded tx =>');
-                console.log(decodedTx);
-                console.log(decodedTx.format.locktime);
+                    if (decodedTx &&
+                        decodedTx.format &&
+                        decodedTx.format.locktime > 0) {
+                      interestTotal += shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                    }
 
-                if (i === _utxo.length -1) {
-                  const successObj = {
-                    msg: 'success',
-                    result: {
-                      balance: Number((0.00000001 * json.confirmed).toFixed(8)),
-                      unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
-                      unconfirmedSats: json.unconfirmed,
-                      balanceSats: json.confirmed,
-                      interest: Number(interestTotal.toFixed(8)),
-                      interestSats: Math.floor(interestTotal * 100000000),
-                      total: interestTotal > 0 ? Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)) : 0,
-                      totalSats: interestTotal > 0 ?json.confirmed + Math.floor(interestTotal * 100000000) : 0,
-                    },
-                  };
+                    console.log('decoded tx =>');
+                    console.log(decodedTx);
 
-                  res.end(JSON.stringify(successObj));
-                }
+                    resolve(true);
+                  });
+                });
+              }))
+              .then(promiseResult => {
+                ecl.close();
+
+                const successObj = {
+                  msg: 'success',
+                  result: {
+                    balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+                    unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+                    unconfirmedSats: json.unconfirmed,
+                    balanceSats: json.confirmed,
+                    interest: Number(interestTotal.toFixed(8)),
+                    interestSats: Math.floor(interestTotal * 100000000),
+                    total: interestTotal > 0 ? Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)) : 0,
+                    totalSats: interestTotal > 0 ?json.confirmed + Math.floor(interestTotal * 100000000) : 0,
+                  },
+                };
+
+                res.end(JSON.stringify(successObj));
               });
+            } else {
+              const successObj = {
+                msg: 'success',
+                result: {
+                  balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+                  unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+                  unconfirmedSats: json.unconfirmed,
+                  balanceSats: json.confirmed,
+                  interest: 0,
+                  interestSats: 0,
+                  total: 0,
+                  totalSats: 0,
+                },
+              };
+
+              res.end(JSON.stringify(successObj));
             }
           } else {
             const successObj = {
@@ -842,33 +871,28 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
 
             res.end(JSON.stringify(successObj));
           }
-        } else {
-          const successObj = {
-            msg: 'success',
-            result: {
-              balance: Number((0.00000001 * json.confirmed).toFixed(8)),
-              unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
-              unconfirmedSats: json.unconfirmed,
-              balanceSats: json.confirmed,
-              interest: 0,
-            },
-          };
+        });
+      } else {
+        ecl.close();
+        console.log('electrum getbalance ==>');
+        console.log(json);
 
-          res.end(JSON.stringify(successObj));
-        }
-      });
+        const successObj = {
+          msg: 'success',
+          result: {
+            balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+            unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+            unconfirmedSats: json.unconfirmed,
+            balanceSats: json.confirmed,
+          },
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
     } else {
-      ecl.close();
-      console.log('electrum getbalance ==>');
-      console.log(json);
-
       const successObj = {
-        msg: 'success',
-        result: {
-          balance: 0.00000001 * json.confirmed,
-          unconfirmed: json.unconfirmed,
-          sats: json.confirmed,
-        },
+        msg: 'error',
+        result: CONNECTION_ERROR_OR_INCOMPLETE_DATA,
       };
 
       res.end(JSON.stringify(successObj));
@@ -920,54 +944,69 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
     ecl.connect();
 
     ecl.blockchainNumblocksSubscribe()
-    .then(function(currentHeight) {
-      ecl.blockchainAddressGetHistory(req.query.address)
-      .then((json) => {
-        if (json &&
-            json.length) {
-          json = shepherd.sortTransactions(json);
-          json = json.slice(0, MAX_TX);
-          console.log(json.length);
-          let _rawtx = [];
+    .then((currentHeight) => {
+      if (currentHeight &&
+          Number(currentHeight) > 0) {
+        ecl.blockchainAddressGetHistory(req.query.address)
+        .then((json) => {
+          if (json &&
+              json.length) {
+            json = shepherd.sortTransactions(json);
+            json = json.slice(0, MAX_TX);
+            console.log(json.length);
+            let _rawtx = [];
 
-          // get raw tx
-          for (let i = 0; i < json.length; i++) {
-            ecl.blockchainBlockGetHeader(json[i].height)
-            .then((blockInfo) => {
-              ecl.blockchainTransactionGet(json[i]['tx_hash'])
-              .then((_rawtxJSON) => {
-                console.log('electrum gettransaction ==>');
-                console.log(i + ' | ' + (_rawtxJSON.length - 1));
-                console.log(_rawtxJSON);
+            Promise.all(json.map((transaction, index) => {
+              return new Promise((resolve, reject) => {
+                ecl.blockchainBlockGetHeader(transaction.height)
+                .then((blockInfo) => {
+                  if (blockInfo &&
+                      blockInfo.timestamp) {
+                    ecl.blockchainTransactionGet(transaction['tx_hash'])
+                    .then((_rawtxJSON) => {
+                      console.log('electrum gettransaction ==>');
+                      console.log(index + ' | ' + (_rawtxJSON.length - 1));
+                      console.log(_rawtxJSON);
 
-                // decode tx
-                const _network = shepherd.getNetworkData(network);
-                const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+                      // decode tx
+                      const _network = shepherd.getNetworkData(network);
+                      const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
 
-                let txInputs = [];
+                      let txInputs = [];
 
-                console.log('decodedtx =>');
-                console.log(decodedTx.outputs);
+                      console.log('decodedtx =>');
+                      console.log(decodedTx.outputs);
 
-                if (decodedTx.inputs) {
-                  for (let j = 0; j < decodedTx.inputs.length; j++) {
-                    if (decodedTx.inputs[j].txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
-                      ecl.blockchainTransactionGet(decodedTx.inputs[j].txid)
-                      .then((rawInput) => {
-                        console.log('electrum raw input tx ==>');
-                        const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
-                        console.log(decodedVinVout.outputs[decodedTx.inputs[j].n]);
-                        txInputs.push(decodedVinVout.outputs[decodedTx.inputs[j].n]);
+                      if (decodedTx &&
+                          decodedTx.inputs) {
+                        Promise.all(decodedTx.inputs.map((_decodedInput, index) => {
+                          return new Promise((_resolve, _reject) => {
+                            if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
+                              ecl.blockchainTransactionGet(_decodedInput.txid)
+                              .then((rawInput) => {
+                                console.log('electrum raw input tx ==>');
+                                const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
 
-                        if (j === decodedTx.inputs.length - 1) {
+                                if (decodedVinVout) {
+                                  console.log(decodedVinVout.outputs[_decodedInput.n]);
+                                  txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
+                                  _resolve(true);
+                                }
+                              });
+                            } else {
+                              _resolve(true);
+                            }
+                          });
+                        }))
+                        .then(promiseResult => {
                           const _parsedTx = {
                             network: decodedTx.network,
                             format: decodedTx.format,
                             inputs: txInputs,
                             outputs: decodedTx.outputs,
-                            height: json[i].height,
+                            height: transaction.height,
                             timestamp: blockInfo.timestamp,
-                            confirmations: currentHeight - json[i].height,
+                            confirmations: currentHeight - transaction.height,
                           };
 
                           const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
@@ -978,104 +1017,68 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                             _rawtx.push(formattedTx[0]);
                             _rawtx.push(formattedTx[1]);
                           }
-
-                          if (i === json.length - 1) {
-                            ecl.close();
-                            console.log('electrum gettransaction array ==>');
-                            console.log(_rawtx);
-
-                            const successObj = {
-                              msg: 'success',
-                              result: {
-                                listtransactions: _rawtx,
-                              },
-                            };
-
-                            res.end(JSON.stringify(successObj));
-                          }
-                        }
-                      });
-                    } else {
-                      if (j === decodedTx.inputs.length - 1) {
+                          resolve(true);
+                        });
+                      } else {
                         const _parsedTx = {
                           network: decodedTx.network,
-                          format: decodedTx.format,
-                          inputs: txInputs,
-                          outputs: decodedTx.outputs,
-                          height: json[i].height,
+                          format: 'cant parse',
+                          inputs: 'cant parse',
+                          outputs: 'cant parse',
+                          height: transaction.height,
                           timestamp: blockInfo.timestamp,
-                          confirmations: currentHeight - json[i].height,
+                          confirmations: currentHeight - transaction.height,
                         };
 
                         const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
-
-                        if (formattedTx.type) {
-                          _rawtx.push(formattedTx);
-                        } else {
-                          _rawtx.push(formattedTx[0]);
-                          _rawtx.push(formattedTx[1]);
-                        }
-
-                        if (i === json.length - 1) {
-                          ecl.close();
-                          console.log('electrum gettransaction array ==>');
-                          console.log(_rawtx);
-
-                          const successObj = {
-                            msg: 'success',
-                            result: {
-                              listtransactions: _rawtx,
-                            },
-                          };
-
-                          res.end(JSON.stringify(successObj));
-                        }
+                        _rawtx.push(formattedTx);
+                        resolve(true);
                       }
-                    }
-                  }
-                } else {
-                  const _parsedTx = {
-                    network: decodedTx.network,
-                    format: 'cant parse',
-                    inputs: 'cant parse',
-                    outputs: 'cant parse',
-                    height: json[i].height,
-                    timestamp: blockInfo.timestamp,
-                    confirmations: currentHeight - json[i].height,
-                  };
-
-                  const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
-                  _rawtx.push(formattedTx);
-
-                  if (i === json.length - 1) {
-                    ecl.close();
-                    console.log('electrum gettransaction array ==>');
-                    console.log(_rawtx);
-
-                    const successObj = {
-                      msg: 'success',
-                      result: {
-                        listtransactions: _rawtx,
-                      },
+                    });
+                  } else {
+                    const _parsedTx = {
+                      network: 'cant parse',
+                      format: 'cant parse',
+                      inputs: 'cant parse',
+                      outputs: 'cant parse',
+                      height: transaction.height,
+                      timestamp: 'cant get block info',
+                      confirmations: currentHeight - transaction.height,
                     };
-
-                    res.end(JSON.stringify(successObj));
+                    const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
+                    _rawtx.push(formattedTx);
+                    resolve(true);
                   }
-                }
+                });
               });
-            });
-          }
-        } else {
-          const successObj = {
-            msg: 'success',
-            result: {
-              listtransactions: [],
-            },
-          };
+            }))
+            .then(promiseResult => {
+              ecl.close();
 
-          res.end(JSON.stringify(successObj));
-        }
-      });
+              const successObj = {
+                msg: 'success',
+                result: _rawtx,
+              };
+
+              res.end(JSON.stringify(successObj));
+            });
+          } else {
+            const successObj = {
+              msg: 'success',
+              result: [],
+            };
+
+            res.end(JSON.stringify(successObj));
+          }
+        });
+      } else {
+        const successObj = {
+          msg: 'error',
+          result: 'cant get current height',
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
     });
   }
 });
@@ -1388,7 +1391,7 @@ shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, cha
   let key = bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
   let tx = new bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
 
-  console.log(`buildSignedTx priv key ${wif}`);
+  // console.log(`buildSignedTx priv key ${wif}`);
   console.log(`buildSignedTx pub key ${key.getAddress().toString()}`);
   // console.log('buildSignedTx std tx fee ' + electrumServers[network].txfee);
 
@@ -1701,104 +1704,117 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
 
           ecl.blockchainNumblocksSubscribe()
           .then((currentHeight) => {
-            // filter out unconfirmed utxos
-            for (let i = 0; i < _utxoJSON.length; i++) {
-              if (Number(currentHeight) - Number(_utxoJSON[i].height) !== 0) {
-                _utxo.push(_utxoJSON[i]);
+            if (currentHeight &&
+                Number(currentHeight) > 0) {
+              // filter out unconfirmed utxos
+              for (let i = 0; i < _utxoJSON.length; i++) {
+                if (Number(currentHeight) - Number(_utxoJSON[i].height) !== 0) {
+                  _utxo.push(_utxoJSON[i]);
+                }
               }
-            }
 
-            if (!_utxo.length) { // no confirmed utxo
-              resolve('no valid utxo');
-            } else {
-              Promise.all(_utxo.map((_utxoItem, index) => {
-                return new Promise((resolve, reject) => {
-                  ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
-                  .then((_rawtxJSON) => {
-                    console.log('electrum gettransaction ==>');
-                    console.log(index + ' | ' + (_rawtxJSON.length - 1));
-                    console.log(_rawtxJSON);
+              if (!_utxo.length) { // no confirmed utxo
+                resolve('no valid utxo');
+              } else {
+                Promise.all(_utxo.map((_utxoItem, index) => {
+                  return new Promise((resolve, reject) => {
+                    ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                    .then((_rawtxJSON) => {
+                      console.log('electrum gettransaction ==>');
+                      console.log(index + ' | ' + (_rawtxJSON.length - 1));
+                      console.log(_rawtxJSON);
 
-                    // decode tx
-                    const _network = shepherd.getNetworkData(network);
-                    const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+                      // decode tx
+                      const _network = shepherd.getNetworkData(network);
+                      const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
 
-                    console.log('decoded tx =>');
-                    console.log(decodedTx);
+                      console.log('decoded tx =>');
+                      console.log(decodedTx);
 
-                    if (!decodedTx) {
-                      _atLeastOneDecodeTxFailed = true;
-                      resolve('cant decode tx');
-                    } else {
-                      if (network === 'komodo') {
-                        let interest = 0;
-
-                        if (Number(_utxoItem.value) * 0.00000001 >= 10 &&
-                            decodedTx.format.locktime > 0) {
-                          interest = shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxoItem.value);
-                        }
-
-                        let _resolveObj = {
-                          txid: _utxoItem['tx_hash'],
-                          vout: _utxoItem['tx_pos'],
-                          address,
-                          amount: Number(_utxoItem.value) * 0.00000001,
-                          amountSats: _utxoItem.value,
-                          interest: interest,
-                          interestSats: Math.floor(interest * 100000000),
-                          confirmations: currentHeight - _utxoItem.height,
-                          spendable: true,
-                          verified: false,
-                        };
-
-                        // merkle root verification agains another electrum server
-                        if (verify) {
-                          shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
-                          .then((verifyMerkleRes) => {
-                            _resolveObj.verified = verifyMerkleRes;
-                            resolve(_resolveObj);
-                          });
-                        } else {
-                          resolve(_resolveObj);
-                        }
+                      if (!decodedTx) {
+                        _atLeastOneDecodeTxFailed = true;
+                        resolve('cant decode tx');
                       } else {
-                        let _resolveObj = {
-                          txid: _utxoItem['tx_hash'],
-                          vout: _utxoItem['tx_pos'],
-                          address,
-                          amount: Number(_utxoItem.value) * 0.00000001,
-                          amountSats: _utxoItem.value,
-                          confirmations: currentHeight - _utxoItem.height,
-                          spendable: true,
-                          verified: false,
-                        };
+                        if (network === 'komodo') {
+                          let interest = 0;
 
-                        // merkle root verification agains another electrum server
-                        if (verify) {
-                          shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
-                          .then((verifyMerkleRes) => {
-                            _resolveObj.verified = verifyMerkleRes;
+                          if (Number(_utxoItem.value) * 0.00000001 >= 10 &&
+                              decodedTx.format.locktime > 0) {
+                            interest = shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                          }
+
+                          let _resolveObj = {
+                            txid: _utxoItem['tx_hash'],
+                            vout: _utxoItem['tx_pos'],
+                            address,
+                            amount: Number(_utxoItem.value) * 0.00000001,
+                            amountSats: _utxoItem.value,
+                            interest: interest,
+                            interestSats: Math.floor(interest * 100000000),
+                            confirmations: currentHeight - _utxoItem.height,
+                            spendable: true,
+                            verified: false,
+                          };
+
+                          // merkle root verification agains another electrum server
+                          if (verify) {
+                            shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
+                            .then((verifyMerkleRes) => {
+                              if (verifyMerkleRes && verifyMerkleRes === CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                                verifyMerkleRes = false;
+                              }
+
+                              _resolveObj.verified = verifyMerkleRes;
+                              resolve(_resolveObj);
+                            });
+                          } else {
                             resolve(_resolveObj);
-                          });
+                          }
                         } else {
-                          resolve(_resolveObj);
+                          let _resolveObj = {
+                            txid: _utxoItem['tx_hash'],
+                            vout: _utxoItem['tx_pos'],
+                            address,
+                            amount: Number(_utxoItem.value) * 0.00000001,
+                            amountSats: _utxoItem.value,
+                            confirmations: currentHeight - _utxoItem.height,
+                            spendable: true,
+                            verified: false,
+                          };
+
+                          // merkle root verification agains another electrum server
+                          if (verify) {
+                            shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
+                            .then((verifyMerkleRes) => {
+                              if (verifyMerkleRes && verifyMerkleRes === CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                                verifyMerkleRes = false;
+                              }
+
+                              _resolveObj.verified = verifyMerkleRes;
+                              resolve(_resolveObj);
+                            });
+                          } else {
+                            resolve(_resolveObj);
+                          }
                         }
                       }
-                    }
+                    });
                   });
-                });
-              }))
-              .then(promiseResult => {
-                ecl.close();
+                }))
+                .then(promiseResult => {
+                  ecl.close();
 
-                if (!_atLeastOneDecodeTxFailed) {
-                  console.log(promiseResult);
-                  resolve(promiseResult);
-                } else {
-                  console.log('listunspent error, cant decode tx(s)');
-                  resolve('decode error');
-                }
-              });
+                  if (!_atLeastOneDecodeTxFailed) {
+                    console.log(promiseResult);
+                    resolve(promiseResult);
+                  } else {
+                    console.log('listunspent error, cant decode tx(s)');
+                    resolve('decode error');
+                  }
+                });
+              }
+            } else {
+              resolve('cant get current height');
             }
           });
         } else {
