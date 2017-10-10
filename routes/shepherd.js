@@ -3466,9 +3466,13 @@ shepherd.quitKomodod = function(timeout = 100) {
           shepherd.log(`exec error: ${error}`);
         }
         if (key === 'CHIPS') {
-          shepherd.killRogueProcess('chips-cli');
+          setTimeout(function() {
+            shepherd.killRogueProcess('chips-cli');
+          }, 100);
         } else {
-          shepherd.killRogueProcess('komodo-cli');
+          setTimeout(function() {
+            shepherd.killRogueProcess('komodo-cli');
+          }, 100);
         }
       });
     }
