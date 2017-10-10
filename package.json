@@ -25,6 +25,7 @@
     "bitcoinjs-lib": "^3.2.0",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
+    "buffer-reverse": "^1.0.1",
     "coinkey": "^2.0.0",
     "coinselect": "github:bitcoinjs/coinselect",
     "electron": "1.6.5",

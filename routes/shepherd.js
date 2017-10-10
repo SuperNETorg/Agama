@@ -46,7 +46,7 @@ var electrumKeys = {};
 const electrumJSCore = require('./electrumjs/electrumjs.core.js');
 const electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
 const electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
-const electrumServers = {
+let electrumServers = {
   /*zcash: {
     address: '173.212.225.176',
     port: 50032,
@@ -574,7 +574,7 @@ shepherd.verifyMerkle = function(txid, height, serverList, mainServer) {
               resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
             }
           } else {
-            resolve(f);
+            resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
           }
         });
       } else {
@@ -657,6 +657,14 @@ shepherd.get('/electrum/coins/server/set', function(req, res, next) {
     ip: req.query.address,
     port: req.query.port,
   };
+
+  for (let key in electrumServers) {
+    if (electrumServers[key].abbr === req.query.coin) { // a bit risky
+      electrumServers[key].address = req.query.address;
+      electrumServers[key].port = req.query.port;
+      break;
+    }
+  }
 
   console.log(JSON.stringify(electrumCoins[req.query.coin]), null, '\t');
 
@@ -990,6 +998,8 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                                 if (decodedVinVout) {
                                   console.log(decodedVinVout.outputs[_decodedInput.n]);
                                   txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
+                                  _resolve(true);
+                                } else {
                                   _resolve(true);
                                 }
                               });
@@ -1460,7 +1470,7 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
   }
 
   ecl.connect();
-  shepherd.listunspent(ecl, changeAddress, network, network === 'komodo' ? true : false, true)
+  shepherd.listunspent(ecl, changeAddress, network, true, true)
   .then((utxoList) => {
     ecl.close();
 
@@ -1488,16 +1498,18 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
           }
         } else {
           utxoListFormatted.push({
-            txid: utxoList[i]['tx_hash'],
-            vout: utxoList[i]['tx_pos'],
-            value: Number(utxoList[i].value),
-            height: utxoList[i].height,
+            txid: utxoList[i].txid,
+            vout: utxoList[i].vout,
+            value: Number(utxoList[i].amountSats),
             verified: utxoList[i].verified ? utxoList[i].verified : false,
           });
         }
       }
 
-      console.log('electrum listunspent ==>');
+      console.log('electrum listunspent unformatted ==>');
+      console.log(utxoList);
+
+      console.log('electrum listunspent formatted ==>');
       console.log(utxoListFormatted);
 
       const _maxSpendBalance = Number(shepherd.maxSpendBalance(utxoListFormatted));
@@ -1608,7 +1620,8 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
 
           const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, inputs, _change, value);
 
-          if (!push) {
+          if (!push ||
+              push === 'false') {
             const successObj = {
               msg: 'success',
               result: {
@@ -1634,24 +1647,44 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
             .then((txid) => {
               ecl.close();
 
-              const successObj = {
-                msg: 'success',
-                result: {
-                  utxoSet: inputs,
-                  change: _change,
-                  fee,
-                  // wif,
-                  value,
-                  outputAddress,
-                  changeAddress,
-                  network,
-                  rawtx: _rawtx,
-                  txid,
-                  utxoVerified,
-                },
-              };
+              if (txid &&
+                  txid.indexOf('bad-txns-inputs-spent') > -1) {
+                const successObj = {
+                  msg: 'error',
+                  result: 'bad transaction inputs spent',
+                };
 
-              res.end(JSON.stringify(successObj));
+                res.end(JSON.stringify(successObj));
+              } else {
+                if (txid &&
+                    txid.length === 64) {
+                  const successObj = {
+                    msg: 'success',
+                    result: {
+                      utxoSet: inputs,
+                      change: _change,
+                      fee,
+                      // wif,
+                      value,
+                      outputAddress,
+                      changeAddress,
+                      network,
+                      rawtx: _rawtx,
+                      txid,
+                      utxoVerified,
+                    },
+                  };
+
+                  res.end(JSON.stringify(successObj));
+                } else {
+                  const successObj = {
+                    msg: 'error',
+                    result: 'cant broadcast transaction',
+                  };
+
+                  res.end(JSON.stringify(successObj));
+                }
+              }
             });
           }
         }
@@ -1786,7 +1819,8 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
                           if (verify) {
                             shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
                             .then((verifyMerkleRes) => {
-                              if (verifyMerkleRes && verifyMerkleRes === CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                              if (verifyMerkleRes &&
+                                  verifyMerkleRes === CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
                                 verifyMerkleRes = false;
                               }
 
