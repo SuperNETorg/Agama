@@ -25,7 +25,7 @@ const CoinKey = require('coinkey')
 const bitcoinJS = require('bitcoinjs-lib');
 const coinSelect = require('coinselect');
 const fixPath = require('fix-path');
-var crypto = require('crypto')
+var crypto = require('crypto');
 
 var ps = require('ps-node');
 var setconf = require('../private/setconf.js');
@@ -58,6 +58,10 @@ let electrumServers = {
     proto: 'tcp',
     txfee: 10000,
     abbr: 'REVS',
+    serverList: [
+      '173.212.225.176:50050',
+      '136.243.45.140:50050'
+    ]
   },
   jumblr: {
     address: '173.212.225.176',
@@ -65,6 +69,10 @@ let electrumServers = {
     proto: 'tcp',
     txfee: 10000,
     abbr: 'JUMBLR',
+    serverList: [
+      '173.212.225.176:50051',
+      '136.243.45.140:50051'
+    ],
   },
   komodo: { // !estimatefee
     address: '173.212.225.176',
@@ -1603,7 +1611,7 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
             !outputs) {
           const successObj = {
             msg: 'error',
-            result: 'Cant find best fit utxo. Try lower amount.',
+            result: 'Can\'t find best fit utxo. Try lower amount.',
           };
 
           res.end(JSON.stringify(successObj));
@@ -1651,38 +1659,105 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
                   txid.indexOf('bad-txns-inputs-spent') > -1) {
                 const successObj = {
                   msg: 'error',
-                  result: 'bad transaction inputs spent',
+                  result: 'Bad transaction inputs spent',
+                  raw: {
+                    utxoSet: inputs,
+                    change: _change,
+                    fee,
+                    value,
+                    outputAddress,
+                    changeAddress,
+                    network,
+                    rawtx: _rawtx,
+                    txid,
+                    utxoVerified,
+                  },
                 };
 
                 res.end(JSON.stringify(successObj));
               } else {
                 if (txid &&
                     txid.length === 64) {
-                  const successObj = {
-                    msg: 'success',
-                    result: {
-                      utxoSet: inputs,
-                      change: _change,
-                      fee,
-                      // wif,
-                      value,
-                      outputAddress,
-                      changeAddress,
-                      network,
-                      rawtx: _rawtx,
-                      txid,
-                      utxoVerified,
-                    },
-                  };
+                  if (txid.indexOf('bad-txns-in-belowout') > -1) {
+                    const successObj = {
+                      msg: 'error',
+                      result: 'Bad transaction inputs spent',
+                      raw: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
 
-                  res.end(JSON.stringify(successObj));
+                    res.end(JSON.stringify(successObj));
+                  } else {
+                    const successObj = {
+                      msg: 'success',
+                      result: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        // wif,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
                 } else {
-                  const successObj = {
-                    msg: 'error',
-                    result: 'cant broadcast transaction',
-                  };
+                  if (txid &&
+                      txid.indexOf('bad-txns-in-belowout') > -1) {
+                    const successObj = {
+                      msg: 'error',
+                      result: 'Bad transaction inputs spent',
+                      raw: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
 
-                  res.end(JSON.stringify(successObj));
+                    res.end(JSON.stringify(successObj));
+                  } else {
+                    const successObj = {
+                      msg: 'error',
+                      result: 'Can\'t broadcast transaction',
+                      raw: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
                 }
               }
             });
