@@ -3,6 +3,7 @@ const assetChainPorts = {
   'CHIPS': '57776',
   'SUPERNET': '11341',
   'REVS': '10196',
+  'MNZ': '14337',
   'WLC': '12167',
   'PANGEA': '14068',
   'DEX': '11890',
