@@ -1499,11 +1499,6 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
             interestSats: Number(utxoList[i].interestSats),
             verified: utxoList[i].verified ? utxoList[i].verified : false,
           });
-
-          if (Number(utxoList[i].interestSats) > interestClaimThreshold) {
-            totalInterest += Number(utxoList[i].interestSats);
-            totalInterestUTXOCount++;
-          }
         } else {
           utxoListFormatted.push({
             txid: utxoList[i].txid,
@@ -1576,6 +1571,13 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
           if (!inputs[i].verified) {
             utxoVerified = false;
             break;
+          }
+        }
+
+        for (let i = 0; i < inputs.length; i++) {
+          if (Number(inputs[i].interestSats) > interestClaimThreshold) {
+            totalInterest += Number(inputs[i].interestSats);
+            totalInterestUTXOCount++;
           }
         }
       }
