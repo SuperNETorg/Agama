@@ -21,7 +21,7 @@ const Promise = require('bluebird');
 const {shell} = require('electron');
 const {execFile} = require('child_process');
 const sha256 = require('sha256');
-const CoinKey = require('coinkey')
+const CoinKey = require('coinkey');
 const bitcoinJS = require('bitcoinjs-lib');
 const coinSelect = require('coinselect');
 const fixPath = require('fix-path');
@@ -63,7 +63,29 @@ let electrumServers = {
       '136.243.45.140:50050'
     ]
   },
-  jumblr: {
+  mnz: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50053,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'MNZ',
+    serverList: [
+      '173.212.225.176:50053',
+      '136.243.45.140:50053'
+    ]
+  },
+  wlc: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50052,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'WLC',
+    serverList: [
+      '173.212.225.176:50052',
+      '136.243.45.140:50052'
+    ]
+  },
+  jumblr: { // !estimatefee
     address: '173.212.225.176',
     port: 50051,
     proto: 'tcp',
