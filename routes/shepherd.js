@@ -3676,7 +3676,8 @@ shepherd.post('/cli', function(req, res, next) {
           res.end(body);
         }
       });*/
-      if (_cmd === 'debug' && _chain !== 'CHIPS') {
+      if (_cmd === 'debug' &&
+          _chain !== 'CHIPS') {
         if (shepherd.nativeCoindList[_chain.toLowerCase()]) {
           const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
           let coindDebugLogLocation;
@@ -3755,9 +3756,11 @@ shepherd.post('/cli', function(req, res, next) {
         });
       }
     } else {
-      let _coindCliBin = komodocliBin + (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params;
+      let _coindCliBin = komodocliBin;
 
-      if (shepherd.nativeCoindList[_chain.toLowerCase()]) {
+      if (shepherd.nativeCoindList &&
+          _chain &&
+          shepherd.nativeCoindList[_chain.toLowerCase()]) {
         _coindCliBin = `${coindRootDir}/${_chain.toLowerCase()}/${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}-cli`;
       }
 
@@ -4846,7 +4849,7 @@ function setConf(flock, coind) {
 
   const CheckFileExists = function() {
     return new Promise(function(resolve, reject) {
-      const result = 'Check Conf file exists is done'
+      const result = 'Check Conf file exists is done';
 
       const confFileExist = fs.ensureFileSync(DaemonConfPath);
       if (confFileExist) {
@@ -5098,7 +5101,7 @@ function getConf(flock, coind) {
   }
 
   shepherd.log(flock);
-  shepherd.log('getconf coind ' + coind);
+  shepherd.log(`getconf coind ${coind}`);
   shepherd.writeLog(`getconf flock: ${flock}`);
 
   if (os.platform() === 'darwin') {
@@ -5153,7 +5156,7 @@ function getConf(flock, coind) {
   }
 
   shepherd.writeLog(`getconf path: ${DaemonConfPath}`);
-  shepherd.log('daemon path: ' + DaemonConfPath);
+  shepherd.log(`daemon path: ${DaemonConfPath}`);
   return DaemonConfPath;
 }
 
@@ -5188,7 +5191,7 @@ shepherd.SystemInfo = function() {
     'cpu_cores': os.cpus().length,
     'platform': os.platform(),
     'os_release': os.release(),
-    'os_type': os.type()
+    'os_type': os.type(),
   };
 
   return os_data;
