@@ -61,7 +61,7 @@ let electrumServers = {
     serverList: [
       '173.212.225.176:50050',
       '136.243.45.140:50050'
-    ]
+    ],
   },
   mnz: { // !estimatefee
     address: '173.212.225.176',
@@ -72,7 +72,7 @@ let electrumServers = {
     serverList: [
       '173.212.225.176:50053',
       '136.243.45.140:50053'
-    ]
+    ],
   },
   wlc: { // !estimatefee
     address: '173.212.225.176',
@@ -83,7 +83,7 @@ let electrumServers = {
     serverList: [
       '173.212.225.176:50052',
       '136.243.45.140:50052'
-    ]
+    ],
   },
   jumblr: { // !estimatefee
     address: '173.212.225.176',
@@ -3561,9 +3561,20 @@ shepherd.quitKomodod = function(timeout = 100) {
           clearInterval(coindExitInterval[key]);
         }
 
+        // workaround for AGT-65
+        const _port = assetChainPorts[key];
+        portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+          // Status is 'open' if currently in use or 'closed' if available
+          if (status === 'closed') {
+            delete coindInstanceRegistry[key];
+            clearInterval(coindExitInterval[key]);
+          }
+        });
+
         if (error !== null) {
           shepherd.log(`exec error: ${error}`);
         }
+
         if (key === 'CHIPS') {
           setTimeout(function() {
             shepherd.killRogueProcess('chips-cli');
