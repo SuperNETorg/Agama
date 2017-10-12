@@ -25,7 +25,7 @@ const CoinKey = require('coinkey');
 const bitcoinJS = require('bitcoinjs-lib');
 const coinSelect = require('coinselect');
 const fixPath = require('fix-path');
-var crypto = require('crypto');
+const crypto = require('crypto');
 
 var ps = require('ps-node');
 var setconf = require('../private/setconf.js');
@@ -209,8 +209,157 @@ shepherd.appConfig = _appConfig.config;
 
 if (os.platform() === 'darwin') {
   fixPath();
-  var agamaDir = `${process.env.HOME}/Library/Application Support/agama`,
-      agamaTestDir = `${process.env.HOME}/Library/Application Support/agama/test`,
+  var agamaDir = `${process.env.HOME}/Library/Application Support/Agama`;
+}
+
+if (os.platform() === 'linux') {
+  var agamaDir = `${process.env.HOME}/.agama`;
+}
+
+if (os.platform() === 'win32') {
+  var agamaDir = `${process.env.APPDATA}/Agama`;
+  agamaDir = path.normalize(agamaDir);
+}
+
+shepherd.log = function(msg) {
+  if (shepherd.appConfig.dev ||
+      shepherd.appConfig.debug) {
+    console.log(msg);
+  }
+
+  appRuntimeLog.push({
+    time: Date.now(),
+    msg: msg,
+  });
+};
+
+shepherd.writeLog = function(data) {
+  const logLocation = `${agamaDir}/shepherd`;
+  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
+
+  if (shepherd.appConfig.debug) {
+    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
+      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
+        if (err) {
+          shepherd.log('error writing log file');
+        }
+      });
+    } else {
+      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
+        if (err) {
+          shepherd.log('error writing log file');
+        }
+      });
+    }
+  }
+}
+
+shepherd.loadLocalConfig = function() {
+  if (fs.existsSync(`${agamaDir}/config.json`)) {
+    let localAppConfig = fs.readFileSync(`${agamaDir}/config.json`, 'utf8');
+
+    shepherd.log('app config set from local file');
+    shepherd.writeLog('app config set from local file');
+
+    // find diff between local and hardcoded configs
+    // append diff to local config
+    const compareJSON = function(obj1, obj2) {
+      let result = {};
+
+      for (let i in obj1) {
+        if (!obj2.hasOwnProperty(i)) {
+          result[i] = obj1[i];
+        }
+      }
+
+      return result;
+    };
+
+    if (localAppConfig) {
+      const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
+
+      if (Object.keys(compareConfigs).length) {
+        const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
+
+        shepherd.log('config diff is found, updating local config');
+        shepherd.log('config diff:');
+        shepherd.log(compareConfigs);
+        shepherd.writeLog('aconfig diff is found, updating local config');
+        shepherd.writeLog('config diff:');
+        shepherd.writeLog(compareConfigs);
+
+        shepherd.saveLocalAppConf(newConfig);
+        return newConfig;
+      } else {
+        return JSON.parse(localAppConfig);
+      }
+    } else {
+      return shepherd.appConfig;
+    }
+  } else {
+    shepherd.log('local config file is not found!');
+    shepherd.writeLog('local config file is not found!');
+    shepherd.saveLocalAppConf(shepherd.appConfig);
+
+    return shepherd.appConfig;
+  }
+};
+
+shepherd.saveLocalAppConf = function(appSettings) {
+  let appConfFileName = `${agamaDir}/config.json`;
+
+  _fs.access(agamaDir, fs.constants.R_OK, function(err) {
+    if (!err) {
+
+      const FixFilePermissions = function() {
+        return new Promise(function(resolve, reject) {
+          const result = 'config.json file permissions updated to Read/Write';
+
+          fsnode.chmodSync(appConfFileName, '0666');
+
+          setTimeout(function() {
+            shepherd.log(result);
+            shepherd.writeLog(result);
+            resolve(result);
+          }, 1000);
+        });
+      }
+
+      const FsWrite = function() {
+        return new Promise(function(resolve, reject) {
+          const result = 'config.json write file is done';
+
+          fs.writeFile(appConfFileName,
+                      JSON.stringify(appSettings)
+                      .replace(/,/g, ',\n') // format json in human readable form
+                      .replace(/:/g, ': ')
+                      .replace(/{/g, '{\n')
+                      .replace(/}/g, '\n}'), 'utf8', function(err) {
+            if (err)
+              return shepherd.log(err);
+          });
+
+          fsnode.chmodSync(appConfFileName, '0666');
+          setTimeout(function() {
+            shepherd.log(result);
+            shepherd.log(`app conf.json file is created successfully at: ${agamaDir}`);
+            shepherd.writeLog(`app conf.json file is created successfully at: ${agamaDir}`);
+            resolve(result);
+          }, 2000);
+        });
+      }
+
+      FsWrite()
+      .then(FixFilePermissions());
+    }
+  });
+}
+
+shepherd.appConfig = shepherd.loadLocalConfig();
+
+if (os.platform() === 'darwin') {
+  fixPath();
+  var agamaTestDir = `${process.env.HOME}/Library/Application Support/Agama/test`,
       komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
       komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`,
@@ -220,13 +369,12 @@ if (os.platform() === 'darwin') {
       zcashParamsDir = `${process.env.HOME}/Library/Application Support/ZcashParams`,
       chipsBin = path.join(__dirname, '../assets/bin/osx/chipsd'),
       chipscliBin = path.join(__dirname, '../assets/bin/osx/chips-cli'),
-      komodoDir = `${process.env.HOME}/Library/Application Support/Chips`,
+      chipsDir = `${process.env.HOME}/Library/Application Support/Chips`,
       coindRootDir = path.join(__dirname, '../assets/bin/osx/dex/coind');
 }
 
 if (os.platform() === 'linux') {
-  var agamaDir = `${process.env.HOME}/.agama`,
-      agamaTestDir = `${process.env.HOME}/.agama/test`,
+  var agamaTestDir = `${process.env.HOME}/.agama/test`,
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
       komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`,
@@ -238,9 +386,7 @@ if (os.platform() === 'linux') {
 }
 
 if (os.platform() === 'win32') {
-  var agamaDir = `${process.env.APPDATA}/Agama`;
-      agamaDir = path.normalize(agamaDir);
-      agamaTestDir = `${process.env.APPDATA}/Agama/test`;
+  var agamaTestDir = `${process.env.APPDATA}/Agama/test`;
       agamaTestDir = path.normalize(agamaTestDir);
       komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
       komododBin = path.normalize(komododBin),
@@ -2079,18 +2225,6 @@ shepherd.getAppRuntimeLog = function() {
   });
 };
 
-shepherd.log = function(msg) {
-  if (shepherd.appConfig.dev ||
-      shepherd.appConfig.debug) {
-    console.log(msg);
-  }
-
-  appRuntimeLog.push({
-    time: Date.now(),
-    msg: msg,
-  });
-};
-
 shepherd.startSPV = function(coin) {
   if (coin === 'KMD+REVS+JUMBLR') {
     shepherd.addElectrumCoin('KMD');
@@ -2826,27 +2960,6 @@ shepherd.readVersionFile = function() {
   const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
 
   return localVersionFile;
-}
-
-shepherd.writeLog = function(data) {
-  const logLocation = `${agamaDir}/shepherd`;
-  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
-
-  if (shepherd.appConfig.debug) {
-    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
-      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
-        if (err) {
-          shepherd.log('error writing log file');
-        }
-      });
-    } else {
-      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
-        if (err) {
-          shepherd.log('error writing log file');
-        }
-      });
-    }
-  }
 }
 
 shepherd.createAgamaDirs = function() {
@@ -3867,109 +3980,6 @@ shepherd.post('/appconf/reset', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.saveLocalAppConf = function(appSettings) {
-  let appConfFileName = `${agamaDir}/config.json`;
-
-  _fs.access(agamaDir, fs.constants.R_OK, function(err) {
-    if (!err) {
-
-      const FixFilePermissions = function() {
-        return new Promise(function(resolve, reject) {
-          const result = 'config.json file permissions updated to Read/Write';
-
-          fsnode.chmodSync(appConfFileName, '0666');
-
-          setTimeout(function() {
-            shepherd.log(result);
-            shepherd.writeLog(result);
-            resolve(result);
-          }, 1000);
-        });
-      }
-
-      const FsWrite = function() {
-        return new Promise(function(resolve, reject) {
-          const result = 'config.json write file is done';
-
-          fs.writeFile(appConfFileName,
-                      JSON.stringify(appSettings)
-                      .replace(/,/g, ',\n') // format json in human readable form
-                      .replace(/:/g, ': ')
-                      .replace(/{/g, '{\n')
-                      .replace(/}/g, '\n}'), 'utf8', function(err) {
-            if (err)
-              return shepherd.log(err);
-          });
-
-          fsnode.chmodSync(appConfFileName, '0666');
-          setTimeout(function() {
-            shepherd.log(result);
-            shepherd.log(`app conf.json file is created successfully at: ${agamaDir}`);
-            shepherd.writeLog(`app conf.json file is created successfully at: ${agamaDir}`);
-            resolve(result);
-          }, 2000);
-        });
-      }
-
-      FsWrite()
-      .then(FixFilePermissions());
-    }
-  });
-}
-
-shepherd.loadLocalConfig = function() {
-  if (fs.existsSync(`${agamaDir}/config.json`)) {
-    let localAppConfig = fs.readFileSync(`${agamaDir}/config.json`, 'utf8');
-
-    shepherd.log('app config set from local file');
-    shepherd.writeLog('app config set from local file');
-
-    // find diff between local and hardcoded configs
-    // append diff to local config
-    const compareJSON = function(obj1, obj2) {
-      let result = {};
-
-      for (let i in obj1) {
-        if (!obj2.hasOwnProperty(i)) {
-          result[i] = obj1[i];
-        }
-      }
-
-      return result;
-    };
-
-    if (localAppConfig) {
-      const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-
-      if (Object.keys(compareConfigs).length) {
-        const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
-
-        shepherd.log('config diff is found, updating local config');
-        shepherd.log('config diff:');
-        shepherd.log(compareConfigs);
-        shepherd.writeLog('aconfig diff is found, updating local config');
-        shepherd.writeLog('config diff:');
-        shepherd.writeLog(compareConfigs);
-
-        shepherd.saveLocalAppConf(newConfig);
-        return newConfig;
-      } else {
-        return JSON.parse(localAppConfig);
-      }
-    } else {
-      return shepherd.appConfig;
-    }
-  } else {
-    shepherd.log('local config file is not found!');
-    shepherd.writeLog('local config file is not found!');
-    shepherd.saveLocalAppConf(shepherd.appConfig);
-
-    return shepherd.appConfig;
-  }
-};
-
-shepherd.appConfig = shepherd.loadLocalConfig();
-
 shepherd.log(`agama dir: ${agamaDir}`);
 shepherd.log('--------------------------')
 shepherd.log(`komodo dir: ${komododBin}`);
@@ -4770,24 +4780,6 @@ function herder(flock, data, coind) {
 }
 
 shepherd.setConfKMD = function(isChips) {
-  let komodoDir;
-  let zcashDir;
-
-  if (os.platform() === 'darwin') {
-    komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`;
-    ZcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
-  }
-
-  if (os.platform() === 'linux') {
-    komodoDir = `${process.env.HOME}/.komodo`;
-    ZcashDir = `${process.env.HOME}/.zcash`;
-  }
-
-  if (os.platform() === 'win32') {
-    komodoDir = `${process.env.APPDATA}/Komodo`;
-    ZcashDir = `${process.env.APPDATA}/Zcash`;
-  }
-
   // check if kmd conf exists
   _fs.access(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
     if (err) {
@@ -4810,9 +4802,6 @@ shepherd.setConfKMD = function(isChips) {
 }
 
 function setConf(flock, coind) {
-  let komodoDir;
-  let chipsDir;
-  let zcashDir;
   let nativeCoindDir;
   let DaemonConfPath;
 
@@ -4820,23 +4809,14 @@ function setConf(flock, coind) {
   shepherd.writeLog(`setconf ${flock}`);
 
   if (os.platform() === 'darwin') {
-    komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`;
-    chipsDir = `${process.env.HOME}/Library/Application Support/Chips`;
-    ZcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
     nativeCoindDir = coind ? `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 
   if (os.platform() === 'linux') {
-    komodoDir = `${process.env.HOME}/.komodo`;
-    chipsDir = `${process.env.HOME}/.chips`;
-    ZcashDir = `${process.env.HOME}/.zcash`;
     nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
   }
 
   if (os.platform() === 'win32') {
-    komodoDir = `${process.env.APPDATA}/Komodo`;
-    chipsDir = `${process.env.APPDATA}/Chips`;
-    ZcashDir = `${process.env.APPDATA}/Zcash`;
     nativeCoindDir = coind ?  `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 
@@ -5123,9 +5103,6 @@ function setConf(flock, coind) {
 }
 
 function getConf(flock, coind) {
-  let komodoDir = '';
-  let ZcashDir = '';
-  let chipsDir = '';
   let DaemonConfPath = '';
   let nativeCoindDir;
 
@@ -5138,23 +5115,14 @@ function getConf(flock, coind) {
   shepherd.writeLog(`getconf flock: ${flock}`);
 
   if (os.platform() === 'darwin') {
-    komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`;
-    ZcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
-    chipsDir = `${process.env.HOME}/Library/Application Support/Chips`;
     nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
   }
 
   if (os.platform() === 'linux') {
-    komodoDir = `${process.env.HOME}/.komodo`;
-    ZcashDir = `${process.env.HOME}/.zcash`;
-    chipsDir = `${process.env.HOME}/.chips`;
     nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
   }
 
   if (os.platform() === 'win32') {
-    komodoDir = `${process.env.APPDATA}/Komodo`;
-    ZcashDir = `${process.env.APPDATA}/Zcash`;
-    chipsDir = `${process.env.APPDATA}/Chips`;
     nativeCoindDir = coind ? `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 

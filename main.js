@@ -29,6 +29,7 @@ if (osPlatform === 'linux') {
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd');
 var guiapp = express();
+var appConfig = shepherd.loadLocalConfig(); // load app config
 
 const nativeCoindList = shepherd.scanNativeCoindBins();
 shepherd.setVar('nativeCoindList', nativeCoindList);
@@ -77,7 +78,6 @@ shepherd.log(`platform: ${osPlatform}`);
 shepherd.log(`os_release: ${os.release()}`);
 shepherd.log(`os_type: ${os.type()}`);
 
-var appConfig = shepherd.loadLocalConfig(); // load app config
 appConfig['daemonOutput'] = false; // shadow setting
 
 let __defaultAppSettings = require('./routes/appConfig.js').config;
@@ -305,7 +305,7 @@ function createAppSettingsWindow() {
 	// initialise window
 	appSettingsWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 750,
-		height: !appConfig.experimentalFeatures ? 570 : 700,
+		height: 570,
 		frame: false,
 		icon: agamaIcon,
 		show: false,
