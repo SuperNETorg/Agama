@@ -24,8 +24,16 @@ chmod +x assets/artifacts.supernet.org/latest/osx/iguana \
 #cp -rvf assets/artifacts.supernet.org/latest/osx/* assets/bin/osx/
 mkdir assets/bin
 echo Moving OSX bins to assets/bin
-mv assets/artifacts.supernet.org/latest/osx assets/bin/osx
-
+wget https://supernetorg.bintray.com/binaries/komodo_OSX_latest.zip
+checksum=`shasum -a 256 komodo_OSX_latest.zip | awk '{ print $1 }'`
+if [ "$checksum" = "c20a1b7268dd0d9bbc8984a0e76cc868d8b4479af18cd1dde4406f63b7f12255" ]; then
+    echo "Checksum is correct."
+    unzip komodo_OSX_latest.zip
+    mv komodo_OSX_latest assets/bin/osx
+  else
+    echo "Checksum is incorrect!"
+    exit 0
+fi
 echo =========================================
 echo Step: Moving Windows binaries from artifacts to assets/bin/win64/
 #echo
