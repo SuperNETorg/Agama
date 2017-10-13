@@ -208,6 +208,10 @@ const zcashParamsDownloadLinks = {
     proving: 'https://agama.komodoplatform.com/file/supernet/sprout-proving.key',
     verifying: 'https://agama.komodoplatform.com/file/supernet/sprout-verifying.key',
   },
+  'agama-yq0ysrdtr.stackpathdns.com': {
+    proving: 'http://agama-yq0ysrdtr.stackpathdns.com/file/supernet/sprout-proving.key',
+    verifying: 'http://agama-yq0ysrdtr.stackpathdns.com/file/supernet/sprout-verifying.key',
+  },
   'zcash.dl.mercerweiss.com': {
     proving: 'https://zcash.dl.mercerweiss.com/sprout-proving.key',
     verifying: 'https://zcash.dl.mercerweiss.com/sprout-verifying.key',
