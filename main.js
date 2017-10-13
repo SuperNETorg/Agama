@@ -545,6 +545,8 @@ app.on('activate', function() {
 	if (mainWindow === null) {}
 });
 
+app.commandLine.appendSwitch('ignore-certificate-errors'); // dirty hack
+
 function formatBytes(bytes, decimals) {
   if (bytes === 0) {
     return '0 Bytes';
