@@ -203,6 +203,19 @@ let electrumServers = {
   },
 };
 
+const zcashParamsDownloadLinks = {
+  'agama.komodoplatform.com': {
+    proving: 'https://agama.komodoplatform.com/file/supernet/sprout-proving.key',
+    verifying: 'https://agama.komodoplatform.com/file/supernet/sprout-verifying.key',
+  },
+  'zcash.dl.mercerweiss.com': {
+    proving: 'https://zcash.dl.mercerweiss.com/sprout-proving.key',
+    verifying: 'https://zcash.dl.mercerweiss.com/sprout-verifying.key',
+  },
+};
+
+shepherd.zcashParamsDownloadLinks = zcashParamsDownloadLinks;
+
 const CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';
 
 shepherd.appConfig = _appConfig.config;
@@ -2570,7 +2583,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ payload: _payload }),
-        timeout: 60000,
+        timeout: 120000,
       };
 
       request(options, function(error, response, body) {
@@ -2925,16 +2938,16 @@ shepherd.zcashParamsExist = function() {
   };
 
   if (_checkList.rootDir &&
-      _checkList.provingKey &&
+      _checkList.provingKey ||
       _checkList.verifyingKey) {
     // verify each key size
-    const _provingKeySize = fs.lstatSync(`${zcashParamsDir}/sprout-proving.key`);
-    const _verifyingKeySize = fs.lstatSync(`${zcashParamsDir}/sprout-verifying.key`);
+    const _provingKeySize = _checkList.provingKey ? fs.lstatSync(`${zcashParamsDir}/sprout-proving.key`) : 0;
+    const _verifyingKeySize = _checkList.verifyingKey ? fs.lstatSync(`${zcashParamsDir}/sprout-verifying.key`) : 0;
 
-    if (_provingKeySize.size === 910173851) {
+    if (Number(_provingKeySize.size) === 910173851) { // bytes
       _checkList.provingKeySize = true;
     }
-    if (_verifyingKeySize.size === 1449) {
+    if (Number(_verifyingKeySize.size) === 1449) {
       _checkList.verifyingKeySize = true;
     }
 
@@ -3231,6 +3244,7 @@ let binsToUpdate = [];
  *  type:
  *  params:
  */
+ // TODO: promises
 shepherd.get('/update/bins/check', function(req, res, next) {
   const rootLocation = path.join(__dirname, '../');
   const successObj = {
@@ -3304,16 +3318,19 @@ shepherd.get('/update/bins', function(req, res, next) {
       localFile: `${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`,
       onProgress: function(received, total) {
         const percentage = (received * 100) / total;
-        shepherd.io.emit('patch', {
-          msg: {
-            type: 'bins-update',
-            status: 'progress',
-            file: binsToUpdate[i].name,
-            bytesTotal: total,
-            bytesReceived: received,
-          },
-        });
-        shepherd.log(`${binsToUpdate[i].name} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+
+        if (percentage.toString().indexOf('.10') > -1) {
+          shepherd.io.emit('patch', {
+            msg: {
+              type: 'bins-update',
+              status: 'progress',
+              file: binsToUpdate[i].name,
+              bytesTotal: total,
+              bytesReceived: received,
+            },
+          });
+          // shepherd.log(`${binsToUpdate[i].name} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+        }
       }
     })
     .then(function() {
@@ -3368,9 +3385,8 @@ shepherd.updateAgama = function() {
     localFile: `${rootLocation}patch.zip`,
     onProgress: function(received, total) {
       const percentage = (received * 100) / total;
-      if (Math.floor(percentage) % 5 === 0 ||
-          Math.floor(percentage) % 10 === 0) {
-        shepherd.log(`patch ${percentage}% | ${received} bytes out of ${total} bytes.`);
+
+      if (percentage.toString().indexOf('.10') > -1) {
         shepherd.io.emit('patch', {
           msg: {
             status: 'progress',
@@ -3380,6 +3396,7 @@ shepherd.updateAgama = function() {
             bytesReceived: received,
           },
         });
+        //shepherd.log(`patch ${percentage}% | ${received} bytes out of ${total} bytes.`);
       }
     }
   })
@@ -3493,6 +3510,75 @@ shepherd.get('/unpack', function(req, res, next) {
   };
 
   res.end(JSON.stringify(successObj));
+});
+
+/*
+ *  Update bins
+ *  type:
+ *  params:
+ */
+shepherd.get('/zcparamsdl', function(req, res, next) {
+  // const dlLocation = zcashParamsDir + '/test';
+  const dlLocation = zcashParamsDir;
+  const dlOption = req.query.dloption;
+
+  const successObj = {
+    msg: 'success',
+    result: 'zcash params dl started',
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  for (let key in zcashParamsDownloadLinks[dlOption]) {
+    downloadFile({
+      remoteFile: zcashParamsDownloadLinks[dlOption][key],
+      localFile: dlLocation + '/' + 'sprout-' + key + '.key',
+      onProgress: function(received, total) {
+        const percentage = (received * 100) / total;
+
+        if (percentage.toString().indexOf('.10') > -1) {
+          shepherd.io.emit('zcparams', {
+            msg: {
+              type: 'zcpdownload',
+              status: 'progress',
+              file: key,
+              bytesTotal: total,
+              bytesReceived: received,
+              progress: percentage,
+            },
+          });
+          // shepherd.log(`${key} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+        }
+      }
+    })
+    .then(function() {
+      const checkZcashParams = shepherd.zcashParamsExist();
+
+      shepherd.log(`${key} dl done`);
+
+      if (checkZcashParams.error) {
+        shepherd.io.emit('zcparams', {
+          msg: {
+            type: 'zcpdownload',
+            file: key,
+            status: 'error',
+            message: 'size mismatch',
+            progress: 100,
+          },
+        });
+      } else {
+        shepherd.io.emit('zcparams', {
+          msg: {
+            type: 'zcpdownload',
+            file: key,
+            progress: 100,
+            status: 'done',
+          },
+        });
+        shepherd.log(`file ${key} succesfully downloaded`);
+      }
+    });
+  }
 });
 
 /*

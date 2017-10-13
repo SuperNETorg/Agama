@@ -389,6 +389,7 @@ function createWindow(status) {
 		mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
 		mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
 		mainWindow.nativeCoindList = nativeCoindList;
+		mainWindow.zcashParamsDownloadLinks = shepherd.zcashParamsDownloadLinks;
 
 		if (appConfig.dev) {
 			mainWindow.loadURL('http://127.0.0.1:3000');
