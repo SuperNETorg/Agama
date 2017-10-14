@@ -390,6 +390,10 @@ function createWindow(status) {
 		mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
 		mainWindow.nativeCoindList = nativeCoindList;
 		mainWindow.zcashParamsDownloadLinks = shepherd.zcashParamsDownloadLinks;
+		mainWindow.isWindows = os.platform() === 'win32' ? true : false;
+		mainWindow.appExit = appExit;
+		mainWindow.getMaxconKMDConf = shepherd.getMaxconKMDConf;
+		mainWindow.setMaxconKMDConf = shepherd.setMaxconKMDConf;
 
 		if (appConfig.dev) {
 			mainWindow.loadURL('http://127.0.0.1:3000');

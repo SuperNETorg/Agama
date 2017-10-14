@@ -224,18 +224,21 @@ const CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data
 
 shepherd.appConfig = _appConfig.config;
 
-if (os.platform() === 'darwin') {
-  fixPath();
-  var agamaDir = `${process.env.HOME}/Library/Application Support/Agama`;
-}
+var agamaDir;
+switch (os.platform()) {
+  case 'darwin':
+    fixPath();
+    agamaDir = `${process.env.HOME}/Library/Application Support/Agama`;
+    break;
 
-if (os.platform() === 'linux') {
-  var agamaDir = `${process.env.HOME}/.agama`;
-}
+  case 'linux':
+    agamaDir = `${process.env.HOME}/.agama`;
+    break;
 
-if (os.platform() === 'win32') {
-  var agamaDir = `${process.env.APPDATA}/Agama`;
-  agamaDir = path.normalize(agamaDir);
+  case 'win32':
+    agamaDir = `${process.env.APPDATA}/Agama`;
+    agamaDir = path.normalize(agamaDir);
+    break;
 }
 
 shepherd.log = function(msg) {
@@ -3766,13 +3769,15 @@ shepherd.quitKomodod = function(timeout = 100) {
 
         // workaround for AGT-65
         const _port = assetChainPorts[key];
-        portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
-          // Status is 'open' if currently in use or 'closed' if available
-          if (status === 'closed') {
-            delete coindInstanceRegistry[key];
-            clearInterval(coindExitInterval[key]);
-          }
-        });
+        setTimeout(function() {
+          portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+            // Status is 'open' if currently in use or 'closed' if available
+            if (status === 'closed') {
+              delete coindInstanceRegistry[key];
+              clearInterval(coindExitInterval[key]);
+            }
+          });
+        }, 100);
 
         if (error !== null) {
           shepherd.log(`exec error: ${error}`);
@@ -3801,50 +3806,53 @@ shepherd.getConf = function(chain) {
   let _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
   _confLocation = chain === 'CHIPS' ? `${chipsDir}/chips.conf` : _confLocation;
 
+  console.log(`getconf chain ${chain}`);
    // any coind
-  if (shepherd.nativeCoindList[chain.toLowerCase()]) {
-    const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
-    let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
-
-    _confLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}.conf`;
-  }
-
-  if (fs.existsSync(_confLocation)) {
-    let _port = assetChainPorts[chain];
-    const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
-
-    // any coind
+  if (chain) {
     if (shepherd.nativeCoindList[chain.toLowerCase()]) {
-      _port = shepherd.nativeCoindList[chain.toLowerCase()].port;
+      const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+      let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
+
+      _confLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}.conf`;
     }
 
-    if (_rpcConf.length) {
-      let _match;
-      let parsedRpcConfig = {
-        user: '',
-        pass: '',
-        port: _port,
-      };
+    if (fs.existsSync(_confLocation)) {
+      let _port = assetChainPorts[chain];
+      const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
 
-      if (_match = _rpcConf.match(/rpcuser=\s*(.*)/)) {
-        parsedRpcConfig.user = _match[1];
-      }
-
-      if ((_match = _rpcConf.match(/rpcpass=\s*(.*)/)) ||
-          (_match = _rpcConf.match(/rpcpassword=\s*(.*)/))) {
-        parsedRpcConfig.pass = _match[1];
-      }
-
+      // any coind
       if (shepherd.nativeCoindList[chain.toLowerCase()]) {
-        rpcConf[chain] = parsedRpcConfig;
+        _port = shepherd.nativeCoindList[chain.toLowerCase()].port;
+      }
+
+      if (_rpcConf.length) {
+        let _match;
+        let parsedRpcConfig = {
+          user: '',
+          pass: '',
+          port: _port,
+        };
+
+        if (_match = _rpcConf.match(/rpcuser=\s*(.*)/)) {
+          parsedRpcConfig.user = _match[1];
+        }
+
+        if ((_match = _rpcConf.match(/rpcpass=\s*(.*)/)) ||
+            (_match = _rpcConf.match(/rpcpassword=\s*(.*)/))) {
+          parsedRpcConfig.pass = _match[1];
+        }
+
+        if (shepherd.nativeCoindList[chain.toLowerCase()]) {
+          rpcConf[chain] = parsedRpcConfig;
+        } else {
+          rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
+        }
       } else {
-        rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
+        shepherd.log(`${_confLocation} is empty`);
       }
     } else {
-      shepherd.log(`${_confLocation} is empty`);
+      shepherd.log(`${_confLocation} doesnt exist`);
     }
-  } else {
-    shepherd.log(`${_confLocation} doesnt exist`);
   }
 }
 
@@ -3874,7 +3882,7 @@ shepherd.post('/cli', function(req, res, next) {
     const _params = req.body.payload.params ? ` ${req.body.payload.params}` : '';
 
     if (!rpcConf[_chain]) {
-      shepherd.getConf(req.body.payload.chain === 'KMD' ? 'komodod' : req.body.payload.chain);
+      shepherd.getConf(req.body.payload.chain === 'KMD' || !req.body.payload.chain && shepherd.kmdMainPassiveMode ? 'komodod' : req.body.payload.chain);
     }
 
     if (_mode === 'default') {
@@ -3969,27 +3977,29 @@ shepherd.post('/cli', function(req, res, next) {
           };
         }
 
-        const options = {
-          url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
-          method: 'POST',
-          auth: {
-            'user': rpcConf[req.body.payload.chain].user,
-            'pass': rpcConf[req.body.payload.chain].pass
-          },
-          body: JSON.stringify(_body)
-        };
+        if (req.body.payload.chain) {
+          const options = {
+            url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
+            method: 'POST',
+            auth: {
+              'user': rpcConf[req.body.payload.chain].user,
+              'pass': rpcConf[req.body.payload.chain].pass
+            },
+            body: JSON.stringify(_body)
+          };
 
-        // send back body on both success and error
-        // this bit replicates iguana core's behaviour
-        request(options, function (error, response, body) {
-          if (response &&
-              response.statusCode &&
-              response.statusCode === 200) {
-            res.end(body);
-          } else {
-            res.end(body);
-          }
-        });
+          // send back body on both success and error
+          // this bit replicates iguana core's behaviour
+          request(options, function (error, response, body) {
+            if (response &&
+                response.statusCode &&
+                response.statusCode === 200) {
+              res.end(body);
+            } else {
+              res.end(body);
+            }
+          });
+        }
       }
     } else {
       let _coindCliBin = komodocliBin;
@@ -5192,6 +5202,58 @@ function setConf(flock, coind) {
   .then(CheckConf);
 }
 
+shepherd.getMaxconKMDConf = function() {
+  return new Promise((resolve, reject) => {
+    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', function(err, data) {
+      if (err) {
+        shepherd.log(`kmd conf maxconnections param read failed`);
+        resolve('unset');
+      } else {
+        const _maxcon = data.match(/maxconnections=\s*(.*)/);
+
+        if (!_maxcon) {
+          shepherd.log(`kmd conf maxconnections param is unset`);
+          resolve(false);
+        } else {
+          shepherd.log(`kmd conf maxconnections param is already set to ${_maxcon[1]}`);
+          resolve(_maxcon[1]);
+        }
+      }
+    });
+  });
+}
+
+shepherd.setMaxconKMDConf = function(limit) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', function(err, data) {
+      const _maxconVal = limit ? 1 : 10;
+
+      if (err) {
+        shepherd.log(`error reading ${komodoDir}/komodo.conf`);
+        resolve(false);
+      } else {
+        if (data.indexOf('maxconnections=') > -1) {
+          const _maxcon = data.match(/maxconnections=\s*(.*)/);
+
+          data = data.replace(`maxconnections=${_maxcon[1]}`, `maxconnections=${_maxconVal}`);
+        } else {
+          data = `${data}maxconnections=${_maxconVal}\n`;
+        }
+
+        fs.writeFile(`${komodoDir}/komodo.conf`, data, function(err) {
+          if (err) {
+            shepherd.log(`error writing ${komodoDir}/komodo.conf maxconnections=${_maxconVal}`);
+            resolve(false);
+          } else {
+            shepherd.log(`kmd conf maxconnections is set to ${_maxconVal}`);
+            resolve(true);
+          }
+        });
+      }
+    });
+  });
+}
+
 function getConf(flock, coind) {
   let DaemonConfPath = '';
   let nativeCoindDir;
@@ -5204,16 +5266,16 @@ function getConf(flock, coind) {
   shepherd.log(`getconf coind ${coind}`);
   shepherd.writeLog(`getconf flock: ${flock}`);
 
-  if (os.platform() === 'darwin') {
-    nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
-  }
-
-  if (os.platform() === 'linux') {
-    nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
-  }
-
-  if (os.platform() === 'win32') {
-    nativeCoindDir = coind ? `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+  switch (os.platform()) {
+    case 'darwin':
+      nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
+      break;
+    case 'linux':
+      nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
+      break;
+    case 'win32':
+      nativeCoindDir = coind ? `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+      break;
   }
 
   switch (flock) {
@@ -5248,6 +5310,7 @@ function getConf(flock, coind) {
 
   shepherd.writeLog(`getconf path: ${DaemonConfPath}`);
   shepherd.log(`daemon path: ${DaemonConfPath}`);
+
   return DaemonConfPath;
 }
 
