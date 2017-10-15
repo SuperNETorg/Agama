@@ -352,7 +352,7 @@ shepherd.saveLocalAppConf = function(appSettings) {
           fs.writeFile(appConfFileName,
                       JSON.stringify(appSettings)
                       .replace(/,/g, ',\n') // format json in human readable form
-                      .replace(/:/g, ': ')
+                      .replace(/":/g, '": ')
                       .replace(/{/g, '{\n')
                       .replace(/}/g, '\n}'), 'utf8', function(err) {
             if (err)
@@ -3752,7 +3752,14 @@ shepherd.quitKomodod = function(timeout = 100) {
       let _arg = [];
       if (chain && !shepherd.nativeCoindList[key.toLowerCase()] && key !== 'CHIPS') {
         _arg.push(`-ac_name=${chain}`);
+        
+        if (shepherd.appConfig.dataDir.length) {
+          _arg.push(`-datadir=${shepherd.appConfig.dataDir + (key !== 'komodod' ? '/' + key : '')}`);
+        }
+      } else if (key === 'komodod' && shepherd.appConfig.dataDir.length) {
+        _arg.push(`-datadir=${shepherd.appConfig.dataDir}`);
       }
+
       _arg.push('stop');
       execFile(`${_coindQuitCmd}`, _arg, function(error, stdout, stderr) {
         shepherd.log(`stdout: ${stdout}`);
@@ -3806,8 +3813,7 @@ shepherd.getConf = function(chain) {
   let _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
   _confLocation = chain === 'CHIPS' ? `${chipsDir}/chips.conf` : _confLocation;
 
-  console.log(`getconf chain ${chain}`);
-   // any coind
+  // any coind
   if (chain) {
     if (shepherd.nativeCoindList[chain.toLowerCase()]) {
       const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
@@ -4011,6 +4017,11 @@ shepherd.post('/cli', function(req, res, next) {
       }
 
       let _arg = (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params;
+
+      if (shepherd.appConfig.dataDir.length) {
+        _arg = `${_arg} -datadir=${shepherd.appConfig.dataDir  + (_chain ? '/' + key : '')}`;
+      }
+
       _arg = _arg.trim().split(' ');
       execFile(_coindCliBin, _arg, function(error, stdout, stderr) {
         shepherd.log(`stdout: ${stdout}`);
@@ -4571,6 +4582,29 @@ function herder(flock, data, coind) {
     shepherd.writeLog('komodod flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
 
+    // datadir case, check if komodo/chain folder exists
+    if (shepherd.appConfig.dataDir.length &&
+        data.ac_name !== 'komodod') {
+      const _dir = data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir;
+
+      try {
+         _fs.accessSync(_dir, fs.R_OK | fs.W_OK);
+
+        shepherd.log(`komodod datadir ${_dir} exists`);
+      } catch (e) {
+        shepherd.log(`komodod datadir ${_dir} access err: ${e}`);
+        shepherd.log(`attempting to create komodod datadir ${_dir}`);
+
+        fs.mkdirSync(_dir);
+
+        if (fs.existsSync(_dir)) {
+          shepherd.log(`created komodod datadir folder at ${_dir}`);
+        } else {
+          shepherd.log(`unable to create komodod datadir folder at ${_dir}`);            
+        }
+      }
+    }
+
     // truncate debug.log
     if (!shepherd.kmdMainPassiveMode) {
       try {
@@ -4588,7 +4622,7 @@ function herder(flock, data, coind) {
             shepherd.log('cant unlink debug.log');
           }
         }
-      } catch(e) {
+      } catch (e) {
         shepherd.log(`komodod debug.log access err: ${e}`);
         shepherd.writeLog(`komodod debug.log access err: ${e}`);
       }
@@ -4621,7 +4655,7 @@ function herder(flock, data, coind) {
           }
 
           if (shepherd.appConfig.dataDir.length) {
-            _customParam = _customParam + ' -datadir=' + shepherd.appConfig.dataDir + '/' + data.ac_name;
+            _customParam = _customParam + ' -datadir=' + shepherd.appConfig.dataDir + (data.ac_name !== 'komodod' ? '/' + data.ac_name : '');
           }
 
           shepherd.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
@@ -4669,6 +4703,7 @@ function herder(flock, data, coind) {
     }
   }
 
+  // TODO: refactor
   if (flock === 'chipsd') {
     let kmdDebugLogLocation = chipsDir + '/debug.log';
 
@@ -4960,8 +4995,8 @@ function setConf(flock, coind) {
   shepherd.log(DaemonConfPath);
   shepherd.writeLog(`setconf ${DaemonConfPath}`);
 
-  const CheckFileExists = function() {
-    return new Promise(function(resolve, reject) {
+  const CheckFileExists = () => {
+    return new Promise((resolve, reject) => {
       const result = 'Check Conf file exists is done';
 
       const confFileExist = fs.ensureFileSync(DaemonConfPath);
@@ -4977,8 +5012,8 @@ function setConf(flock, coind) {
     });
   }
 
-  const FixFilePermissions = function() {
-    return new Promise(function(resolve, reject) {
+  const FixFilePermissions = () => {
+    return new Promise((resolve, reject) => {
       const result = 'Conf file permissions updated to Read/Write';
 
       fsnode.chmodSync(DaemonConfPath, '0666');
@@ -5014,13 +5049,13 @@ function setConf(flock, coind) {
     });
   }
 
-  const CheckConf = function() {
-    return new Promise(function(resolve, reject) {
+  const CheckConf = () => {
+    return new Promise((resolve, reject) => {
       const result = 'CheckConf is done';
 
-      setconf.status(DaemonConfPath, function(err, status) {
-        const rpcuser = function() {
-          return new Promise(function(resolve, reject) {
+      setconf.status(DaemonConfPath, (err, status) => {
+        const rpcuser = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking rpcuser...';
 
             if (status[0].hasOwnProperty('rpcuser')) {
@@ -5047,15 +5082,15 @@ function setConf(flock, coind) {
           });
         }
 
-        const rpcpass = function() {
-          return new Promise(function(resolve, reject) {
+        const rpcpass = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking rpcpassword...';
 
             if (status[0].hasOwnProperty('rpcpassword')) {
               shepherd.log('rpcpassword: OK');
               shepherd.writeLog('rpcpassword: OK');
             } else {
-              var randomstring = md5((Math.random() * Math.random() * 999).toString());
+              const randomstring = md5((Math.random() * Math.random() * 999).toString());
 
               shepherd.log('rpcpassword: NOT FOUND');
               shepherd.writeLog('rpcpassword: NOT FOUND');
@@ -5075,8 +5110,8 @@ function setConf(flock, coind) {
           });
         }
 
-        const rpcbind = function() {
-          return new Promise(function(resolve, reject) {
+        const rpcbind = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking rpcbind...';
 
             if (status[0].hasOwnProperty('rpcbind')) {
@@ -5101,8 +5136,8 @@ function setConf(flock, coind) {
           });
         }
 
-        const server = function() {
-          return new Promise(function(resolve, reject) {
+        const server = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking server...';
 
             if (status[0].hasOwnProperty('server')) {
@@ -5127,8 +5162,8 @@ function setConf(flock, coind) {
           });
         }
 
-        const addnode = function() {
-          return new Promise(function(resolve, reject) {
+        const addnode = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking addnode...';
 
             if (flock === 'chipsd' ||
@@ -5159,6 +5194,7 @@ function setConf(flock, coind) {
                   '\naddnode=5.9.122.241' +
                   '\naddnode=144.76.94.3';
                 }
+
                 shepherd.log('addnode: NOT FOUND');
                 fs.appendFile(DaemonConfPath, nodesList, (err) => {
                   if (err) {
@@ -5179,7 +5215,7 @@ function setConf(flock, coind) {
         }
 
         rpcuser()
-        .then(function(result) {
+        .then((result) => {
           return rpcpass();
         })
         .then(server)
@@ -5195,16 +5231,16 @@ function setConf(flock, coind) {
   }
 
   CheckFileExists()
-  .then(function(result) {
+  .then((result) => {
     return FixFilePermissions();
   })
   .then(RemoveLines)
   .then(CheckConf);
 }
 
-shepherd.getMaxconKMDConf = function() {
+shepherd.getMaxconKMDConf = () => {
   return new Promise((resolve, reject) => {
-    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', function(err, data) {
+    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', (err, data) => {
       if (err) {
         shepherd.log(`kmd conf maxconnections param read failed`);
         resolve('unset');
@@ -5223,9 +5259,9 @@ shepherd.getMaxconKMDConf = function() {
   });
 }
 
-shepherd.setMaxconKMDConf = function(limit) {
+shepherd.setMaxconKMDConf = (limit) => {
   return new Promise((resolve, reject) => {
-    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', function(err, data) {
+    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', (err, data) => {
       const _maxconVal = limit ? 1 : 10;
 
       if (err) {
@@ -5237,10 +5273,10 @@ shepherd.setMaxconKMDConf = function(limit) {
 
           data = data.replace(`maxconnections=${_maxcon[1]}`, `maxconnections=${_maxconVal}`);
         } else {
-          data = `${data}maxconnections=${_maxconVal}\n`;
+          data = `${data}\nmaxconnections=${_maxconVal}\n`;
         }
 
-        fs.writeFile(`${komodoDir}/komodo.conf`, data, function(err) {
+        fs.writeFile(`${komodoDir}/komodo.conf`, data, (err) => {
           if (err) {
             shepherd.log(`error writing ${komodoDir}/komodo.conf maxconnections=${_maxconVal}`);
             resolve(false);
@@ -5336,7 +5372,7 @@ function formatBytes(bytes, decimals) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-shepherd.SystemInfo = function() {
+shepherd.SystemInfo = () => {
   const os_data = {
     'totalmem_bytes': os.totalmem(),
     'totalmem_readable': formatBytes(os.totalmem()),
@@ -5351,7 +5387,7 @@ shepherd.SystemInfo = function() {
   return os_data;
 }
 
-shepherd.appInfo = function() {
+shepherd.appInfo = () => {
   const sysInfo = shepherd.SystemInfo();
   const releaseInfo = shepherd.appBasicInfo;
   const dirs = {
