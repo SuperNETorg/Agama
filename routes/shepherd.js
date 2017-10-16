@@ -1218,8 +1218,29 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                           const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
 
                           if (formattedTx.type) {
+                            formattedTx.height = transaction.height;
+                            formattedTx.blocktime = blockInfo.timestamp;
+                            formattedTx.timereceived = blockInfo.timereceived;
+                            formattedTx.hex = _rawtxJSON;
+                            formattedTx.inputs = decodedTx.inputs;
+                            formattedTx.outputs = decodedTx.outputs;
+                            formattedTx.locktime = decodedTx.format.locktime;
                             _rawtx.push(formattedTx);
                           } else {
+                            formattedTx[0].height = transaction.height;
+                            formattedTx[0].blocktime = blockInfo.timestamp;
+                            formattedTx[0].timereceived = blockInfo.timereceived;
+                            formattedTx[0].hex = _rawtxJSON;
+                            formattedTx[0].inputs = decodedTx.inputs;
+                            formattedTx[0].outputs = decodedTx.outputs;
+                            formattedTx[0].locktime = decodedTx.format.locktime;
+                            formattedTx[1].height = transaction.height;
+                            formattedTx[1].blocktime = blockInfo.timestamp;
+                            formattedTx[1].timereceived = blockInfo.timereceived;
+                            formattedTx[1].hex = _rawtxJSON;
+                            formattedTx[1].inputs = decodedTx.inputs;
+                            formattedTx[1].outputs = decodedTx.outputs;
+                            formattedTx[1].locktime = decodedTx.format.locktime;
                             _rawtx.push(formattedTx[0]);
                             _rawtx.push(formattedTx[1]);
                           }
@@ -1290,7 +1311,8 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
 });
 
 shepherd.get('/electrum/gettransaction', function(req, res, next) {
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
   ecl.connect();
   ecl.blockchainTransactionGet(req.query.txid)
@@ -3757,7 +3779,7 @@ shepherd.quitKomodod = function(timeout = 100) {
       let _arg = [];
       if (chain && !shepherd.nativeCoindList[key.toLowerCase()] && key !== 'CHIPS') {
         _arg.push(`-ac_name=${chain}`);
-        
+
         if (shepherd.appConfig.dataDir.length) {
           _arg.push(`-datadir=${shepherd.appConfig.dataDir + (key !== 'komodod' ? '/' + key : '')}`);
         }
@@ -4605,7 +4627,7 @@ function herder(flock, data, coind) {
         if (fs.existsSync(_dir)) {
           shepherd.log(`created komodod datadir folder at ${_dir}`);
         } else {
-          shepherd.log(`unable to create komodod datadir folder at ${_dir}`);            
+          shepherd.log(`unable to create komodod datadir folder at ${_dir}`);
         }
       }
     }
