@@ -2851,19 +2851,24 @@ shepherd.testBins = function(daemonName) {
 // komodod datadir location test
 shepherd.testLocation = function(path) {
   return new Promise(function(resolve, reject) {
-    fs.lstat(path, (err, stats) => {
-      if (err) {
-        shepherd.log(`error testing path ${path}`);
-        resolve(-1);
-      } else {
-        if (stats.isDirectory()) {
-          resolve(true);
+    if (path.indexOf(' ') > -1) {
+      shepherd.log(`error testing path ${path}`);
+      resolve(-1);
+    } else {
+      fs.lstat(path, (err, stats) => {
+        if (err) {
+          shepherd.log(`error testing path ${path}`);
+          resolve(-1);
         } else {
-          shepherd.log(`error testing path ${path} not a folder`);
-          resolve(false);
+          if (stats.isDirectory()) {
+            resolve(true);
+          } else {
+            shepherd.log(`error testing path ${path} not a folder`);
+            resolve(false);
+          }
         }
-      }
-    });
+      });
+    }
   });
 }
 
