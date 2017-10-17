@@ -1,210 +1,52 @@
 const electron = require('electron');
-const app = electron.app;
-const BrowserWindow = electron.BrowserWindow;
-const path = require('path');
-const url = require('url');
-const os = require('os');
-const fsnode = require('fs');
-const fs = require('fs-extra');
-const _fs = require('graceful-fs');
 const express = require('express');
-const exec = require('child_process').exec;
-const spawn = require('child_process').spawn;
-const md5 = require('./md5.js');
-const request = require('request');
-const async = require('async');
-const portscanner = require('portscanner');
-const aes256 = require('nodejs-aes256');
-const AdmZip = require('adm-zip');
-const remoteFileSize = require('remote-file-size');
-const Promise = require('bluebird');
-const {shell} = require('electron');
-const {execFile} = require('child_process');
-const sha256 = require('sha256');
-const CoinKey = require('coinkey');
-const bitcoinJS = require('bitcoinjs-lib');
-const coinSelect = require('coinselect');
-const fixPath = require('fix-path');
-const crypto = require('crypto');
+const app = electron.app;
+let shepherd = express.Router();
 
-var ps = require('ps-node');
-var setconf = require('../private/setconf.js');
-var nativeCoind = require('./nativeCoind.js');
-var assetChainPorts = require('./ports.js');
-var _appConfig = require('./appConfig.js');
-var shepherd = express.Router();
-var coindInstanceRegistry = {};
-var guiLog = {};
-var rpcConf = {};
-var appRuntimeLog = [];
-var appRuntimeSPVLog = [];
-var lockDownAddCoin = false;
-var electrumCoins = {
+shepherd.path = require('path');
+shepherd.os = require('os');
+shepherd.fsnode = require('fs');
+shepherd.fs = require('fs-extra');
+shepherd._fs = require('graceful-fs');
+// shepherd.md5 = require('./md5.js');
+shepherd.request = require('request');
+shepherd.portscanner = require('portscanner');
+shepherd.aes256 = require('nodejs-aes256');
+shepherd.AdmZip = require('adm-zip');
+shepherd.remoteFileSize = require('remote-file-size');
+shepherd.Promise = require('bluebird');
+shepherd.exec = require('child_process').exec;
+shepherd.execFile = require('child_process').execFile;
+shepherd.sha256 = require('sha256');
+shepherd.CoinKey = require('coinkey');
+shepherd.bitcoinJS = require('bitcoinjs-lib');
+shepherd.coinSelect = require('coinselect');
+shepherd.fixPath = require('fix-path');
+shepherd.crypto = require('crypto');
+
+shepherd.setconf = require('../private/setconf.js');
+shepherd.nativeCoind = require('./nativeCoind.js');
+shepherd.nativeCoindList = {};
+shepherd.assetChainPorts = require('./ports.js');
+shepherd._appConfig = require('./appConfig.js');
+
+shepherd.coindInstanceRegistry = {};
+shepherd.guiLog = {};
+shepherd.rpcConf = {};
+shepherd.appRuntimeLog = [];
+shepherd.appRuntimeSPVLog = [];
+shepherd.lockDownAddCoin = false;
+shepherd.electrumCoins = {
   auth: false,
 };
-var electrumKeys = {};
+shepherd.electrumKeys = {};
 
-const electrumJSCore = require('./electrumjs/electrumjs.core.js');
-const electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
-const electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
-let electrumServers = {
-  /*zcash: {
-    address: '173.212.225.176',
-    port: 50032,
-    proto: 'tcp',
-  },*/
-  revs: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50050,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'REVS',
-    serverList: [
-      '173.212.225.176:50050',
-      '136.243.45.140:50050'
-    ],
-  },
-  mnz: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50053,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'MNZ',
-    serverList: [
-      '173.212.225.176:50053',
-      '136.243.45.140:50053'
-    ],
-  },
-  wlc: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50052,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'WLC',
-    serverList: [
-      '173.212.225.176:50052',
-      '136.243.45.140:50052'
-    ],
-  },
-  jumblr: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50051,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'JUMBLR',
-    serverList: [
-      '173.212.225.176:50051',
-      '136.243.45.140:50051'
-    ],
-  },
-  komodo: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50011,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'KMD',
-    serverList: [
-      '173.212.225.176:50011',
-      '136.243.45.140:50011'
-    ],
-  },
-  dogecoin: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50015,
-    proto: 'tcp',
-    txfee: 100000000,
-    abbr: 'DOGE',
-  },
-  viacoin: { // !estimatefee
-    address: 'vialectrum.bitops.me',
-    port: 50002,
-    proto: 'ssl',
-    txfee: 100000,
-    abbr: 'VIA',
-  },
-  vertcoin: {
-    address: '173.212.225.176',
-    port: 50088,
-    proto: 'tcp',
-    txfee: 100000,
-    abbr: 'VTC',
-  },
-  namecoin: {
-    address: '173.212.225.176',
-    port: 50036,
-    proto: 'tcp',
-    txfee: 100000,
-    abbr: 'NMC',
-  },
-  monacoin: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50002,
-    proto: 'tcp',
-    txfee: 100000,
-    abbr: 'MONA',
-  },
-  litecoin: {
-    address: '173.212.225.176',
-    port: 50012,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'LTC',
-  },
-  faircoin: {
-    address: '173.212.225.176',
-    port: 50005,
-    proto: 'tcp',
-    txfee: 1000000,
-    abbr: 'FAIR',
-  },
-  digibyte: {
-    address: '173.212.225.176',
-    port: 50022,
-    proto: 'tcp',
-    txfee: 100000,
-    abbr: 'DGB',
-  },
-  dash: {
-    address: '173.212.225.176',
-    port: 50098,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'DASH',
-  },
-  crown: {
-    address: '173.212.225.176',
-    port: 50041,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'CRW',
-  },
-  bitcoin: {
-    address: '173.212.225.176',
-    port: 50001,
-    proto: 'tcp',
-    abbr: 'BTC',
-  },
-  argentum: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50081,
-    proto: 'tcp',
-    txfee: 50000,
-    abbr: 'ARG',
-  },
-  chips: { // !estimatefee
-    address: '173.212.225.176',
-    port: 50076,
-    proto: 'tcp',
-    txfee: 10000,
-    abbr: 'CHIPS',
-    serverList: [
-      '173.212.225.176:50076',
-      '136.243.45.140:50076'
-    ],
-  },
-};
+shepherd.electrumJSCore = require('./electrumjs/electrumjs.core.js');
+shepherd.electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
+shepherd.electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
+shepherd.electrumServers = require('./electrumjs/electrumServers.js');
 
-const zcashParamsDownloadLinks = {
+shepherd.zcashParamsDownloadLinks = {
   'agama.komodoplatform.com': {
     proving: 'https://agama.komodoplatform.com/file/supernet/sprout-proving.key',
     verifying: 'https://agama.komodoplatform.com/file/supernet/sprout-verifying.key',
@@ -219,236 +61,84 @@ const zcashParamsDownloadLinks = {
   },
 };
 
-shepherd.zcashParamsDownloadLinks = zcashParamsDownloadLinks;
+shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';
 
-const CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';
+shepherd.appConfig = shepherd._appConfig.config;
 
-shepherd.appConfig = _appConfig.config;
-
-var agamaDir;
-switch (os.platform()) {
+shepherd.agamaDir;
+switch (shepherd.os.platform()) {
   case 'darwin':
-    fixPath();
-    agamaDir = `${process.env.HOME}/Library/Application Support/Agama`;
+    shepherd.fixPath();
+    shepherd.agamaDir = `${process.env.HOME}/Library/Application Support/Agama`;
     break;
 
   case 'linux':
-    agamaDir = `${process.env.HOME}/.agama`;
+    shepherd.agamaDir = `${process.env.HOME}/.agama`;
     break;
 
   case 'win32':
-    agamaDir = `${process.env.APPDATA}/Agama`;
-    agamaDir = path.normalize(agamaDir);
+    shepherd.agamaDir = `${process.env.APPDATA}/Agama`;
+    shepherd.agamaDir = shepherd.path.normalize(shepherd.agamaDir);
     break;
 }
 
-shepherd.log = function(msg, isSpvOut) {
-  if (shepherd.appConfig.dev ||
-      shepherd.appConfig.debug) {
-    console.log(msg);
-  }
-
-  if (!isSpvOut) {
-    appRuntimeLog.push({
-      time: Date.now(),
-      msg: msg,
-    });
-  } else {
-    appRuntimeSPVLog.push({
-      time: Date.now(),
-      msg: msg,
-    });
-  }
-};
-
-shepherd.get('/log/runtime', function(req, res, next) {
-
-  const successObj = {
-    msg: 'success',
-    result: req.query.spv && req.query.spv === 'true' ? appRuntimeSPVLog : appRuntimeLog,
-  };
-
-  res.end(JSON.stringify(successObj));
-});
-
-shepherd.writeLog = function(data) {
-  const logLocation = `${agamaDir}/shepherd`;
-  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
-
-  if (shepherd.appConfig.debug) {
-    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
-      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, (err) => {
-        if (err) {
-          shepherd.log('error writing log file');
-        }
-      });
-    } else {
-      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, (err) => {
-        if (err) {
-          shepherd.log('error writing log file');
-        }
-      });
-    }
-  }
-}
-
-shepherd.loadLocalConfig = () => {
-  if (fs.existsSync(`${agamaDir}/config.json`)) {
-    let localAppConfig = fs.readFileSync(`${agamaDir}/config.json`, 'utf8');
-
-    shepherd.log('app config set from local file');
-    shepherd.writeLog('app config set from local file');
-
-    // find diff between local and hardcoded configs
-    // append diff to local config
-    const compareJSON = (obj1, obj2) => {
-      let result = {};
-
-      for (let i in obj1) {
-        if (!obj2.hasOwnProperty(i)) {
-          result[i] = obj1[i];
-        }
-      }
-
-      return result;
-    };
-
-    if (localAppConfig) {
-      const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-
-      if (Object.keys(compareConfigs).length) {
-        const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
-
-        shepherd.log('config diff is found, updating local config');
-        shepherd.log('config diff:');
-        shepherd.log(compareConfigs);
-        shepherd.writeLog('aconfig diff is found, updating local config');
-        shepherd.writeLog('config diff:');
-        shepherd.writeLog(compareConfigs);
-
-        shepherd.saveLocalAppConf(newConfig);
-        return newConfig;
-      } else {
-        return JSON.parse(localAppConfig);
-      }
-    } else {
-      return shepherd.appConfig;
-    }
-  } else {
-    shepherd.log('local config file is not found!');
-    shepherd.writeLog('local config file is not found!');
-    shepherd.saveLocalAppConf(shepherd.appConfig);
-
-    return shepherd.appConfig;
-  }
-};
-
-shepherd.saveLocalAppConf = (appSettings) => {
-  let appConfFileName = `${agamaDir}/config.json`;
-
-  _fs.access(agamaDir, fs.constants.R_OK, (err) => {
-    if (!err) {
-
-      const FixFilePermissions = () => {
-        return new Promise((resolve, reject) => {
-          const result = 'config.json file permissions updated to Read/Write';
-
-          fsnode.chmodSync(appConfFileName, '0666');
-
-          setTimeout(() => {
-            shepherd.log(result);
-            shepherd.writeLog(result);
-            resolve(result);
-          }, 1000);
-        });
-      }
-
-      const FsWrite = () => {
-        return new Promise((resolve, reject) => {
-          const result = 'config.json write file is done';
-
-          fs.writeFile(appConfFileName,
-                      JSON.stringify(appSettings)
-                      .replace(/,/g, ',\n') // format json in human readable form
-                      .replace(/":/g, '": ')
-                      .replace(/{/g, '{\n')
-                      .replace(/}/g, '\n}'), 'utf8', (err) => {
-            if (err)
-              return shepherd.log(err);
-          });
-
-          fsnode.chmodSync(appConfFileName, '0666');
-          setTimeout(() => {
-            shepherd.log(result);
-            shepherd.log(`app conf.json file is created successfully at: ${agamaDir}`);
-            shepherd.writeLog(`app conf.json file is created successfully at: ${agamaDir}`);
-            resolve(result);
-          }, 2000);
-        });
-      }
-
-      FsWrite()
-      .then(FixFilePermissions());
-    }
-  });
-}
+shepherd = require('./log.js')(shepherd);
+shepherd = require('./config.js')(shepherd);
 
 shepherd.appConfig = shepherd.loadLocalConfig();
 
-if (os.platform() === 'darwin') {
-  fixPath();
-  var agamaTestDir = `${process.env.HOME}/Library/Application Support/Agama/test`,
-      komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
-      komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
-      komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`,
-      zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
-      zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
-      zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`,
-      zcashParamsDir = `${process.env.HOME}/Library/Application Support/ZcashParams`,
-      chipsBin = path.join(__dirname, '../assets/bin/osx/chipsd'),
-      chipscliBin = path.join(__dirname, '../assets/bin/osx/chips-cli'),
-      chipsDir = `${process.env.HOME}/Library/Application Support/Chips`,
-      coindRootDir = path.join(__dirname, '../assets/bin/osx/dex/coind');
+if (shepherd.os.platform() === 'darwin') {
+  shepherd.fixPath();
+  shepherd.agamaTestDir = `${process.env.HOME}/Library/Application Support/Agama/test`,
+  shepherd.komododBin = shepherd.path.join(__dirname, '../assets/bin/osx/komodod'),
+  shepherd.komodocliBin = shepherd.path.join(__dirname, '../assets/bin/osx/komodo-cli'),
+  shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`,
+  shepherd.zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
+  shepherd.zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
+  shepherd.zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`,
+  shepherd.zcashParamsDir = `${process.env.HOME}/Library/Application Support/ZcashParams`,
+  shepherd.chipsBin = shepherd.path.join(__dirname, '../assets/bin/osx/chipsd'),
+  shepherd.chipscliBin = shepherd.path.join(__dirname, '../assets/bin/osx/chips-cli'),
+  shepherd.chipsDir = `${process.env.HOME}/Library/Application Support/Chips`,
+  shepherd.coindRootDir = shepherd.path.join(__dirname, '../assets/bin/osx/dex/coind');
 }
 
-if (os.platform() === 'linux') {
-  var agamaTestDir = `${process.env.HOME}/.agama/test`,
-      komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
-      komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
-      komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`,
-      zcashParamsDir = `${process.env.HOME}/.zcash-params`,
-      chipsBin = path.join(__dirname, '../assets/bin/linux64/chipsd'),
-      chipscliBin = path.join(__dirname, '../assets/bin/linux64/chips-cli'),
-      chipsDir = `${process.env.HOME}/.chips`,
-      coindRootDir = path.join(__dirname, '../assets/bin/linux64/dex/coind');
+if (shepherd.os.platform() === 'linux') {
+  shepherd.agamaTestDir = `${process.env.HOME}/.agama/test`,
+  shepherd.komododBin = shepherd.path.join(__dirname, '../assets/bin/linux64/komodod'),
+  shepherd.komodocliBin = shepherd.path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
+  shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`,
+  shepherd.zcashParamsDir = `${process.env.HOME}/.zcash-params`,
+  shepherd.chipsBin = shepherd.path.join(__dirname, '../assets/bin/linux64/chipsd'),
+  shepherd.chipscliBin = shepherd.path.join(__dirname, '../assets/bin/linux64/chips-cli'),
+  shepherd.chipsDir = `${process.env.HOME}/.chips`,
+  shepherd.coindRootDir = shepherd.path.join(__dirname, '../assets/bin/linux64/dex/coind');
 }
 
-if (os.platform() === 'win32') {
-  var agamaTestDir = `${process.env.APPDATA}/Agama/test`;
-      agamaTestDir = path.normalize(agamaTestDir);
-      komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
-      komododBin = path.normalize(komododBin),
-      komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
-      komodocliBin = path.normalize(komodocliBin),
-      komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`,
-      komodoDir = path.normalize(komodoDir);
-      chipsBin = path.join(__dirname, '../assets/bin/win64/chipsd.exe'),
-      chipsBin = path.normalize(chipsBin),
-      chipscliBin = path.join(__dirname, '../assets/bin/win64/chips-cli.exe'),
-      chipscliBin = path.normalize(chipscliBin),
-      chipsDir = `${process.env.APPDATA}/Chips`,
-      chipsDir = path.normalize(chipsDir);
-      zcashParamsDir = `${process.env.APPDATA}/ZcashParams`;
-      zcashParamsDir = path.normalize(zcashParamsDir);
-      coindRootDir = path.join(__dirname, '../assets/bin/osx/dex/coind');
-      coindRootDir = path.normalize(coindRootDir);
+if (shepherd.os.platform() === 'win32') {
+  shepherd.agamaTestDir = `${process.env.APPDATA}/Agama/test`;
+  shepherd.agamaTestDir = shepherd.path.normalize(shepherd.agamaTestDir);
+  shepherd.komododBin = shepherd.path.join(__dirname, '../assets/bin/win64/komodod.exe'),
+  shepherd.komododBin = shepherd.path.normalize(shepherd.komododBin),
+  shepherd.komodocliBin = shepherd.path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
+  shepherd.komodocliBin = shepherd.path.normalize(shepherd.komodocliBin),
+  shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`,
+  shepherd.komodoDir = shepherd.path.normalize(shepherd.komodoDir);
+  shepherd.chipsBin = shepherd.path.join(__dirname, '../assets/bin/win64/chipsd.exe'),
+  shepherd.chipsBin = shepherd.path.normalize(shepherd.chipsBin),
+  shepherd.chipscliBin = shepherd.path.join(__dirname, '../assets/bin/win64/chips-cli.exe'),
+  shepherd.chipscliBin = shepherd.path.normalize(shepherd.chipscliBin),
+  shepherd.chipsDir = `${process.env.APPDATA}/Chips`,
+  shepherd.chipsDir = shepherd.path.normalize(shepherd.chipsDir);
+  shepherd.zcashParamsDir = `${process.env.APPDATA}/ZcashParams`;
+  shepherd.zcashParamsDir = shepherd.path.normalize(shepherd.zcashParamsDir);
+  shepherd.coindRootDir = shepherd.path.join(__dirname, '../assets/bin/osx/dex/coind');
+  shepherd.coindRootDir = shepherd.path.normalize(shepherd.coindRootDir);
 }
 
-shepherd.appConfigSchema = _appConfig.schema;
+shepherd.appConfigSchema = shepherd._appConfig.schema;
 shepherd.defaultAppConfig = Object.assign({}, shepherd.appConfig);
 shepherd.kmdMainPassiveMode = false;
-
-shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
 shepherd.getNetworkData = (network) => {
   const coin = shepherd.findNetworkObj(network) || shepherd.findNetworkObj(network.toUpperCase()) || shepherd.findNetworkObj(network.toLowerCase());
@@ -492,14 +182,14 @@ shepherd.getNetworkData = (network) => {
       coinUC === 'MESH' ||
       coinUC === 'WLC' ||
       coinUC === 'MNZ') {
-    return electrumJSNetworks.komodo;
+    return shepherd.electrumJSNetworks.komodo;
   } else {
-    return electrumJSNetworks[network];
+    return shepherd.electrumJSNetworks[network];
   }
 }
 
 shepherd.seedToWif = (seed, network, iguana) => {
-  const bytes = sha256(seed, { asBytes: true });
+  const bytes = shepherd.sha256(seed, { asBytes: true });
 
   if (iguana) {
     bytes[0] &= 248;
@@ -515,7 +205,7 @@ shepherd.seedToWif = (seed, network, iguana) => {
 
   const hex = toHexString(bytes);
 
-  const key = new CoinKey(new Buffer(hex, 'hex'), {
+  const key = new shepherd.CoinKey(new Buffer(hex, 'hex'), {
     private: shepherd.getNetworkData(network).wif,
     public: shepherd.getNetworkData(network).pubKeyHash,
   });
@@ -545,23 +235,23 @@ shepherd.get('/electrum/seedtowif', (req, res, next) => {
 });
 
 shepherd.findNetworkObj = (coin) => {
-  for (let key in electrumServers) {
-    if (electrumServers[key].abbr === coin) {
+  for (let key in shepherd.electrumServers) {
+    if (shepherd.electrumServers[key].abbr === coin) {
       return key;
     }
   }
 }
 
 shepherd.findCoinName = (network) => {
-  for (let key in electrumServers) {
+  for (let key in shepherd.electrumServers) {
     if (key === network) {
-      return electrumServers[key].abbr;
+      return shepherd.electrumServers[key].abbr;
     }
   }
 }
 
 shepherd.get('/electrum/servers/test', (req, res, next) => {
-  const ecl = new electrumJSCore(req.query.port, req.query.address, 'tcp'); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(req.query.port, req.query.address, 'tcp'); // tcp or tls
 
   ecl.connect();
   ecl.serverVersion()
@@ -594,52 +284,52 @@ shepherd.get('/electrum/keys', (req, res, next) => {
   let _matchingKeyPairs = 0;
   let _electrumKeys = {};
 
-  for (let key in electrumServers) {
-    const _abbr = electrumServers[key].abbr;
+  for (let key in shepherd.electrumServers) {
+    const _abbr = shepherd.electrumServers[key].abbr;
     const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
 
-    if (electrumKeys[_abbr].pub === pub &&
-        electrumKeys[_abbr].priv === priv) {
+    if (shepherd.electrumKeys[_abbr].pub === pub &&
+        shepherd.electrumKeys[_abbr].priv === priv) {
       _matchingKeyPairs++;
     }
   }
 
   if (req.query.active) {
-    _electrumKeys = JSON.parse(JSON.stringify(electrumKeys));
+    _electrumKeys = JSON.parse(JSON.stringify(shepherd.electrumKeys));
 
     for (let key in _electrumKeys) {
-      if (!electrumCoins[key]) {
+      if (!shepherd.electrumCoins[key]) {
         delete _electrumKeys[key];
       }
     }
   } else {
-    _electrumKeys = electrumKeys;
+    _electrumKeys = shepherd.electrumKeys;
   }
 
   shepherd.log(JSON.stringify(_electrumKeys, null, '\t'), true);
 
   const successObj = {
     msg: 'success',
-    result: _matchingKeyPairs === Object.keys(electrumKeys).length ? _electrumKeys : false,
+    result: _matchingKeyPairs === Object.keys(shepherd.electrumKeys).length ? _electrumKeys : false,
   };
 
   res.end(JSON.stringify(successObj));
 });
 
 shepherd.get('/electrum/login', (req, res, next) => {
-  for (let key in electrumServers) {
-    const _abbr = electrumServers[key].abbr;
+  for (let key in shepherd.electrumServers) {
+    const _abbr = shepherd.electrumServers[key].abbr;
     const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
 
-    electrumKeys[_abbr] = {
+    shepherd.electrumKeys[_abbr] = {
       priv,
       pub,
     };
   }
 
-  electrumCoins.auth = true;
+  shepherd.electrumCoins.auth = true;
 
-  shepherd.log(JSON.stringify(electrumKeys, null, '\t'), true);
+  shepherd.log(JSON.stringify(shepherd.electrumKeys, null, '\t'), true);
 
   const successObj = {
     msg: 'success',
@@ -650,8 +340,8 @@ shepherd.get('/electrum/login', (req, res, next) => {
 });
 
 shepherd.get('/electrum/dev/logout', (req, res, next) => {
-  electrumCoins.auth = false;
-  electrumKeys = {};
+  shepherd.electrumCoins.auth = false;
+  shepherd.electrumKeys = {};
 
   const successObj = {
     msg: 'success',
@@ -682,14 +372,14 @@ shepherd.get('/electrum/dev/logout', (req, res, next) => {
   const successObj = {
     msg: 'success',
     result: {
-      servers: electrumServers,
+      servers: shepherd.electrumServers,
     },
   };
 
   res.end(JSON.stringify(successObj));
 
-  console.log(bitcoinJS.networks.komodo);
-  const hdMaster = bitcoinJS.HDNode.fromSeedBuffer(seed, electrumJSNetworks.komodo); // seed from above
+  console.log(shepherd.bitcoinJS.networks.komodo);
+  const hdMaster = shepherd.bitcoinJS.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo); // seed from above
 
   const key1 = hdMaster.derivePath('m/0');
   const key2 = hdMaster.derivePath('m/1');
@@ -699,7 +389,7 @@ shepherd.get('/electrum/dev/logout', (req, res, next) => {
   console.log(key1.keyPair.getAddress());
   console.log(key2.keyPair.toWIF());
 
-  const hdnode = bitcoinJS.HDNode.fromSeedBuffer(seed, electrumJSNetworks.komodo).deriveHardened(0).derive(0).derive(1);
+  const hdnode = shepherd.bitcoinJS.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo).deriveHardened(0).derive(0).derive(1);
   console.log(`address: ${hdnode.getAddress()}`);
   console.log(`priv (WIF): ${hdnode.keyPair.toWIF()}`);
 });*/
@@ -710,7 +400,7 @@ shepherd.getMerkleRoot = (txid, proof, pos) => {
   let hash = txid;
   let serialized;
   const _sha256 = (data) => {
-    return crypto.createHash('sha256').update(data).digest();
+    return shepherd.crypto.createHash('sha256').update(data).digest();
   }
 
   shepherd.log(`getMerkleRoot txid ${txid}`, true);
@@ -749,9 +439,9 @@ shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
   const _randomServer = randomServer.split(':');
   const _mainServer = mainServer.split(':');
 
-  let ecl = new electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
+  let ecl = new shepherd.electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
 
-  return new Promise((resolve, reject) => {
+  return new shepherd.Promise((resolve, reject) => {
     shepherd.log(`main server: ${mainServer}`, true);
     shepherd.log(`verification server: ${randomServer}`, true);
 
@@ -768,7 +458,7 @@ shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
         const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
         shepherd.log(_res, true);
 
-        ecl = new electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
+        ecl = new shepherd.electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
         ecl.connect();
 
         ecl.blockchainBlockGetHeader(height)
@@ -802,18 +492,18 @@ shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
 }
 
 shepherd.verifyMerkleByCoin = (coin, txid, height) => {
-  const _serverList = electrumCoins[coin].serverList;
+  const _serverList = shepherd.electrumCoins[coin].serverList;
 
   shepherd.log(`verifyMerkleByCoin`, true);
-  shepherd.log(electrumCoins[coin].server, true);
-  shepherd.log(electrumCoins[coin].serverList, true);
+  shepherd.log(shepherd.electrumCoins[coin].server, true);
+  shepherd.log(shepherd.electrumCoins[coin].serverList, true);
 
-  return new Promise((resolve, reject) => {
+  return new shepherd.Promise((resolve, reject) => {
     if (_serverList !== 'none') {
       let _filteredServerList = [];
 
       for (let i = 0; i < _serverList.length; i++) {
-        if (_serverList[i] !== electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port) {
+        if (_serverList[i] !== shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port) {
           _filteredServerList.push(_serverList[i]);
         }
       }
@@ -822,7 +512,7 @@ shepherd.verifyMerkleByCoin = (coin, txid, height) => {
         txid,
         height,
         _filteredServerList,
-        electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port
+        shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port
       ).then((proof) => {
         resolve(proof);
       });
@@ -850,8 +540,8 @@ shepherd.get('/electrum/servers', (req, res, next) => {
   if (req.query.abbr) {
     let _electrumServers = {};
 
-    for (let key in electrumServers) {
-      _electrumServers[electrumServers[key].abbr] = electrumServers[key];
+    for (let key in shepherd.electrumServers) {
+      _electrumServers[shepherd.electrumServers[key].abbr] = shepherd.electrumServers[key];
     }
 
     const successObj = {
@@ -866,7 +556,7 @@ shepherd.get('/electrum/servers', (req, res, next) => {
     const successObj = {
       msg: 'success',
       result: {
-        servers: electrumServers,
+        servers: shepherd.electrumServers,
       },
     };
 
@@ -875,20 +565,20 @@ shepherd.get('/electrum/servers', (req, res, next) => {
 });
 
 shepherd.get('/electrum/coins/server/set', (req, res, next) => {
-  electrumCoins[req.query.coin].server = {
+  shepherd.electrumCoins[req.query.coin].server = {
     ip: req.query.address,
     port: req.query.port,
   };
 
-  for (let key in electrumServers) {
-    if (electrumServers[key].abbr === req.query.coin) { // a bit risky
-      electrumServers[key].address = req.query.address;
-      electrumServers[key].port = req.query.port;
+  for (let key in shepherd.electrumServers) {
+    if (shepherd.electrumServers[key].abbr === req.query.coin) { // a bit risky
+      shepherd.electrumServers[key].address = req.query.address;
+      shepherd.electrumServers[key].port = req.query.port;
       break;
     }
   }
 
-  shepherd.log(JSON.stringify(electrumCoins[req.query.coin], null, '\t'), true);
+  shepherd.log(JSON.stringify(shepherd.electrumCoins[req.query.coin], null, '\t'), true);
 
   const successObj = {
     msg: 'success',
@@ -899,17 +589,17 @@ shepherd.get('/electrum/coins/server/set', (req, res, next) => {
 });
 
 shepherd.addElectrumCoin = (coin) => {
-  for (let key in electrumServers) {
-    if (electrumServers[key].abbr === coin) {
-      electrumCoins[coin] = {
+  for (let key in shepherd.electrumServers) {
+    if (shepherd.electrumServers[key].abbr === coin) {
+      shepherd.electrumCoins[coin] = {
         name: key,
         abbr: coin,
         server: {
-          ip: electrumServers[key].address,
-          port: electrumServers[key].port,
+          ip: shepherd.electrumServers[key].address,
+          port: shepherd.electrumServers[key].port,
         },
-        serverList: electrumServers[key].serverList ? electrumServers[key].serverList : 'none',
-        txfee: 'calculated' /*electrumServers[key].txfee*/,
+        serverList: shepherd.electrumServers[key].serverList ? shepherd.electrumServers[key].serverList : 'none',
+        txfee: 'calculated' /*shepherd.electrumServers[key].txfee*/,
       };
 
       return true;
@@ -918,7 +608,7 @@ shepherd.addElectrumCoin = (coin) => {
 }
 
 shepherd.get('/electrum/coins/remove', (req, res, next) => {
-  delete electrumCoins[req.query.coin];
+  delete shepherd.electrumCoins[req.query.coin];
 
   const successObj = {
     msg: 'success',
@@ -940,11 +630,11 @@ shepherd.get('/electrum/coins/add', (req, res, next) => {
 });
 
 shepherd.get('/electrum/coins', (req, res, next) => {
-  let _electrumCoins = JSON.parse(JSON.stringify(electrumCoins)); // deep cloning
+  let _electrumCoins = JSON.parse(JSON.stringify(shepherd.electrumCoins)); // deep cloning
 
   for (let key in _electrumCoins) {
-    if (electrumKeys[key]) {
-      _electrumCoins[key].pub = electrumKeys[key].pub;
+    if (shepherd.electrumKeys[key]) {
+      _electrumCoins[key].pub = shepherd.electrumKeys[key].pub;
     }
   }
 
@@ -992,7 +682,7 @@ shepherd.kmdCalcInterest = (locktime, value) => { // value in sats
 
 shepherd.get('/electrum/getbalance', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
   shepherd.log('electrum getbalance =>', true);
 
@@ -1026,8 +716,8 @@ shepherd.get('/electrum/getbalance', (req, res, next) => {
                 _utxo.length) {
               let interestTotal = 0;
 
-              Promise.all(_utxo.map((_utxoItem, index) => {
-                return new Promise((resolve, reject) => {
+              shepherd.Promise.all(_utxo.map((_utxoItem, index) => {
+                return new shepherd.Promise((resolve, reject) => {
                   ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
                   .then((_rawtxJSON) => {
                     shepherd.log('electrum gettransaction ==>', true);
@@ -1036,7 +726,7 @@ shepherd.get('/electrum/getbalance', (req, res, next) => {
 
                     // decode tx
                     const _network = shepherd.getNetworkData(network);
-                    const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+                    const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
 
                     if (decodedTx &&
                         decodedTx.format &&
@@ -1149,7 +839,7 @@ shepherd.sortTransactions = (transactions) => {
 
 shepherd.get('/electrum/listtransactions', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
   shepherd.log('electrum listtransactions ==>', true);
 
@@ -1189,8 +879,8 @@ shepherd.get('/electrum/listtransactions', (req, res, next) => {
 
             shepherd.log(json.length, true);
 
-            Promise.all(json.map((transaction, index) => {
-              return new Promise((resolve, reject) => {
+            shepherd.Promise.all(json.map((transaction, index) => {
+              return new shepherd.Promise((resolve, reject) => {
                 ecl.blockchainBlockGetHeader(transaction.height)
                 .then((blockInfo) => {
                   if (blockInfo &&
@@ -1203,7 +893,7 @@ shepherd.get('/electrum/listtransactions', (req, res, next) => {
 
                       // decode tx
                       const _network = shepherd.getNetworkData(network);
-                      const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+                      const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
 
                       let txInputs = [];
 
@@ -1212,12 +902,12 @@ shepherd.get('/electrum/listtransactions', (req, res, next) => {
 
                       if (decodedTx &&
                           decodedTx.inputs) {
-                        Promise.all(decodedTx.inputs.map((_decodedInput, index) => {
-                          return new Promise((_resolve, _reject) => {
+                        shepherd.Promise.all(decodedTx.inputs.map((_decodedInput, index) => {
+                          return new shepherd.Promise((_resolve, _reject) => {
                             if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
                               ecl.blockchainTransactionGet(_decodedInput.txid)
                               .then((rawInput) => {
-                                const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
+                                const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, _network);
 
                                 shepherd.log('electrum raw input tx ==>', true);
 
@@ -1342,7 +1032,7 @@ shepherd.get('/electrum/listtransactions', (req, res, next) => {
 
 shepherd.get('/electrum/gettransaction', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
   shepherd.log('electrum gettransaction =>', true);
 
@@ -1491,8 +1181,8 @@ shepherd.get('/electrum/getblockinfo', (req, res, next) => {
 });
 
 shepherd.electrumGetBlockInfo = (height, network) => {
-  return new Promise((resolve, reject) => {
-    const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  return new shepherd.Promise((resolve, reject) => {
+    const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
     ecl.connect();
     ecl.blockchainBlockGetHeader(height)
@@ -1519,8 +1209,8 @@ shepherd.get('/electrum/getcurrentblock', (req, res, next) => {
 });
 
 shepherd.electrumGetCurrentBlock = (network) => {
-  return new Promise((resolve, reject) => {
-    const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  return new shepherd.Promise((resolve, reject) => {
+    const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
     ecl.connect();
     ecl.blockchainNumblocksSubscribe()
@@ -1538,7 +1228,7 @@ shepherd.get('/electrum/decoderawtx', (req, res, next) => {
   const _network = shepherd.getNetworkData(req.query.network);
   const _rawtx = req.query.rawtx;
   // const _rawtx = '0100000001dd6d064f5665f8454293ecaa9dbb55accf4f7e443d35f3b5ab7760f54b6c15fe000000006a473044022056355585a4a501ec9afc96aa5df124cf29ad3ac6454b47cd07cd7d89ec95ec2b022074c4604ee349d30e5336f210598e4dc576bf16ebeb67eeac3f4e82f56e930fee012103b90ba01af308757054e0484bb578765d5df59c4a57adbb94e2419df5e7232a63feffffff0289fc923b000000001976a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac20a10700000000001976a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac49258b58';
-  const decodedTx = electrumJSTxDecoder(_rawtx, _network);
+  const decodedTx = shepherd.electrumJSTxDecoder(_rawtx, _network);
 
   shepherd.log('electrum decoderawtx input tx ==>', true);
 
@@ -1558,7 +1248,7 @@ shepherd.get('/electrum/decoderawtx', (req, res, next) => {
 
     res.end(JSON.stringify(successObj));
   } else {
-    const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+    const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[req.query.network].port, shepherd.electrumServers[req.query.network].address, shepherd.electrumServers[req.query.network].proto); // tcp or tls
 
     ecl.connect();
     ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
@@ -1566,7 +1256,7 @@ shepherd.get('/electrum/decoderawtx', (req, res, next) => {
       ecl.close();
       shepherd.log(json, true);
 
-      const decodedVin = electrumJSTxDecoder(json, _network);
+      const decodedVin = shepherd.electrumJSTxDecoder(json, _network);
 
       const successObj = {
         msg: 'success',
@@ -1626,7 +1316,7 @@ shepherd.findUtxoSet = function(utxoList, target) {
 
 // remove
 shepherd.get('/electrum/subset', function(req, res, next) {
-  const _utxoSet = shepherd.findUtxoSet(null, Number(req.query.target) + Number(electrumServers[req.query.network].txfee)); // target + txfee
+  const _utxoSet = shepherd.findUtxoSet(null, Number(req.query.target) + Number(shepherd.electrumServers[req.query.network].txfee)); // target + txfee
 
   const successObj = {
     msg: 'success',
@@ -1641,13 +1331,13 @@ shepherd.get('/electrum/subset', function(req, res, next) {
 
 // single sig
 shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
-  let key = bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
-  let tx = new bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+  let key = shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
+  let tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
 
   shepherd.log('buildSignedTx');
   // console.log(`buildSignedTx priv key ${wif}`);
   shepherd.log(`buildSignedTx pub key ${key.getAddress().toString()}`, true);
-  // console.log('buildSignedTx std tx fee ' + electrumServers[network].txfee);
+  // console.log('buildSignedTx std tx fee ' + shepherd.electrumServers[network].txfee);
 
   for (let i = 0; i < utxo.length; i++) {
     tx.addInput(utxo[i].txid, utxo[i].vout);
@@ -1702,16 +1392,16 @@ shepherd.maxSpendBalance = (utxoList, fee) => {
 shepherd.get('/electrum/createrawtx', (req, res, next) => {
   // txid 64 char
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
   const outputAddress = req.query.address;
   const changeAddress = req.query.change;
   const value = Number(req.query.value);
   const push = req.query.push;
-  const fee = electrumServers[network].txfee;
+  const fee = shepherd.electrumServers[network].txfee;
   let wif = req.query.wif;
 
   if (req.query.gui) {
-    wif = electrumKeys[req.query.coin].priv;
+    wif = shepherd.electrumKeys[req.query.coin].priv;
   }
 
   shepherd.log('electrum createrawtx =>', true);
@@ -1767,7 +1457,7 @@ shepherd.get('/electrum/createrawtx', (req, res, next) => {
       // default coin selection algo blackjack with fallback to accumulative
       // make a first run, calc approx tx fee
       // if ins and outs are empty reduce max spend by txfee
-      let { inputs, outputs, fee } = coinSelect(utxoListFormatted, targets, feeRate);
+      let { inputs, outputs, fee } = shepherd.coinSelect(utxoListFormatted, targets, feeRate);
 
       shepherd.log('coinselect res =>', true);
       shepherd.log('coinselect inputs =>', true);
@@ -1779,12 +1469,12 @@ shepherd.get('/electrum/createrawtx', (req, res, next) => {
 
       if (!inputs &&
           !outputs) {
-        targets[0].value = targets[0].value - electrumServers[network].txfee;
+        targets[0].value = targets[0].value - shepherd.electrumServers[network].txfee;
         shepherd.log('second run', true);
         shepherd.log('coinselect adjusted targets =>', true);
         shepherd.log(targets, true);
 
-        const secondRun = coinSelect(utxoListFormatted, targets, feeRate);
+        const secondRun = shepherd.coinSelect(utxoListFormatted, targets, feeRate);
         inputs = secondRun.inputs;
         outputs = secondRun.outputs;
         fee = secondRun.fee;
@@ -1900,7 +1590,7 @@ shepherd.get('/electrum/createrawtx', (req, res, next) => {
 
             res.end(JSON.stringify(successObj));
           } else {
-            const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+            const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
             ecl.connect();
             ecl.blockchainTransactionBroadcast(_rawtx)
@@ -2029,7 +1719,7 @@ shepherd.get('/electrum/createrawtx', (req, res, next) => {
 
 shepherd.get('/electrum/pushtx', (req, res, next) => {
   const rawtx = req.query.rawtx;
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[req.query.network].port, shepherd.electrumServers[req.query.network].address, shepherd.electrumServers[req.query.network].proto); // tcp or tls
 
   ecl.connect();
   ecl.blockchainTransactionBroadcast(rawtx)
@@ -2051,7 +1741,7 @@ shepherd.listunspent = (ecl, address, network, full, verify) => {
   let _atLeastOneDecodeTxFailed = false;
 
   if (full) {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       ecl.connect();
       ecl.blockchainAddressListunspent(address)
       .then((_utxoJSON) => {
@@ -2074,8 +1764,8 @@ shepherd.listunspent = (ecl, address, network, full, verify) => {
               if (!_utxo.length) { // no confirmed utxo
                 resolve('no valid utxo');
               } else {
-                Promise.all(_utxo.map((_utxoItem, index) => {
-                  return new Promise((resolve, reject) => {
+                shepherd.Promise.all(_utxo.map((_utxoItem, index) => {
+                  return new shepherd.Promise((resolve, reject) => {
                     ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
                     .then((_rawtxJSON) => {
                       shepherd.log('electrum gettransaction ==>', true);
@@ -2084,7 +1774,7 @@ shepherd.listunspent = (ecl, address, network, full, verify) => {
 
                       // decode tx
                       const _network = shepherd.getNetworkData(network);
-                      const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+                      const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
 
                       shepherd.log('decoded tx =>', true);
                       shepherd.log(decodedTx, true);
@@ -2183,7 +1873,7 @@ shepherd.listunspent = (ecl, address, network, full, verify) => {
       });
     });
   } else {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       ecl.connect();
       ecl.blockchainAddressListunspent(address)
       .then((json) => {
@@ -2202,7 +1892,7 @@ shepherd.listunspent = (ecl, address, network, full, verify) => {
 
 shepherd.get('/electrum/listunspent', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
   if (req.query.full &&
       req.query.full === 'true') {
@@ -2239,7 +1929,7 @@ shepherd.get('/electrum/listunspent', (req, res, next) => {
 });
 
 shepherd.get('/electrum/estimatefee', (req, res, next) => {
-  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+  const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[req.query.network].port, shepherd.electrumServers[req.query.network].address, shepherd.electrumServers[req.query.network].proto); // tcp or tls
 
   ecl.connect();
   ecl.blockchainEstimatefee(req.query.blocks)
@@ -2279,22 +1969,22 @@ shepherd.scanNativeCoindBins = () => {
   let nativeCoindList = {};
 
   // check if coind bins are present in agama
-  for (let key in nativeCoind) {
+  for (let key in shepherd.nativeCoind) {
     nativeCoindList[key] = {
-      name: nativeCoind[key].name,
-      port: nativeCoind[key].port,
-      bin: nativeCoind[key].bin,
+      name: shepherd.nativeCoind[key].name,
+      port: shepherd.nativeCoind[key].port,
+      bin: shepherd.nativeCoind[key].bin,
       bins: {
         daemon: false,
         cli: false,
       },
     };
 
-    if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}d${os.platform() === 'win32' ? '.exe' : ''}`)) {
+    if (shepherd.fs.existsSync(`${shepherd.coindRootDir}/${key}/${shepherd.nativeCoind[key].bin}d${shepherd.os.platform() === 'win32' ? '.exe' : ''}`)) {
       nativeCoindList[key].bins.daemon = true;
     }
 
-    if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}-cli${os.platform() === 'win32' ? '.exe' : ''}`)) {
+    if (shepherd.fs.existsSync(`${shepherd.coindRootDir}/${key}/${shepherd.nativeCoind[key].bin}-cli${shepherd.os.platform() === 'win32' ? '.exe' : ''}`)) {
       nativeCoindList[key].bins.cli = true;
     }
   }
@@ -2303,7 +1993,7 @@ shepherd.scanNativeCoindBins = () => {
 }
 
 shepherd.getAppRuntimeLog = () => {
-  return new Promise((resolve, reject) => {
+  return new shepherd.Promise((resolve, reject) => {
     resolve(appRuntimeLog);
   });
 };
@@ -2344,7 +2034,7 @@ shepherd.startKMDNative = (selection, isManual) => {
       })
     };
 
-    request(options, (error, response, body) => {
+    shepherd.request(options, (error, response, body) => {
       if (response &&
           response.statusCode &&
           response.statusCode === 200) {
@@ -2394,7 +2084,7 @@ shepherd.startKMDNative = (selection, isManual) => {
           })
         };
 
-        request(options, (error, response, body) => {
+        shepherd.request(options, (error, response, body) => {
           if (response &&
               response.statusCode &&
               response.statusCode === 200) {
@@ -2458,8 +2148,8 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
       type.pop();
     }
 
-    Promise.all(type.map((_type, index) => {
-      return new Promise((resolve, reject) => {
+    shepherd.Promise.all(type.map((_type, index) => {
+      return new shepherd.Promise((resolve, reject) => {
         _bitcoinRPC(
           coin,
           _type === 'public' ? 'getaddressesbyaccount' : 'z_listaddresses',
@@ -2545,8 +2235,8 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
           // get zaddr balance
           if (result[1] &&
               result[1].length) {
-            Promise.all(result[1].map((_address, index) => {
-              return new Promise((resolve, reject) => {
+            shepherd.Promise.all(result[1].map((_address, index) => {
+              return new shepherd.Promise((resolve, reject) => {
                 _bitcoinRPC(coin, 'z_getbalance', [_address])
                 .then((__json) => {
                   __json = JSON.parse(__json);
@@ -2628,7 +2318,7 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
   }
 
   const _bitcoinRPC = (coin, cmd, params) => {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       let _payload;
 
       if (params) {
@@ -2656,7 +2346,7 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
         timeout: 120000,
       };
 
-      request(options, (error, response, body) => {
+      shepherd.request(options, (error, response, body) => {
         if (response &&
             response.statusCode &&
             response.statusCode === 200) {
@@ -2668,7 +2358,7 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
     });
   }
 
-  Promise.all(_promiseStack.map((_call, index) => {
+  shepherd.Promise.all(_promiseStack.map((_call, index) => {
     let _params;
     if (_call === 'listtransactions') {
       _params = [
@@ -2677,7 +2367,7 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
         0
       ];
     }
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       _bitcoinRPC(
         _coin,
         _call,
@@ -2700,54 +2390,54 @@ shepherd.post('/native/dashboard/update', (req, res, next) => {
 });
 
 shepherd.testClearAll = () => {
-  return new Promise((resolve, reject) => {
-    fs.removeSync(`${iguanaTestDir}`);
+  return new shepherd.Promise((resolve, reject) => {
+    shepherd.fs.removeSync(`${iguanaTestDir}`);
     resolve('done');
   });
 }
 
 shepherd.testBins = (daemonName) => {
-  return new Promise((resolve, reject) => {
+  return new shepherd.Promise((resolve, reject) => {
     const _bins = {
-      komodod: komododBin,
-      komodoCli: komodocliBin,
+      komodod: shepherd.komododBin,
+      komodoCli: shepherd.komodocliBin,
     };
     const _arg = null;
     let _pid;
 
     shepherd.log('testBins exec ' + _bins[daemonName]);
 
-    if (!fs.existsSync(agamaTestDir)) {
-      fs.mkdirSync(agamaTestDir);
+    if (!shepherd.fs.existsSync(shepherd.agamaTestDir)) {
+      shepherd.fs.mkdirSync(shepherd.agamaTestDir);
     }
 
     try {
-      _fs.access(`${agamaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, (err) => {
+      shepherd._fs.access(`${shepherd.agamaTestDir}/${daemonName}Test.log`, shepherd.fs.constants.R_OK, (err) => {
         if (!err) {
           try {
-            _fs.unlinkSync(`${agamaTestDir}/${daemonName}Test.log`);
+            shepherd._fs.unlinkSync(`${shepherd.agamaTestDir}/${daemonName}Test.log`);
           } catch (e) {}
         } else {
-          shepherd.log(`path ${agamaTestDir}/${daemonName}Test.log doesnt exist`);
+          shepherd.log(`path ${shepherd.agamaTestDir}/${daemonName}Test.log doesnt exist`);
         }
       });
     } catch (e) {}
 
     if (daemonName === 'komodod') {
       try {
-        _fs.access(`${iguanaTestDir}/debug.log`, fs.constants.R_OK, (err) => {
+        shepherd._fs.access(`${iguanaTestDir}/debug.log`, shepherd.fs.constants.R_OK, (err) => {
           if (!err) {
-            _fs.unlinkSync(`${iguanaTestDir}/db.log`);
-            _fs.unlinkSync(`${iguanaTestDir}/debug.log`);
-            _fs.unlinkSync(`${iguanaTestDir}/komodo.conf`);
-            _fs.unlinkSync(`${iguanaTestDir}/komodod.pid`);
-            _fs.unlinkSync(`${iguanaTestDir}/komodostate`);
-            _fs.unlinkSync(`${iguanaTestDir}/realtime`);
-            _fs.unlinkSync(`${iguanaTestDir}/wallet.dat`);
-            _fs.unlinkSync(`${iguanaTestDir}/.lock`);
-            fs.removeSync(`${iguanaTestDir}/blocks`);
-            fs.removeSync(`${iguanaTestDir}/chainstate`);
-            fs.removeSync(`${iguanaTestDir}/database`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/db.log`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/debug.log`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/komodo.conf`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/komodod.pid`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/komodostate`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/realtime`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/wallet.dat`);
+            shepherd._fs.unlinkSync(`${iguanaTestDir}/.lock`);
+            shepherd.fs.removeSync(`${iguanaTestDir}/blocks`);
+            shepherd.fs.removeSync(`${iguanaTestDir}/chainstate`);
+            shepherd.fs.removeSync(`${iguanaTestDir}/database`);
             execKomodod();
           } else {
             shepherd.log(`test: nothing to remove in ${iguanaTestDir}`);
@@ -2790,13 +2480,13 @@ shepherd.testBins = (daemonName) => {
           'addnode=185.106.121.32\n' +
           'addnode=27.100.36.201\n';
 
-        fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, (err) => {
+        shepherd.fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, (err) => {
           if (err) {
             shepherd.log(`test: error writing komodo conf in ${iguanaTestDir}`);
           }
         });
 
-        portscanner.checkPortStatus('7771', '127.0.0.1', (error, status) => {
+        shepherd.portscanner.checkPortStatus('7771', '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'closed') {
             _komododTest.port = 'passed';
@@ -2812,7 +2502,7 @@ shepherd.testBins = (daemonName) => {
           }
 
           pm2.start({
-            script: komododBin, // path to binary
+            script: shepherd.komododBin, // path to binary
             name: 'komodod',
             exec_mode : 'fork',
             args: [
@@ -2857,7 +2547,7 @@ shepherd.testBins = (daemonName) => {
             }),
           };
 
-          request(options, (error, response, body) => {
+          shepherd.request(options, (error, response, body) => {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
@@ -2888,7 +2578,7 @@ shepherd.testBins = (daemonName) => {
       //2017-08-30 18:23:43 UpdateTip: new best=0a47c1323f393650f7221c217d19d149d002d35444f47fde61be2dd90fbde8e6  height=1  log2_work=5.0874628  tx=2  date=2016-09-13 19:04:01 progress=0.000001  cache=0.0MiB(1tx)
       //2017-08-30 18:23:43 UpdateTip: new best=05076a4e1fc9af0f5fda690257b17ae20c12d4796dfba1624804d012c9ec00be  height=2  log2_work=5.6724253  tx=3  date=2016-09-13 19:05:28 progress=0.000001  cache=0.0MiB(2tx)
 
-      /*execFile(`${komododBin}`, _arg, {
+      /*shepherd.execFile(`${shepherd.komododBin}`, _arg, {
         maxBuffer: 1024 * 10000 // 10 mb
       }, function(error, stdout, stderr) {
         shepherd.writeLog(`stdout: ${stdout}`);
@@ -2913,12 +2603,12 @@ shepherd.testBins = (daemonName) => {
 
 // komodod datadir location test
 shepherd.testLocation = (path) => {
-  return new Promise((resolve, reject) => {
-    if (path.indexOf(' ') > -1) {
+  return new shepherd.Promise((resolve, reject) => {
+    if (shepherd.path.indexOf(' ') > -1) {
       shepherd.log(`error testing path ${path}`);
       resolve(-1);
     } else {
-      fs.lstat(path, (err, stats) => {
+      shepherd.fs.lstat(path, (err, stats) => {
         if (err) {
           shepherd.log(`error testing path ${path}`);
           resolve(-1);
@@ -2937,20 +2627,20 @@ shepherd.testLocation = (path) => {
 
 // osx and linux
 shepherd.binFixRights = () => {
-  const osPlatform = os.platform();
+  const osPlatform = shepherd.os.platform();
   const _bins = [
-    komododBin,
-    komodocliBin
+    shepherd.komododBin,
+    shepherd.komodocliBin
   ];
 
   if (osPlatform === 'darwin' ||
       osPlatform === 'linux') {
     for (let i = 0; i < _bins.length; i++) {
-      _fs.stat(_bins[i], (err, stat) => {
+      shepherd._fs.stat(_bins[i], (err, stat) => {
         if (!err) {
           if (parseInt(stat.mode.toString(8), 10) !== 100775) {
             shepherd.log(`${_bins[i]} fix permissions`);
-            fsnode.chmodSync(_bins[i], '0775');
+            shepherd.fsnode.chmodSync(_bins[i], '0775');
           }
         } else {
           shepherd.log(`error: ${_bins[i]} not found`);
@@ -2963,7 +2653,7 @@ shepherd.binFixRights = () => {
 shepherd.killRogueProcess = (processName) => {
   // kill rogue process copies on start
   let processGrep;
-  const osPlatform = os.platform();
+  const osPlatform = shepherd.os.platform();
 
   switch (osPlatform) {
     case 'darwin':
@@ -2977,14 +2667,14 @@ shepherd.killRogueProcess = (processName) => {
       break;
   }
 
-  exec(processGrep, (error, stdout, stderr) => {
+  shepherd.exec(processGrep, (error, stdout, stderr) => {
     if (stdout.indexOf(processName) > -1) {
       const pkillCmd = osPlatform === 'win32' ? `taskkill /f /im ${processName}.exe` : `pkill -15 ${processName}`;
 
       shepherd.log(`found another ${processName} process(es)`);
       shepherd.writeLog(`found another ${processName} process(es)`);
 
-      exec(pkillCmd, (error, stdout, stderr) => {
+      shepherd.exec(pkillCmd, (error, stdout, stderr) => {
         shepherd.log(`${pkillCmd} is issued`);
         shepherd.writeLog(`${pkillCmd} is issued`);
 
@@ -3004,10 +2694,10 @@ shepherd.killRogueProcess = (processName) => {
 
 shepherd.zcashParamsExist = () => {
   let _checkList = {
-    rootDir: _fs.existsSync(zcashParamsDir),
-    provingKey: _fs.existsSync(`${zcashParamsDir}/sprout-proving.key`),
+    rootDir: shepherd._fs.existsSync(shepherd.zcashParamsDir),
+    provingKey: shepherd._fs.existsSync(`${shepherd.zcashParamsDir}/sprout-proving.key`),
     provingKeySize: false,
-    verifyingKey: _fs.existsSync(`${zcashParamsDir}/sprout-verifying.key`),
+    verifyingKey: shepherd._fs.existsSync(`${shepherd.zcashParamsDir}/sprout-verifying.key`),
     verifyingKeySize: false,
     errors: false,
   };
@@ -3016,8 +2706,8 @@ shepherd.zcashParamsExist = () => {
       _checkList.provingKey ||
       _checkList.verifyingKey) {
     // verify each key size
-    const _provingKeySize = _checkList.provingKey ? fs.lstatSync(`${zcashParamsDir}/sprout-proving.key`) : 0;
-    const _verifyingKeySize = _checkList.verifyingKey ? fs.lstatSync(`${zcashParamsDir}/sprout-verifying.key`) : 0;
+    const _provingKeySize = _checkList.provingKey ? shepherd.fs.lstatSync(`${shepherd.zcashParamsDir}/sprout-proving.key`) : 0;
+    const _verifyingKeySize = _checkList.verifyingKey ? shepherd.fs.lstatSync(`${shepherd.zcashParamsDir}/sprout-verifying.key`) : 0;
 
     if (Number(_provingKeySize.size) === 910173851) { // bytes
       _checkList.provingKeySize = true;
@@ -3044,41 +2734,41 @@ shepherd.zcashParamsExist = () => {
 
 shepherd.readVersionFile = () => {
   // read app version
-  const rootLocation = path.join(__dirname, '../');
-  const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
+  const rootLocation = shepherd.path.join(__dirname, '../');
+  const localVersionFile = shepherd.fs.readFileSync(`${rootLocation}version`, 'utf8');
 
   return localVersionFile;
 }
 
 shepherd.createAgamaDirs = () => {
-  if (!fs.existsSync(agamaDir)) {
-    fs.mkdirSync(agamaDir);
+  if (!shepherd.fs.existsSync(shepherd.agamaDir)) {
+    shepherd.fs.mkdirSync(shepherd.agamaDir);
 
-    if (fs.existsSync(agamaDir)) {
-      shepherd.log(`created agama folder at ${agamaDir}`);
-      shepherd.writeLog(`created agama folder at ${agamaDir}`);
+    if (shepherd.fs.existsSync(shepherd.agamaDir)) {
+      shepherd.log(`created agama folder at ${shepherd.agamaDir}`);
+      shepherd.writeLog(`created agama folder at ${shepherd.agamaDir}`);
     }
   } else {
     shepherd.log('agama folder already exists');
   }
 
-  if (!fs.existsSync(`${agamaDir}/shepherd`)) {
-    fs.mkdirSync(`${agamaDir}/shepherd`);
+  if (!shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd`)) {
+    shepherd.fs.mkdirSync(`${shepherd.agamaDir}/shepherd`);
 
-    if (fs.existsSync(`${agamaDir}/shepherd`)) {
-      shepherd.log(`created shepherd folder at ${agamaDir}/shepherd`);
-      shepherd.writeLog(`create shepherd folder at ${agamaDir}/shepherd`);
+    if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd`)) {
+      shepherd.log(`created shepherd folder at ${shepherd.agamaDir}/shepherd`);
+      shepherd.writeLog(`create shepherd folder at ${shepherd.agamaDir}/shepherd`);
     }
   } else {
     shepherd.log('agama/shepherd folder already exists');
   }
 
-  if (!fs.existsSync(`${agamaDir}/shepherd/pin`)) {
-    fs.mkdirSync(`${agamaDir}/shepherd/pin`);
+  if (!shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
+    shepherd.fs.mkdirSync(`${shepherd.agamaDir}/shepherd/pin`);
 
-    if (fs.existsSync(`${agamaDir}/shepherd/pin`)) {
-      shepherd.log(`created pin folder at ${agamaDir}/shepherd/pin`);
-      shepherd.writeLog(`create pin folder at ${agamaDir}/shepherd/pin`);
+    if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
+      shepherd.log(`created pin folder at ${shepherd.agamaDir}/shepherd/pin`);
+      shepherd.writeLog(`create pin folder at ${shepherd.agamaDir}/shepherd/pin`);
     }
   } else {
     shepherd.log('shepherd/pin folder already exists');
@@ -3093,7 +2783,7 @@ shepherd.post('/encryptkey', (req, res, next) => {
   if (req.body.key &&
       req.body.string &&
       req.body.pubkey) {
-    const encryptedString = aes256.encrypt(req.body.key, req.body.string);
+    const encryptedString = shepherd.aes256.encrypt(req.body.key, req.body.string);
 
     // test pin security
     // - at least 1 char in upper case
@@ -3104,7 +2794,7 @@ shepherd.post('/encryptkey', (req, res, next) => {
     const _pin = req.body.key;
     const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
 
-    fs.writeFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, (err) => {
+    shepherd.fs.writeFile(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, (err) => {
       if (err) {
         shepherd.log('error writing pin file');
       }
@@ -3142,8 +2832,8 @@ shepherd.post('/encryptkey', (req, res, next) => {
 shepherd.post('/decryptkey', (req, res, next) => {
   if (req.body.key &&
       req.body.pubkey) {
-    if (fs.existsSync(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
-      fs.readFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', (err, data) => {
+    if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
+      shepherd.fs.readFile(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', (err, data) => {
         if (err) {
           const errorObj = {
             msg: 'error',
@@ -3152,7 +2842,7 @@ shepherd.post('/decryptkey', (req, res, next) => {
 
           res.end(JSON.stringify(errorObj));
         } else {
-          const encryptedKey = aes256.decrypt(req.body.key, data);
+          const encryptedKey = shepherd.aes256.decrypt(req.body.key, data);
           // test if stored encrypted passphrase is decrypted correctly
           // if not then the key is wrong
           const _regexTest = encryptedKey.match(/^[0-9a-zA-Z ]+$/g);
@@ -3192,8 +2882,8 @@ shepherd.post('/decryptkey', (req, res, next) => {
 });
 
 shepherd.get('/getpinlist', (req, res, next) => {
-  if (fs.existsSync(`${agamaDir}/shepherd/pin`)) {
-    fs.readdir(`${agamaDir}/shepherd/pin`, (err, items) => {
+  if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
+    shepherd.fs.readdir(`${shepherd.agamaDir}/shepherd/pin`, (err, items) => {
       let _pins = [];
 
       for (let i = 0; i < items.length; i++) {
@@ -3232,12 +2922,12 @@ shepherd.get('/getpinlist', (req, res, next) => {
  * Promise based download file method
  */
 const downloadFile = (configuration) => {
-  return new Promise((resolve, reject) => {
+  return new shepherd.Promise((resolve, reject) => {
     // Save variable to know progress
     let receivedBytes = 0;
     let totalBytes = 0;
 
-    let req = request({
+    let req = shepherd.request({
       method: 'GET',
       uri: configuration.remoteFile,
       agentOptions: {
@@ -3246,7 +2936,7 @@ const downloadFile = (configuration) => {
       },
     });
 
-    let out = fs.createWriteStream(configuration.localFile);
+    let out = shepherd.fs.createWriteStream(configuration.localFile);
     req.pipe(out);
 
     req.on('response', (data) => {
@@ -3321,7 +3011,7 @@ let binsToUpdate = [];
  */
  // TODO: promises
 shepherd.get('/update/bins/check', (req, res, next) => {
-  const rootLocation = path.join(__dirname, '../');
+  const rootLocation = shepherd.path.join(__dirname, '../');
   const successObj = {
     msg: 'success',
     result: 'bins',
@@ -3329,7 +3019,7 @@ shepherd.get('/update/bins/check', (req, res, next) => {
 
   res.end(JSON.stringify(successObj));
 
-  const _os = os.platform();
+  const _os = shepherd.os.platform();
   shepherd.log(`checking bins: ${_os}`);
 
   shepherd.io.emit('patch', {
@@ -3341,8 +3031,8 @@ shepherd.get('/update/bins/check', (req, res, next) => {
   });
   // get list of bins/dlls that can be updated to the latest
   for (let i = 0; i < latestBins[_os].length; i++) {
-    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], (err, remoteBinSize) => {
-      const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
+    shepherd.remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], (err, remoteBinSize) => {
+      const localBinSize = shepherd.fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
 
       shepherd.log('remote url: ' + (remoteBinLocation[_os] + latestBins[_os][i]) + ' (' + remoteBinSize + ')');
       shepherd.log('local file: ' + (rootLocation + localBinLocation[_os] + latestBins[_os][i]) + ' (' + localBinSize + ')');
@@ -3375,8 +3065,8 @@ shepherd.get('/update/bins/check', (req, res, next) => {
  *  params:
  */
 shepherd.get('/update/bins', (req, res, next) => {
-  const rootLocation = path.join(__dirname, '../');
-  const _os = os.platform();
+  const rootLocation = shepherd.path.join(__dirname, '../');
+  const _os = shepherd.os.platform();
   const successObj = {
     msg: 'success',
     result: {
@@ -3410,7 +3100,7 @@ shepherd.get('/update/bins', (req, res, next) => {
     })
     .then(() => {
       // verify that remote file is matching to DL'ed file
-      const localBinSize = fs.statSync(`${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`).size;
+      const localBinSize = shepherd.fs.statSync(`${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`).size;
       shepherd.log('compare dl file size');
 
       if (localBinSize === binsToUpdate[i].rSize) {
@@ -3453,7 +3143,7 @@ shepherd.get('/update/patch', (req, res, next) => {
 });
 
 shepherd.updateAgama = () => {
-  const rootLocation = path.join(__dirname, '../');
+  const rootLocation = shepherd.path.join(__dirname, '../');
 
   downloadFile({
     remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
@@ -3476,20 +3166,20 @@ shepherd.updateAgama = () => {
     }
   })
   .then(() => {
-    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', (err, remotePatchSize) => {
+    shepherd.remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', (err, remotePatchSize) => {
       // verify that remote file is matching to DL'ed file
-      const localPatchSize = fs.statSync(`${rootLocation}patch.zip`).size;
+      const localPatchSize = shepherd.fs.statSync(`${rootLocation}patch.zip`).size;
       shepherd.log('compare dl file size');
 
       if (localPatchSize === remotePatchSize) {
-        const zip = new AdmZip(`${rootLocation}patch.zip`);
+        const zip = new shepherd.AdmZip(`${rootLocation}patch.zip`);
 
         shepherd.log('patch succesfully downloaded');
         shepherd.log('extracting contents');
 
         if (shepherd.appConfig.dev) {
-          if (!fs.existsSync(`${rootLocation}/patch`)) {
-            fs.mkdirSync(`${rootLocation}/patch`);
+          if (!shepherd.fs.existsSync(`${rootLocation}/patch`)) {
+            shepherd.fs.mkdirSync(`${rootLocation}/patch`);
           }
         }
 
@@ -3501,7 +3191,7 @@ shepherd.updateAgama = () => {
             status: 'done',
           },
         });
-        fs.unlinkSync(`${rootLocation}patch.zip`);
+        shepherd.fs.unlinkSync(`${rootLocation}patch.zip`);
       } else {
         shepherd.io.emit('patch', {
           msg: {
@@ -3522,18 +3212,18 @@ shepherd.updateAgama = () => {
  *  params:
  */
 shepherd.get('/update/patch/check', (req, res, next) => {
-  const rootLocation = path.join(__dirname, '../');
+  const rootLocation = shepherd.path.join(__dirname, '../');
   const options = {
     url: 'https://github.com/pbca26/dl-test/raw/master/version',
     method: 'GET',
   };
 
-  request(options, (error, response, body) => {
+  shepherd.request(options, (error, response, body) => {
     if (response &&
         response.statusCode &&
         response.statusCode === 200) {
       const remoteVersion = body.split('\n');
-      const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
+      const localVersionFile = shepherd.fs.readFileSync(`${rootLocation}version`, 'utf8');
       let localVersion;
 
       if (localVersionFile.indexOf('\r\n') > -1) {
@@ -3575,8 +3265,8 @@ shepherd.get('/update/patch/check', (req, res, next) => {
  *  params:
  */
 shepherd.get('/unpack', (req, res, next) => {
-  const dlLocation = path.join(__dirname, '../');
-  const zip = new AdmZip(`${dlLocation}patch.zip`);
+  const dlLocation = shepherd.path.join(__dirname, '../');
+  const zip = new shepherd.AdmZip(`${dlLocation}patch.zip`);
   zip.extractAllTo(/*target path*/ `${dlLocation}/patch/unpack`, /*overwrite*/true);
 
   const successObj = {
@@ -3593,8 +3283,8 @@ shepherd.get('/unpack', (req, res, next) => {
  *  params:
  */
 shepherd.get('/zcparamsdl', (req, res, next) => {
-  // const dlLocation = zcashParamsDir + '/test';
-  const dlLocation = zcashParamsDir;
+  // const dlLocation = shepherd.zcashParamsDir + '/test';
+  const dlLocation = shepherd.zcashParamsDir;
   const dlOption = req.query.dloption;
 
   const successObj = {
@@ -3661,8 +3351,8 @@ shepherd.get('/zcparamsdl', (req, res, next) => {
  *
  */
 shepherd.get('/coinslist', (req, res, next) => {
-  if (fs.existsSync(`${agamaDir}/shepherd/coinslist.json`)) {
-    fs.readFile(`${agamaDir}/shepherd/coinslist.json`, 'utf8', (err, data) => {
+  if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/coinslist.json`)) {
+    shepherd.fs.readFile(`${shepherd.agamaDir}/shepherd/coinslist.json`, 'utf8', (err, data) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -3694,17 +3384,17 @@ shepherd.get('/coinslist', (req, res, next) => {
  *  params: payload
  */
 shepherd.post('/guilog', (req, res, next) => {
-  const logLocation = `${agamaDir}/shepherd`;
+  const logLocation = `${shepherd.agamaDir}/shepherd`;
 
-  if (!guiLog[shepherd.appSessionHash]) {
-    guiLog[shepherd.appSessionHash] = {};
+  if (!shepherd.guiLog[shepherd.appSessionHash]) {
+    shepherd.guiLog[shepherd.appSessionHash] = {};
   }
 
-  if (guiLog[shepherd.appSessionHash][req.body.timestamp]) {
-    guiLog[shepherd.appSessionHash][req.body.timestamp].status = req.body.status;
-    guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
+  if (shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp]) {
+    shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp].status = req.body.status;
+    shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
   } else {
-    guiLog[shepherd.appSessionHash][req.body.timestamp] = {
+    shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp] = {
       function: req.body.function,
       type: req.body.type,
       url: req.body.url,
@@ -3713,7 +3403,7 @@ shepherd.post('/guilog', (req, res, next) => {
     };
   }
 
-  fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(guiLog), (err) => {
+  shepherd.fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(shepherd.guiLog), (err) => {
     if (err) {
       shepherd.writeLog('error writing gui log file');
     }
@@ -3734,8 +3424,8 @@ shepherd.post('/guilog', (req, res, next) => {
 shepherd.get('/getlog', (req, res, next) => {
   const logExt = req.query.type === 'txt' ? 'txt' : 'json';
 
-  if (fs.existsSync(`${agamaDir}/shepherd/agamalog.${logExt}`)) {
-    fs.readFile(`${agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', (err, data) => {
+  if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/agamalog.${logExt}`)) {
+    shepherd.fs.readFile(`${shepherd.agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', (err, data) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -3777,7 +3467,7 @@ shepherd.post('/coinslist', (req, res, next) => {
 
     res.end(JSON.stringify(errorObj));
   } else {
-    fs.writeFile(`${agamaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), (err) => {
+    shepherd.fs.writeFile(`${shepherd.agamaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), (err) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -3802,18 +3492,18 @@ shepherd.quitKomodod = (timeout = 100) => {
   // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
   let coindExitInterval = {};
-  lockDownAddCoin = true;
+  shepherd.lockDownAddCoin = true;
 
-  for (let key in coindInstanceRegistry) {
+  for (let key in shepherd.coindInstanceRegistry) {
     const chain = key !== 'komodod' ? key : null;
-    let _coindQuitCmd = komodocliBin;
+    let _coindQuitCmd = shepherd.komodocliBin;
 
      // any coind
     if (shepherd.nativeCoindList[key.toLowerCase()]) {
-      _coindQuitCmd = `${coindRootDir}/${key.toLowerCase()}/${shepherd.nativeCoindList[key.toLowerCase()].bin.toLowerCase()}-cli`;
+      _coindQuitCmd = `${shepherd.coindRootDir}/${key.toLowerCase()}/${shepherd.nativeCoindList[key.toLowerCase()].bin.toLowerCase()}-cli`;
     }
     if (key === 'CHIPS') {
-      _coindQuitCmd = chipscliBin;
+      _coindQuitCmd = shepherd.chipscliBin;
     }
 
     const execCliStop = () => {
@@ -3829,7 +3519,7 @@ shepherd.quitKomodod = (timeout = 100) => {
       }
 
       _arg.push('stop');
-      execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
+      shepherd.execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
         shepherd.log(`stdout: ${stdout}`);
         shepherd.log(`stderr: ${stderr}`);
 
@@ -3838,17 +3528,17 @@ shepherd.quitKomodod = (timeout = 100) => {
             (error && error.toString().indexOf('Command failed') > -1 && !stderr) || // win "special snowflake" case
             stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
             stderr.indexOf('connect to server: unknown (code -1)') > -1) {
-          delete coindInstanceRegistry[key];
+          delete shepherd.coindInstanceRegistry[key];
           clearInterval(coindExitInterval[key]);
         }
 
         // workaround for AGT-65
-        const _port = assetChainPorts[key];
+        const _port = shepherd.assetChainPorts[key];
         setTimeout(() => {
-          portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+          shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
             // Status is 'open' if currently in use or 'closed' if available
             if (status === 'closed') {
-              delete coindInstanceRegistry[key];
+              delete shepherd.coindInstanceRegistry[key];
               clearInterval(coindExitInterval[key]);
             }
           });
@@ -3878,21 +3568,21 @@ shepherd.quitKomodod = (timeout = 100) => {
 }
 
 shepherd.getConf = (chain) => {
-  let _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
-  _confLocation = chain === 'CHIPS' ? `${chipsDir}/chips.conf` : _confLocation;
+  let _confLocation = chain === 'komodod' ? `${shepherd.komodoDir}/komodo.conf` : `${shepherd.komodoDir}/${chain}/${chain}.conf`;
+  _confLocation = chain === 'CHIPS' ? `${shepherd.chipsDir}/chips.conf` : _confLocation;
 
   // any coind
   if (chain) {
     if (shepherd.nativeCoindList[chain.toLowerCase()]) {
-      const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+      const _osHome = shepherd.os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
       let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
 
       _confLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}.conf`;
     }
 
-    if (fs.existsSync(_confLocation)) {
-      let _port = assetChainPorts[chain];
-      const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
+    if (shepherd.fs.existsSync(_confLocation)) {
+      let _port = shepherd.assetChainPorts[chain];
+      const _rpcConf = shepherd.fs.readFileSync(_confLocation, 'utf8');
 
       // any coind
       if (shepherd.nativeCoindList[chain.toLowerCase()]) {
@@ -3917,9 +3607,9 @@ shepherd.getConf = (chain) => {
         }
 
         if (shepherd.nativeCoindList[chain.toLowerCase()]) {
-          rpcConf[chain] = parsedRpcConfig;
+          shepherd.rpcConf[chain] = parsedRpcConfig;
         } else {
-          rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
+          shepherd.rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
         }
       } else {
         shepherd.log(`${_confLocation} is empty`);
@@ -3955,7 +3645,7 @@ shepherd.post('/cli', (req, res, next) => {
     let _cmd = req.body.payload.cmd;
     const _params = req.body.payload.params ? ` ${req.body.payload.params}` : '';
 
-    if (!rpcConf[_chain]) {
+    if (!shepherd.rpcConf[_chain]) {
       shepherd.getConf(req.body.payload.chain === 'KMD' || !req.body.payload.chain && shepherd.kmdMainPassiveMode ? 'komodod' : req.body.payload.chain);
     }
 
@@ -3985,7 +3675,7 @@ shepherd.post('/cli', (req, res, next) => {
 
       // send back body on both success and error
       // this bit replicates iguana core's behaviour
-      request(options, function(error, response, body) {
+      shepherd.request(options, function(error, response, body) {
         if (response &&
             response.statusCode &&
             response.statusCode === 200) {
@@ -3997,11 +3687,11 @@ shepherd.post('/cli', (req, res, next) => {
       if (_cmd === 'debug' &&
           _chain !== 'CHIPS') {
         if (shepherd.nativeCoindList[_chain.toLowerCase()]) {
-          const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+          const _osHome = shepherd.os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
           let coindDebugLogLocation;
 
           if (_chain === 'CHIPS') {
-            coindDebugLogLocation = `${chipsDir}/debug.log`;
+            coindDebugLogLocation = `${shepherd.chipsDir}/debug.log`;
           } else {
             coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
           }
@@ -4053,18 +3743,18 @@ shepherd.post('/cli', (req, res, next) => {
 
         if (req.body.payload.chain) {
           const options = {
-            url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
+            url: `http://localhost:${shepherd.rpcConf[req.body.payload.chain].port}`,
             method: 'POST',
             auth: {
-              'user': rpcConf[req.body.payload.chain].user,
-              'pass': rpcConf[req.body.payload.chain].pass
+              'user': shepherd.rpcConf[req.body.payload.chain].user,
+              'pass': shepherd.rpcConf[req.body.payload.chain].pass
             },
             body: JSON.stringify(_body)
           };
 
           // send back body on both success and error
           // this bit replicates iguana core's behaviour
-          request(options, (error, response, body) => {
+          shepherd.request(options, (error, response, body) => {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
@@ -4076,12 +3766,12 @@ shepherd.post('/cli', (req, res, next) => {
         }
       }
     } else {
-      let _coindCliBin = komodocliBin;
+      let _coindCliBin = shepherd.komodocliBin;
 
       if (shepherd.nativeCoindList &&
           _chain &&
           shepherd.nativeCoindList[_chain.toLowerCase()]) {
-        _coindCliBin = `${coindRootDir}/${_chain.toLowerCase()}/${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}-cli`;
+        _coindCliBin = `${shepherd.coindRootDir}/${_chain.toLowerCase()}/${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}-cli`;
       }
 
       let _arg = (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params;
@@ -4091,7 +3781,7 @@ shepherd.post('/cli', (req, res, next) => {
       }
 
       _arg = _arg.trim().split(' ');
-      execFile(_coindCliBin, _arg, (error, stdout, stderr) => {
+      shepherd.execFile(_coindCliBin, _arg, (error, stdout, stderr) => {
         shepherd.log(`stdout: ${stdout}`);
         shepherd.log(`stderr: ${stderr}`);
 
@@ -4159,13 +3849,13 @@ shepherd.post('/appconf/reset', (req, res, next) => {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.log(`agama dir: ${agamaDir}`);
+shepherd.log(`agama dir: ${shepherd.agamaDir}`);
 shepherd.log('--------------------------')
-shepherd.log(`komodo dir: ${komododBin}`);
-shepherd.log(`komodo bin: ${komodoDir}`);
-shepherd.writeLog(`agama dir: ${agamaDir}`);
-shepherd.writeLog(`komodo dir: ${komododBin}`);
-shepherd.writeLog(`komodo bin: ${komodoDir}`);
+shepherd.log(`komodo dir: ${shepherd.komododBin}`);
+shepherd.log(`komodo bin: ${shepherd.komodoDir}`);
+shepherd.writeLog(`agama dir: ${shepherd.agamaDir}`);
+shepherd.writeLog(`komodo dir: ${shepherd.komododBin}`);
+shepherd.writeLog(`komodo bin: ${shepherd.komodoDir}`);
 
 // default route
 shepherd.get('/', (req, res, next) => {
@@ -4217,20 +3907,20 @@ shepherd.get('/InstantDEX/allcoins', (req, res, next) => {
   let nativeCoindList = [];
   let electrumCoinsList = [];
 
-  for (let key in electrumCoins) {
+  for (let key in shepherd.electrumCoins) {
     if (key !== 'auth') {
-      electrumCoinsList.push(electrumCoins[key].abbr);
+      electrumCoinsList.push(shepherd.electrumCoins[key].abbr);
     }
   }
 
-  for (let key in coindInstanceRegistry) {
+  for (let key in shepherd.coindInstanceRegistry) {
     nativeCoindList.push(key === 'komodod' ? 'KMD' : key);
   }
 
   successObj = {
     native: nativeCoindList,
     spv: electrumCoinsList,
-    total: Object.keys(electrumCoins).length - 1 + Object.keys(nativeCoindList).length,
+    total: Object.keys(shepherd.electrumCoins).length - 1 + Object.keys(nativeCoindList).length,
   };
 
   res.end(JSON.stringify(successObj));
@@ -4244,15 +3934,15 @@ shepherd.get('/auth/status', (req, res, next) => { // not finished
   let successObj;
   let _status = false;
 
-  if (Object.keys(coindInstanceRegistry).length) {
-    if (Object.keys(electrumCoins).length > 1 && electrumCoins.auth) {
+  if (Object.keys(shepherd.coindInstanceRegistry).length) {
+    if (Object.keys(shepherd.electrumCoins).length > 1 && shepherd.electrumCoins.auth) {
       _status = true;
-    } else if (Object.keys(electrumCoins).length === 1 && !electrumCoins.auth) {
+    } else if (Object.keys(shepherd.electrumCoins).length === 1 && !shepherd.electrumCoins.auth) {
       _status = true;
     }
-  } else if (Object.keys(electrumCoins).length > 1 && electrumCoins.auth) {
+  } else if (Object.keys(shepherd.electrumCoins).length > 1 && shepherd.electrumCoins.auth) {
     _status = true;
-  } else if (Object.keys(electrumCoins).length === 1 && !Object.keys(coindInstanceRegistry).length) {
+  } else if (Object.keys(shepherd.electrumCoins).length === 1 && !Object.keys(shepherd.coindInstanceRegistry).length) {
     _status = true;
   }
 
@@ -4277,28 +3967,28 @@ shepherd.post('/debuglog', (req, res) => {
   let _lastNLines = req.body.lastLines;
   let _location;
 
-  if (os.platform() === 'darwin') {
-    komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`;
+  if (shepherd.os.platform() === 'darwin') {
+    shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`;
   }
 
-  if (os.platform() === 'linux') {
-    komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`;
+  if (shepherd.os.platform() === 'linux') {
+    shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`;
   }
 
-  if (os.platform() === 'win32') {
-    komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`;
-    komodoDir = path.normalize(komodoDir);
+  if (shepherd.os.platform() === 'win32') {
+    shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`;
+    shepherd.komodoDir = shepherd.path.normalize(shepherd.komodoDir);
   }
 
   if (_herd === 'komodo') {
-    _location = komodoDir;
+    _location = shepherd.komodoDir;
   }
 
   if (_ac) {
-    _location = `${komodoDir}/${_ac}`;
+    _location = `${shepherd.komodoDir}/${_ac}`;
 
     if (_ac === 'CHIPS') {
-      _location = chipsDir;
+      _location = shepherd.chipsDir;
     }
   }
 
@@ -4331,10 +4021,10 @@ shepherd.post('/herd', (req, res) => {
   if (req.body.options &&
       !shepherd.kmdMainPassiveMode) {
     const testCoindPort = (skipError) => {
-      if (!lockDownAddCoin) {
-        const _port = assetChainPorts[req.body.options.ac_name];
+      if (!shepherd.lockDownAddCoin) {
+        const _port = shepherd.assetChainPorts[req.body.options.ac_name];
 
-        portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+        shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'open') {
             if (!skipError) {
@@ -4412,11 +4102,11 @@ shepherd.post('/setconf', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
-  if (os.platform() === 'win32' &&
+  if (shepherd.os.platform() === 'win32' &&
       req.body.chain == 'komodod') {
-    setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+    setkomodoconf = spawn(shepherd.path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
   } else {
-    setConf(req.body.chain);
+    shepherd.setConf(req.body.chain);
   }
 
   const obj = {
@@ -4567,7 +4257,7 @@ shepherd.get('/kick', (req, res, next) => {
           }
         });*/
       } else if (currentKickItem.type === 'pattern') {
-        let dirItems = fs.readdirSync(`${iguanaDir}/currentKickItem.name.replace('[coin]', _coin)`);
+        let dirItems = shepherd.fs.readdirSync(`${iguanaDir}/currentKickItem.name.replace('[coin]', _coin)`);
 
         if (dirItems &&
             dirItems.length) {
@@ -4597,18 +4287,18 @@ shepherd.get('/kick', (req, res, next) => {
 });
 
 shepherd.readDebugLog = (fileLocation, lastNLines) => {
-  return new Promise(
+  return new shepherd.Promise(
     (resolve, reject) => {
       if (lastNLines) {
         try {
-          _fs.access(fileLocation, fs.constants.R_OK, (err) => {
+          shepherd._fs.access(fileLocation, shepherd.fs.constants.R_OK, (err) => {
             if (err) {
               shepherd.log(`error reading ${fileLocation}`);
               shepherd.writeLog(`error reading ${fileLocation}`);
               reject(`readDebugLog error: ${err}`);
             } else {
               shepherd.log(`reading ${fileLocation}`);
-              _fs.readFile(fileLocation, 'utf-8', (err, data) => {
+              shepherd._fs.readFile(fileLocation, 'utf-8', (err, data) => {
                 if (err) {
                   shepherd.writeLog(`readDebugLog err: ${err}`);
                   shepherd.log(`readDebugLog err: ${err}`);
@@ -4645,7 +4335,7 @@ const herder = (flock, data, coind) => {
   // TODO: notify gui that reindex/rescan param is used to reflect on the screen
   //       asset chain debug.log unlink
   if (flock === 'komodod') {
-    let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? `${komodoDir}/${data.ac_name}` : komodoDir) + '/debug.log';
+    let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? `${shepherd.komodoDir}/${data.ac_name}` : shepherd.komodoDir) + '/debug.log';
 
     shepherd.log('komodod flock selected...');
     shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
@@ -4655,19 +4345,19 @@ const herder = (flock, data, coind) => {
     // datadir case, check if komodo/chain folder exists
     if (shepherd.appConfig.dataDir.length &&
         data.ac_name !== 'komodod') {
-      const _dir = data.ac_name !== 'komodod' ? `${komodoDir}/${data.ac_name}` : komodoDir;
+      const _dir = data.ac_name !== 'komodod' ? `${shepherd.komodoDir}/${data.ac_name}` : shepherd.komodoDir;
 
       try {
-         _fs.accessSync(_dir, fs.R_OK | fs.W_OK);
+         shepherd._fs.accessSync(_dir, shepherd.fs.R_OK | shepherd.fs.W_OK);
 
         shepherd.log(`komodod datadir ${_dir} exists`);
       } catch (e) {
         shepherd.log(`komodod datadir ${_dir} access err: ${e}`);
         shepherd.log(`attempting to create komodod datadir ${_dir}`);
 
-        fs.mkdirSync(_dir);
+        shepherd.fs.mkdirSync(_dir);
 
-        if (fs.existsSync(_dir)) {
+        if (shepherd.fs.existsSync(_dir)) {
           shepherd.log(`created komodod datadir folder at ${_dir}`);
         } else {
           shepherd.log(`unable to create komodod datadir folder at ${_dir}`);
@@ -4678,14 +4368,14 @@ const herder = (flock, data, coind) => {
     // truncate debug.log
     if (!shepherd.kmdMainPassiveMode) {
       try {
-        const _confFileAccess = _fs.accessSync(kmdDebugLogLocation, fs.R_OK | fs.W_OK);
+        const _confFileAccess = shepherd._fs.accessSync(kmdDebugLogLocation, shepherd.fs.R_OK | shepherd.fs.W_OK);
 
         if (_confFileAccess) {
           shepherd.log(`error accessing ${kmdDebugLogLocation}`);
           shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
         } else {
           try {
-            fs.unlinkSync(kmdDebugLogLocation);
+            shepherd.fs.unlinkSync(kmdDebugLogLocation);
             shepherd.log(`truncate ${kmdDebugLogLocation}`);
             shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
           } catch (e) {
@@ -4699,11 +4389,11 @@ const herder = (flock, data, coind) => {
     }
 
     // get komodod instance port
-    const _port = assetChainPorts[data.ac_name];
+    const _port = shepherd.assetChainPorts[data.ac_name];
 
     try {
       // check if komodod instance is already running
-      portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+      shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
@@ -4728,18 +4418,18 @@ const herder = (flock, data, coind) => {
             _customParam = _customParam + ' -datadir=' + shepherd.appConfig.dataDir + (data.ac_name !== 'komodod' ? '/' + data.ac_name : '');
           }
 
-          shepherd.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
-          shepherd.writeLog(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
+          shepherd.log(`exec ${shepherd.komododBin} ${data.ac_options.join(' ')}${_customParam}`);
+          shepherd.writeLog(`exec ${shepherd.komododBin} ${data.ac_options.join(' ')}${_customParam}`);
 
           const isChain = data.ac_name.match(/^[A-Z]*$/);
           const coindACParam = isChain ? ` -ac_name=${data.ac_name} ` : '';
           shepherd.log(`daemon param ${data.ac_custom_param}`);
 
-          coindInstanceRegistry[data.ac_name] = true;
+          shepherd.coindInstanceRegistry[data.ac_name] = true;
           if (!shepherd.kmdMainPassiveMode) {
             let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
             _arg = _arg.trim().split(' ');
-            execFile(`${komododBin}`, _arg, {
+            shepherd.execFile(`${shepherd.komododBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
             }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
@@ -4761,7 +4451,7 @@ const herder = (flock, data, coind) => {
           }
         } else {
           if (shepherd.kmdMainPassiveMode) {
-            coindInstanceRegistry[data.ac_name] = true;
+            shepherd.coindInstanceRegistry[data.ac_name] = true;
           }
           shepherd.log(`port ${_port} (${data.ac_name}) is already in use`);
           shepherd.writeLog(`port ${_port} (${data.ac_name}) is already in use`);
@@ -4775,23 +4465,23 @@ const herder = (flock, data, coind) => {
 
   // TODO: refactor
   if (flock === 'chipsd') {
-    let kmdDebugLogLocation = chipsDir + '/debug.log';
+    let kmdDebugLogLocation = `${shepherd.chipsDir}/debug.log`;
 
     shepherd.log('chipsd flock selected...');
-    shepherd.log('selected data: ' + JSON.stringify(data, null, '\t'));
+    shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
     shepherd.writeLog('chipsd flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
 
     // truncate debug.log
     try {
-      const _confFileAccess = _fs.accessSync(kmdDebugLogLocation, fs.R_OK | fs.W_OK);
+      const _confFileAccess = shepherd._fs.accessSync(kmdDebugLogLocation, shepherd.fs.R_OK | shepherd.fs.W_OK);
 
       if (_confFileAccess) {
         shepherd.log(`error accessing ${kmdDebugLogLocation}`);
         shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
       } else {
         try {
-          fs.unlinkSync(kmdDebugLogLocation);
+          shepherd.fs.unlinkSync(kmdDebugLogLocation);
           shepherd.log(`truncate ${kmdDebugLogLocation}`);
           shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
         } catch (e) {
@@ -4804,11 +4494,11 @@ const herder = (flock, data, coind) => {
     }
 
     // get komodod instance port
-    const _port = assetChainPorts.chipsd;
+    const _port = shepherd.assetChainPorts.chipsd;
 
     try {
       // check if komodod instance is already running
-      portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+      shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
@@ -4828,18 +4518,18 @@ const herder = (flock, data, coind) => {
             _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
           }
 
-          shepherd.log(`exec ${chipsBin} ${_customParam}`);
-          shepherd.writeLog(`exec ${chipsBin} ${_customParam}`);
+          shepherd.log(`exec ${shepherd.chipsBin} ${_customParam}`);
+          shepherd.writeLog(`exec ${shepherd.chipsBin} ${_customParam}`);
 
           shepherd.log(`daemon param ${data.ac_custom_param}`);
 
-          coindInstanceRegistry['CHIPS'] = true;
+          shepherd.coindInstanceRegistry['CHIPS'] = true;
           let _arg = `${_customParam}`;
           _arg = _arg.trim().split(' ');
 
           if (_arg &&
               _arg.length > 1) {
-            execFile(`${chipsBin}`, _arg, {
+            shepherd.execFile(`${shepherd.chipsBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
             }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
@@ -4859,7 +4549,7 @@ const herder = (flock, data, coind) => {
               }
             });
           } else {
-            execFile(`${chipsBin}`, {
+            shepherd.execFile(`${shepherd.chipsBin}`, {
               maxBuffer: 1024 * 1000000 // 1000 mb
             }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
@@ -4888,7 +4578,7 @@ const herder = (flock, data, coind) => {
   }
 
   if (flock === 'zcashd') { // TODO: fix(?)
-    let kmdDebugLogLocation = `${zcashDir}/debug.log`;
+    let kmdDebugLogLocation = `${shepherd.zcashDir}/debug.log`;
 
     shepherd.log('zcashd flock selected...');
     shepherd.log(`selected data: ${data}`);
@@ -4902,10 +4592,10 @@ const herder = (flock, data, coind) => {
       }
 
       pm2.start({
-        script: zcashdBin, // path to binary
+        script: shepherd.zcashdBin, // path to binary
         name: data.ac_name, // REVS, USD, EUR etc.
         exec_mode: 'fork',
-        cwd: zcashDir,
+        cwd: shepherd.zcashDir,
         args: data.ac_options
       }, function(err, apps) {
         shepherd.writeLog(`zcashd fork started ${data.ac_name} ${JSON.stringify(data.ac_options)}`);
@@ -4921,7 +4611,7 @@ const herder = (flock, data, coind) => {
   }
 
   if (flock === 'coind') {
-     const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+     const _osHome = shepherd.os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
      let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}/debug.log`;
 
      shepherd.log(`coind ${coind} flock selected...`);
@@ -4931,14 +4621,14 @@ const herder = (flock, data, coind) => {
 
      // truncate debug.log
      try {
-       _fs.access(coindDebugLogLocation, fs.constants.R_OK, (err) => {
+       shepherd._fs.access(coindDebugLogLocation, shepherd.fs.constants.R_OK, (err) => {
          if (err) {
            shepherd.log(`error accessing ${coindDebugLogLocation}`);
            shepherd.writeLog(`error accessing ${coindDebugLogLocation}`);
          } else {
            shepherd.log(`truncate ${coindDebugLogLocation}`);
            shepherd.writeLog(`truncate ${coindDebugLogLocation}`);
-           fs.unlink(coindDebugLogLocation);
+           shepherd.fs.unlink(coindDebugLogLocation);
          }
        });
      } catch(e) {
@@ -4948,20 +4638,20 @@ const herder = (flock, data, coind) => {
 
      // get komodod instance port
      const _port = shepherd.nativeCoindList[coind.toLowerCase()].port;
-     const coindBin = `${coindRootDir}/${coind.toLowerCase()}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}d`;
+     const coindBin = `${shepherd.coindRootDir}/${coind.toLowerCase()}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}d`;
 
      try {
        // check if coind instance is already running
-       portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+       shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
          // Status is 'open' if currently in use or 'closed' if available
          if (status === 'closed') {
            shepherd.log(`exec ${coindBin} ${data.ac_options.join(' ')}`);
            shepherd.writeLog(`exec ${coindBin} ${data.ac_options.join(' ')}`);
 
-           coindInstanceRegistry[coind] = true;
+           shepherd.coindInstanceRegistry[coind] = true;
             let _arg = `${data.ac_options.join(' ')}`;
             _arg = _arg.trim().split(' ');
-            execFile(`${coindBin}`, _arg, {
+            shepherd.execFile(`${coindBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
             }, (error, stdout, stderr) => {
              shepherd.writeLog(`stdout: ${stdout}`);
@@ -4986,18 +4676,18 @@ const herder = (flock, data, coind) => {
 
 shepherd.setConfKMD = (isChips) => {
   // check if kmd conf exists
-  _fs.access(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, (err) => {
+  shepherd._fs.access(isChips ? `${shepherd.chipsDir}/chips.conf` : `${shepherd.komodoDir}/komodo.conf`, shepherd.fs.constants.R_OK, (err) => {
     if (err) {
       shepherd.log(isChips ? 'creating chips conf' : 'creating komodo conf');
-      shepherd.writeLog(isChips ? `creating chips conf in ${chipsDir}/chips.conf` : `creating komodo conf in ${komodoDir}/komodo.conf`);
-      setConf(isChips ? 'chipsd' : 'komodod');
+      shepherd.writeLog(isChips ? `creating chips conf in ${shepherd.chipsDir}/chips.conf` : `creating komodo conf in ${shepherd.komodoDir}/komodo.conf`);
+      shepherd.setConf(isChips ? 'chipsd' : 'komodod');
     } else {
-      const _confSize = fs.lstatSync(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`);
+      const _confSize = shepherd.fs.lstatSync(isChips ? `${shepherd.chipsDir}/chips.conf` : `${shepherd.komodoDir}/komodo.conf`);
 
       if (_confSize.size === 0) {
         shepherd.log(isChips ? 'err: chips conf file is empty, creating chips conf' : 'err: komodo conf file is empty, creating komodo conf');
-        shepherd.writeLog(isChips ? `creating chips conf in ${chipsDir}/chips.conf` : `creating komodo conf in ${komodoDir}/komodo.conf`);
-        setConf(isChips ? 'chipsd' : 'komodod');
+        shepherd.writeLog(isChips ? `creating chips conf in ${shepherd.chipsDir}/chips.conf` : `creating komodo conf in ${shepherd.komodoDir}/komodo.conf`);
+        shepherd.setConf(isChips ? 'chipsd' : 'komodod');
       } else {
         shepherd.writeLog(isChips ? 'chips conf exists' : 'komodo conf exists');
         shepherd.log(isChips ? 'chips conf exists' : 'komodo conf exists');
@@ -5013,52 +4703,52 @@ const setConf = (flock, coind) => {
   shepherd.log(flock);
   shepherd.writeLog(`setconf ${flock}`);
 
-  if (os.platform() === 'darwin') {
+  if (shepherd.os.platform() === 'darwin') {
     nativeCoindDir = coind ? `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 
-  if (os.platform() === 'linux') {
+  if (shepherd.os.platform() === 'linux') {
     nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
   }
 
-  if (os.platform() === 'win32') {
+  if (shepherd.os.platform() === 'win32') {
     nativeCoindDir = coind ?  `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 
   switch (flock) {
     case 'komodod':
-      DaemonConfPath = `${komodoDir}/komodo.conf`;
+      DaemonConfPath = `${shepherd.komodoDir}/komodo.conf`;
 
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
       break;
     case 'zcashd':
-      DaemonConfPath = `${ZcashDir}/zcash.conf`;
+      DaemonConfPath = `${shepherd.ZcashDir}/zcash.conf`;
 
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
       break;
     case 'chipsd':
-      DaemonConfPath = `${chipsDir}/chips.conf`;
+      DaemonConfPath = `${shepherd.chipsDir}/chips.conf`;
 
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
       break;
     case 'coind':
        DaemonConfPath = `${nativeCoindDir}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}.conf`;
 
-       if (os.platform() === 'win32') {
-         DaemonConfPath = path.normalize(DaemonConfPath);
+       if (shepherd.os.platform() === 'win32') {
+         DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
        }
        break;
     default:
-      DaemonConfPath = `${komodoDir}/${flock}/${flock}.conf`;
+      DaemonConfPath = `${shepherd.komodoDir}/${flock}/${flock}.conf`;
 
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
   }
 
@@ -5066,10 +4756,10 @@ const setConf = (flock, coind) => {
   shepherd.writeLog(`setconf ${DaemonConfPath}`);
 
   const CheckFileExists = () => {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       const result = 'Check Conf file exists is done';
 
-      const confFileExist = fs.ensureFileSync(DaemonConfPath);
+      const confFileExist = shepherd.fs.ensureFileSync(DaemonConfPath);
       if (confFileExist) {
         shepherd.log(result);
         shepherd.writeLog(`setconf ${result}`);
@@ -5083,10 +4773,10 @@ const setConf = (flock, coind) => {
   }
 
   const FixFilePermissions = () => {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       const result = 'Conf file permissions updated to Read/Write';
 
-      fsnode.chmodSync(DaemonConfPath, '0666');
+      shepherd.fsnode.chmodSync(DaemonConfPath, '0666');
       shepherd.log(result);
       shepherd.writeLog(`setconf ${result}`);
 
@@ -5095,10 +4785,10 @@ const setConf = (flock, coind) => {
   }
 
   const RemoveLines = () => {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       const result = 'RemoveLines is done';
 
-      fs.readFile(DaemonConfPath, 'utf8', (err, data) => {
+      shepherd.fs.readFile(DaemonConfPath, 'utf8', (err, data) => {
         if (err) {
           shepherd.writeLog(`setconf error ${err}`);
           return shepherd.log(err);
@@ -5106,11 +4796,11 @@ const setConf = (flock, coind) => {
 
         const rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
 
-        fs.writeFile(DaemonConfPath, rmlines, 'utf8', (err) => {
+        shepherd.fs.writeFile(DaemonConfPath, rmlines, 'utf8', (err) => {
           if (err)
             return shepherd.log(err);
 
-          fsnode.chmodSync(DaemonConfPath, '0666');
+          shepherd.fsnode.chmodSync(DaemonConfPath, '0666');
           shepherd.writeLog(`setconf ${result}`);
           shepherd.log(result);
           resolve(result);
@@ -5120,12 +4810,12 @@ const setConf = (flock, coind) => {
   }
 
   const CheckConf = () => {
-    return new Promise((resolve, reject) => {
+    return new shepherd.Promise((resolve, reject) => {
       const result = 'CheckConf is done';
 
-      setconf.status(DaemonConfPath, (err, status) => {
+      shepherd.setconf.status(DaemonConfPath, (err, status) => {
         const rpcuser = () => {
-          return new Promise((resolve, reject) => {
+          return new shepherd.Promise((resolve, reject) => {
             const result = 'checking rpcuser...';
 
             if (status[0].hasOwnProperty('rpcuser')) {
@@ -5137,7 +4827,7 @@ const setConf = (flock, coind) => {
               shepherd.log('rpcuser: NOT FOUND');
               shepherd.writeLog('rpcuser: NOT FOUND');
 
-              fs.appendFile(DaemonConfPath, `\nrpcuser=user${randomstring.substring(0, 16)}`, (err) => {
+              shepherd.fs.appendFile(DaemonConfPath, `\nrpcuser=user${randomstring.substring(0, 16)}`, (err) => {
                 if (err) {
                   shepherd.writeLog(`append daemon conf err: ${err}`);
                   shepherd.log(`append daemon conf err: ${err}`);
@@ -5153,7 +4843,7 @@ const setConf = (flock, coind) => {
         }
 
         const rpcpass = () => {
-          return new Promise((resolve, reject) => {
+          return new shepherd.Promise((resolve, reject) => {
             const result = 'checking rpcpassword...';
 
             if (status[0].hasOwnProperty('rpcpassword')) {
@@ -5165,7 +4855,7 @@ const setConf = (flock, coind) => {
               shepherd.log('rpcpassword: NOT FOUND');
               shepherd.writeLog('rpcpassword: NOT FOUND');
 
-              fs.appendFile(DaemonConfPath, `\nrpcpassword=${randomstring}`, (err) => {
+              shepherd.fs.appendFile(DaemonConfPath, `\nrpcpassword=${randomstring}`, (err) => {
                 if (err) {
                   shepherd.writeLog(`append daemon conf err: ${err}`);
                   shepherd.log(`append daemon conf err: ${err}`);
@@ -5181,7 +4871,7 @@ const setConf = (flock, coind) => {
         }
 
         const rpcbind = () => {
-          return new Promise((resolve, reject) => {
+          return new shepherd.Promise((resolve, reject) => {
             const result = 'checking rpcbind...';
 
             if (status[0].hasOwnProperty('rpcbind')) {
@@ -5191,7 +4881,7 @@ const setConf = (flock, coind) => {
               shepherd.log('rpcbind: NOT FOUND');
               shepherd.writeLog('rpcbind: NOT FOUND');
 
-              fs.appendFile(DaemonConfPath, '\nrpcbind=127.0.0.1', (err) => {
+              shepherd.fs.appendFile(DaemonConfPath, '\nrpcbind=127.0.0.1', (err) => {
                 if (err) {
                   shepherd.writeLog(`append daemon conf err: ${err}`);
                   shepherd.log(`append daemon conf err: ${err}`);
@@ -5207,7 +4897,7 @@ const setConf = (flock, coind) => {
         }
 
         const server = () => {
-          return new Promise((resolve, reject) => {
+          return new shepherd.Promise((resolve, reject) => {
             const result = 'checking server...';
 
             if (status[0].hasOwnProperty('server')) {
@@ -5217,7 +4907,7 @@ const setConf = (flock, coind) => {
               shepherd.log('server: NOT FOUND');
               shepherd.writeLog('server: NOT FOUND');
 
-              fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
+              shepherd.fs.appendFile(DaemonConfPath, '\nserver=1', (err) => {
                 if (err) {
                   shepherd.writeLog(`append daemon conf err: ${err}`);
                   shepherd.log(`append daemon conf err: ${err}`);
@@ -5233,7 +4923,7 @@ const setConf = (flock, coind) => {
         }
 
         const addnode = () => {
-          return new Promise((resolve, reject) => {
+          return new shepherd.Promise((resolve, reject) => {
             const result = 'checking addnode...';
 
             if (flock === 'chipsd' ||
@@ -5266,7 +4956,7 @@ const setConf = (flock, coind) => {
                 }
 
                 shepherd.log('addnode: NOT FOUND');
-                fs.appendFile(DaemonConfPath, nodesList, (err) => {
+                shepherd.fs.appendFile(DaemonConfPath, nodesList, (err) => {
                   if (err) {
                     shepherd.writeLog(`append daemon conf err: ${err}`);
                     shepherd.log(`append daemon conf err: ${err}`);
@@ -5309,8 +4999,8 @@ const setConf = (flock, coind) => {
 }
 
 shepherd.getMaxconKMDConf = () => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', (err, data) => {
+  return new shepherd.Promise((resolve, reject) => {
+    shepherd.fs.readFile(`${shepherd.komodoDir}/komodo.conf`, 'utf8', (err, data) => {
       if (err) {
         shepherd.log(`kmd conf maxconnections param read failed`);
         resolve('unset');
@@ -5330,12 +5020,12 @@ shepherd.getMaxconKMDConf = () => {
 }
 
 shepherd.setMaxconKMDConf = (limit) => {
-  return new Promise((resolve, reject) => {
-    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', (err, data) => {
+  return new shepherd.Promise((resolve, reject) => {
+    shepherd.fs.readFile(`${shepherd.komodoDir}/komodo.conf`, 'utf8', (err, data) => {
       const _maxconVal = limit ? 1 : 10;
 
       if (err) {
-        shepherd.log(`error reading ${komodoDir}/komodo.conf`);
+        shepherd.log(`error reading ${shepherd.komodoDir}/komodo.conf`);
         resolve(false);
       } else {
         if (data.indexOf('maxconnections=') > -1) {
@@ -5346,9 +5036,9 @@ shepherd.setMaxconKMDConf = (limit) => {
           data = `${data}\nmaxconnections=${_maxconVal}\n`;
         }
 
-        fs.writeFile(`${komodoDir}/komodo.conf`, data, (err) => {
+        shepherd.fs.writeFile(`${shepherd.komodoDir}/komodo.conf`, data, (err) => {
           if (err) {
-            shepherd.log(`error writing ${komodoDir}/komodo.conf maxconnections=${_maxconVal}`);
+            shepherd.log(`error writing ${shepherd.komodoDir}/komodo.conf maxconnections=${_maxconVal}`);
             resolve(false);
           } else {
             shepherd.log(`kmd conf maxconnections is set to ${_maxconVal}`);
@@ -5372,7 +5062,7 @@ const getConf = (flock, coind) => {
   shepherd.log(`getconf coind ${coind}`);
   shepherd.writeLog(`getconf flock: ${flock}`);
 
-  switch (os.platform()) {
+  switch (shepherd.os.platform()) {
     case 'darwin':
       nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
       break;
@@ -5386,31 +5076,31 @@ const getConf = (flock, coind) => {
 
   switch (flock) {
     case 'komodod':
-      DaemonConfPath = komodoDir;
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      DaemonConfPath = shepherd.komodoDir;
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
         shepherd.log('===>>> SHEPHERD API OUTPUT ===>>>');
       }
       break;
     case 'zcashd':
-      DaemonConfPath = ZcashDir;
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      DaemonConfPath = shepherd.ZcashDir;
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
       break;
     case 'chipsd':
-      DaemonConfPath = chipsDir;
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      DaemonConfPath = shepherd.chipsDir;
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
       break;
     case 'coind':
-      DaemonConfPath = os.platform() === 'win32' ? path.normalize(`${coindRootDir}/${coind.toLowerCase()}`) : `${coindRootDir}/${coind.toLowerCase()}`;
+      DaemonConfPath = shepherd.os.platform() === 'win32' ? shepherd.path.normalize(`${shepherd.coindRootDir}/${coind.toLowerCase()}`) : `${shepherd.coindRootDir}/${coind.toLowerCase()}`;
       break;
     default:
-      DaemonConfPath = `${komodoDir}/${flock}`;
-      if (os.platform() === 'win32') {
-        DaemonConfPath = path.normalize(DaemonConfPath);
+      DaemonConfPath = `${shepherd.komodoDir}/${flock}`;
+      if (shepherd.os.platform() === 'win32') {
+        DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
       }
   }
 
@@ -5421,8 +5111,9 @@ const getConf = (flock, coind) => {
 }
 
 const formatBytes = (bytes, decimals) => {
-  if (bytes === 0)
+  if (bytes === 0) {
     return '0 Bytes';
+  }
 
   const k = 1000;
   const dm = (decimals + 1) || 3;
@@ -5444,14 +5135,14 @@ const formatBytes = (bytes, decimals) => {
 
 shepherd.SystemInfo = () => {
   const os_data = {
-    'totalmem_bytes': os.totalmem(),
-    'totalmem_readable': formatBytes(os.totalmem()),
-    'arch': os.arch(),
-    'cpu': os.cpus()[0].model,
-    'cpu_cores': os.cpus().length,
-    'platform': os.platform(),
-    'os_release': os.release(),
-    'os_type': os.type(),
+    'totalmem_bytes': shepherd.os.totalmem(),
+    'totalmem_readable': formatBytes(shepherd.os.totalmem()),
+    'arch': shepherd.os.arch(),
+    'cpu': shepherd.os.cpus()[0].model,
+    'cpu_cores': shepherd.os.cpus().length,
+    'platform': shepherd.os.platform(),
+    'os_release': shepherd.os.release(),
+    'os_type': shepherd.os.type(),
   };
 
   return os_data;
@@ -5461,11 +5152,11 @@ shepherd.appInfo = () => {
   const sysInfo = shepherd.SystemInfo();
   const releaseInfo = shepherd.appBasicInfo;
   const dirs = {
-    agamaDir,
-    komodoDir,
-    komododBin,
-    configLocation: `${agamaDir}/config.json`,
-    cacheLocation: `${agamaDir}/shepherd`,
+    agamaDir: shepherd.agamaDir,
+    komodoDir: shepherd.komodoDir,
+    komododBin: shepherd.komododBin,
+    configLocation: `${shepherd.agamaDir}/config.json`,
+    cacheLocation: `${shepherd.agamaDir}/shepherd`,
   };
 
   return {
