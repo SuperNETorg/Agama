@@ -37,6 +37,7 @@ var coindInstanceRegistry = {};
 var guiLog = {};
 var rpcConf = {};
 var appRuntimeLog = [];
+var appRuntimeSPVLog = [];
 var lockDownAddCoin = false;
 var electrumCoins = {
   auth: false,
@@ -241,17 +242,34 @@ switch (os.platform()) {
     break;
 }
 
-shepherd.log = function(msg) {
+shepherd.log = function(msg, isSpvOut) {
   if (shepherd.appConfig.dev ||
       shepherd.appConfig.debug) {
     console.log(msg);
   }
 
-  appRuntimeLog.push({
-    time: Date.now(),
-    msg: msg,
-  });
+  if (!isSpvOut) {
+    appRuntimeLog.push({
+      time: Date.now(),
+      msg: msg,
+    });
+  } else {
+    appRuntimeSPVLog.push({
+      time: Date.now(),
+      msg: msg,
+    });
+  }
 };
+
+shepherd.get('/log/runtime', function(req, res, next) {
+
+  const successObj = {
+    msg: 'success',
+    result: req.query.spv && req.query.spv === 'true' ? appRuntimeSPVLog : appRuntimeLog,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
 
 shepherd.writeLog = function(data) {
   const logLocation = `${agamaDir}/shepherd`;
@@ -259,13 +277,13 @@ shepherd.writeLog = function(data) {
 
   if (shepherd.appConfig.debug) {
     if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
-      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
+      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, (err) => {
         if (err) {
           shepherd.log('error writing log file');
         }
       });
     } else {
-      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
+      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, (err) => {
         if (err) {
           shepherd.log('error writing log file');
         }
@@ -274,7 +292,7 @@ shepherd.writeLog = function(data) {
   }
 }
 
-shepherd.loadLocalConfig = function() {
+shepherd.loadLocalConfig = () => {
   if (fs.existsSync(`${agamaDir}/config.json`)) {
     let localAppConfig = fs.readFileSync(`${agamaDir}/config.json`, 'utf8');
 
@@ -283,7 +301,7 @@ shepherd.loadLocalConfig = function() {
 
     // find diff between local and hardcoded configs
     // append diff to local config
-    const compareJSON = function(obj1, obj2) {
+    const compareJSON = (obj1, obj2) => {
       let result = {};
 
       for (let i in obj1) {
@@ -325,19 +343,19 @@ shepherd.loadLocalConfig = function() {
   }
 };
 
-shepherd.saveLocalAppConf = function(appSettings) {
+shepherd.saveLocalAppConf = (appSettings) => {
   let appConfFileName = `${agamaDir}/config.json`;
 
-  _fs.access(agamaDir, fs.constants.R_OK, function(err) {
+  _fs.access(agamaDir, fs.constants.R_OK, (err) => {
     if (!err) {
 
-      const FixFilePermissions = function() {
-        return new Promise(function(resolve, reject) {
+      const FixFilePermissions = () => {
+        return new Promise((resolve, reject) => {
           const result = 'config.json file permissions updated to Read/Write';
 
           fsnode.chmodSync(appConfFileName, '0666');
 
-          setTimeout(function() {
+          setTimeout(() => {
             shepherd.log(result);
             shepherd.writeLog(result);
             resolve(result);
@@ -345,8 +363,8 @@ shepherd.saveLocalAppConf = function(appSettings) {
         });
       }
 
-      const FsWrite = function() {
-        return new Promise(function(resolve, reject) {
+      const FsWrite = () => {
+        return new Promise((resolve, reject) => {
           const result = 'config.json write file is done';
 
           fs.writeFile(appConfFileName,
@@ -354,13 +372,13 @@ shepherd.saveLocalAppConf = function(appSettings) {
                       .replace(/,/g, ',\n') // format json in human readable form
                       .replace(/":/g, '": ')
                       .replace(/{/g, '{\n')
-                      .replace(/}/g, '\n}'), 'utf8', function(err) {
+                      .replace(/}/g, '\n}'), 'utf8', (err) => {
             if (err)
               return shepherd.log(err);
           });
 
           fsnode.chmodSync(appConfFileName, '0666');
-          setTimeout(function() {
+          setTimeout(() => {
             shepherd.log(result);
             shepherd.log(`app conf.json file is created successfully at: ${agamaDir}`);
             shepherd.writeLog(`app conf.json file is created successfully at: ${agamaDir}`);
@@ -432,7 +450,7 @@ shepherd.kmdMainPassiveMode = false;
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
-shepherd.getNetworkData = function(network) {
+shepherd.getNetworkData = (network) => {
   const coin = shepherd.findNetworkObj(network) || shepherd.findNetworkObj(network.toUpperCase()) || shepherd.findNetworkObj(network.toLowerCase());
   const coinUC = coin ? coin.toUpperCase() : null;
 
@@ -480,7 +498,7 @@ shepherd.getNetworkData = function(network) {
   }
 }
 
-shepherd.seedToWif = function(seed, network, iguana) {
+shepherd.seedToWif = (seed, network, iguana) => {
   const bytes = sha256(seed, { asBytes: true });
 
   if (iguana) {
@@ -489,8 +507,8 @@ shepherd.seedToWif = function(seed, network, iguana) {
     bytes[31] |= 64;
   }
 
-  function toHexString(byteArray) {
-    return Array.from(byteArray, function(byte) {
+  const toHexString = (byteArray) => {
+    return Array.from(byteArray, (byte) => {
       return ('0' + (byte & 0xFF).toString(16)).slice(-2);
     }).join('');
   }
@@ -504,8 +522,8 @@ shepherd.seedToWif = function(seed, network, iguana) {
 
   key.compressed = true;
 
-  shepherd.log(`seedtowif priv key ${key.privateWif}`);
-  shepherd.log(`seedtowif pub key ${key.publicAddress}`);
+  shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
+  shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);
 
   return {
     priv: key.privateWif,
@@ -513,7 +531,7 @@ shepherd.seedToWif = function(seed, network, iguana) {
   };
 }
 
-shepherd.get('/electrum/seedtowif', function(req, res, next) {
+shepherd.get('/electrum/seedtowif', (req, res, next) => {
   const keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
 
   const successObj = {
@@ -526,7 +544,7 @@ shepherd.get('/electrum/seedtowif', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.findNetworkObj = function(coin) {
+shepherd.findNetworkObj = (coin) => {
   for (let key in electrumServers) {
     if (electrumServers[key].abbr === coin) {
       return key;
@@ -534,7 +552,7 @@ shepherd.findNetworkObj = function(coin) {
   }
 }
 
-shepherd.findCoinName = function(network) {
+shepherd.findCoinName = (network) => {
   for (let key in electrumServers) {
     if (key === network) {
       return electrumServers[key].abbr;
@@ -542,15 +560,15 @@ shepherd.findCoinName = function(network) {
   }
 }
 
-shepherd.get('/electrum/servers/test', function(req, res, next) {
+shepherd.get('/electrum/servers/test', (req, res, next) => {
   const ecl = new electrumJSCore(req.query.port, req.query.address, 'tcp'); // tcp or tls
 
   ecl.connect();
   ecl.serverVersion()
   .then((serverData) => {
     ecl.close();
-    console.log('serverData');
-    console.log(serverData);
+    shepherd.log('serverData', true);
+    shepherd.log(serverData, true);
 
     if (serverData &&
         typeof serverData === 'string' &&
@@ -572,7 +590,7 @@ shepherd.get('/electrum/servers/test', function(req, res, next) {
   });
 });
 
-shepherd.get('/electrum/keys', function(req, res, next) {
+shepherd.get('/electrum/keys', (req, res, next) => {
   let _matchingKeyPairs = 0;
   let _electrumKeys = {};
 
@@ -598,7 +616,7 @@ shepherd.get('/electrum/keys', function(req, res, next) {
     _electrumKeys = electrumKeys;
   }
 
-  shepherd.log(JSON.stringify(_electrumKeys, null, '\t'));
+  shepherd.log(JSON.stringify(_electrumKeys, null, '\t'), true);
 
   const successObj = {
     msg: 'success',
@@ -608,7 +626,7 @@ shepherd.get('/electrum/keys', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.get('/electrum/login', function(req, res, next) {
+shepherd.get('/electrum/login', (req, res, next) => {
   for (let key in electrumServers) {
     const _abbr = electrumServers[key].abbr;
     const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
@@ -621,7 +639,7 @@ shepherd.get('/electrum/login', function(req, res, next) {
 
   electrumCoins.auth = true;
 
-  shepherd.log(JSON.stringify(electrumKeys, null, '\t'));
+  shepherd.log(JSON.stringify(electrumKeys, null, '\t'), true);
 
   const successObj = {
     msg: 'success',
@@ -631,7 +649,7 @@ shepherd.get('/electrum/login', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.get('/electrum/dev/logout', function(req, res, next) {
+shepherd.get('/electrum/dev/logout', (req, res, next) => {
   electrumCoins.auth = false;
   electrumKeys = {};
 
@@ -643,7 +661,8 @@ shepherd.get('/electrum/dev/logout', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.get('/electrum/bip39/seed', function(req, res, next) {
+// spv v2
+/*shepherd.get('/electrum/bip39/seed', (req, res, next) => {
   // TODO
   const bip39 = require('bip39'); // npm i -S bip39
   const crypto = require('crypto');
@@ -683,21 +702,21 @@ shepherd.get('/electrum/bip39/seed', function(req, res, next) {
   const hdnode = bitcoinJS.HDNode.fromSeedBuffer(seed, electrumJSNetworks.komodo).deriveHardened(0).derive(0).derive(1);
   console.log(`address: ${hdnode.getAddress()}`);
   console.log(`priv (WIF): ${hdnode.keyPair.toWIF()}`);
-});
+});*/
 
 // get merkle root
-shepherd.getMerkleRoot = function(txid, proof, pos) {
+shepherd.getMerkleRoot = (txid, proof, pos) => {
   const reverse = require('buffer-reverse');
   let hash = txid;
   let serialized;
-  const _sha256 = function(data) {
+  const _sha256 = (data) => {
     return crypto.createHash('sha256').update(data).digest();
   }
 
-  console.log(`txid ${txid}`);
-  console.log(`pos ${pos}`);
-  console.log('proof');
-  console.log(proof);
+  shepherd.log(`getMerkleRoot txid ${txid}`, true);
+  shepherd.log(`getMerkleRoot pos ${pos}`, true);
+  shepherd.log('getMerkleRoot proof', true);
+  shepherd.log(`getMerkleRoot ${proof}`, true);
 
   for (i = 0; i < proof.length; i++) {
     const _hashBuff = new Buffer(hash, 'hex');
@@ -716,9 +735,9 @@ shepherd.getMerkleRoot = function(txid, proof, pos) {
   return hash;
 }
 
-shepherd.verifyMerkle = function(txid, height, serverList, mainServer) {
+shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
   // select random server
-  const getRandomIntInclusive = function(min, max) {
+  const getRandomIntInclusive = (min, max) => {
     min = Math.ceil(min);
     max = Math.floor(max);
 
@@ -733,31 +752,33 @@ shepherd.verifyMerkle = function(txid, height, serverList, mainServer) {
   let ecl = new electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
 
   return new Promise((resolve, reject) => {
-    console.log(`main server: ${mainServer}`);
-    console.log(`verification server: ${randomServer}`);
+    shepherd.log(`main server: ${mainServer}`, true);
+    shepherd.log(`verification server: ${randomServer}`, true);
+
     ecl.connect();
     ecl.blockchainTransactionGetMerkle(txid, height)
     .then((merkleData) => {
       if (merkleData &&
           merkleData.merkle &&
           merkleData.pos) {
-        console.log('electrum getmerkle =>');
-        console.log(merkleData);
+        shepherd.log('electrum getmerkle =>', true);
+        shepherd.log(merkleData, true);
         ecl.close();
 
         const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
-        console.log(_res);
+        shepherd.log(_res, true);
 
         ecl = new electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
         ecl.connect();
+
         ecl.blockchainBlockGetHeader(height)
         .then((blockInfo) => {
           if (blockInfo &&
               blockInfo['merkle_root']) {
             ecl.close();
-            console.log('blockinfo =>');
-            console.log(blockInfo);
-            console.log(blockInfo['merkle_root']);
+            shepherd.log('blockinfo =>', true);
+            shepherd.log(blockInfo, true);
+            shepherd.log(blockInfo['merkle_root'], true);
 
             if (blockInfo &&
                 blockInfo['merkle_root']) {
@@ -780,11 +801,12 @@ shepherd.verifyMerkle = function(txid, height, serverList, mainServer) {
   });
 }
 
-shepherd.verifyMerkleByCoin = function(coin, txid, height) {
+shepherd.verifyMerkleByCoin = (coin, txid, height) => {
   const _serverList = electrumCoins[coin].serverList;
 
-  console.log(electrumCoins[coin].server);
-  console.log(electrumCoins[coin].serverList);
+  shepherd.log(`verifyMerkleByCoin`, true);
+  shepherd.log(electrumCoins[coin].server, true);
+  shepherd.log(electrumCoins[coin].serverList, true);
 
   return new Promise((resolve, reject) => {
     if (_serverList !== 'none') {
@@ -796,8 +818,12 @@ shepherd.verifyMerkleByCoin = function(coin, txid, height) {
         }
       }
 
-      shepherd.verifyMerkle(txid, height, _filteredServerList, electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port)
-      .then((proof) => {
+      shepherd.verifyMerkle(
+        txid,
+        height,
+        _filteredServerList,
+        electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port
+      ).then((proof) => {
         resolve(proof);
       });
     } else {
@@ -806,7 +832,7 @@ shepherd.verifyMerkleByCoin = function(coin, txid, height) {
   });
 }
 
-shepherd.get('/electrum/merkle/verify', function(req, res, next) {
+shepherd.get('/electrum/merkle/verify', (req, res, next) => {
   shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
   .then((verifyMerkleRes) => {
     const successObj = {
@@ -820,7 +846,7 @@ shepherd.get('/electrum/merkle/verify', function(req, res, next) {
   });
 });
 
-shepherd.get('/electrum/servers', function(req, res, next) {
+shepherd.get('/electrum/servers', (req, res, next) => {
   if (req.query.abbr) {
     let _electrumServers = {};
 
@@ -848,7 +874,7 @@ shepherd.get('/electrum/servers', function(req, res, next) {
   }
 });
 
-shepherd.get('/electrum/coins/server/set', function(req, res, next) {
+shepherd.get('/electrum/coins/server/set', (req, res, next) => {
   electrumCoins[req.query.coin].server = {
     ip: req.query.address,
     port: req.query.port,
@@ -862,7 +888,7 @@ shepherd.get('/electrum/coins/server/set', function(req, res, next) {
     }
   }
 
-  console.log(JSON.stringify(electrumCoins[req.query.coin]), null, '\t');
+  shepherd.log(JSON.stringify(electrumCoins[req.query.coin], null, '\t'), true);
 
   const successObj = {
     msg: 'success',
@@ -872,7 +898,7 @@ shepherd.get('/electrum/coins/server/set', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.addElectrumCoin = function(coin) {
+shepherd.addElectrumCoin = (coin) => {
   for (let key in electrumServers) {
     if (electrumServers[key].abbr === coin) {
       electrumCoins[coin] = {
@@ -891,7 +917,7 @@ shepherd.addElectrumCoin = function(coin) {
   }
 }
 
-shepherd.get('/electrum/coins/remove', function(req, res, next) {
+shepherd.get('/electrum/coins/remove', (req, res, next) => {
   delete electrumCoins[req.query.coin];
 
   const successObj = {
@@ -902,7 +928,7 @@ shepherd.get('/electrum/coins/remove', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.get('/electrum/coins/add', function(req, res, next) {
+shepherd.get('/electrum/coins/add', (req, res, next) => {
   const result = shepherd.addElectrumCoin(req.query.coin);
 
   const successObj = {
@@ -913,7 +939,7 @@ shepherd.get('/electrum/coins/add', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.get('/electrum/coins', function(req, res, next) {
+shepherd.get('/electrum/coins', (req, res, next) => {
   let _electrumCoins = JSON.parse(JSON.stringify(electrumCoins)); // deep cloning
 
   for (let key in _electrumCoins) {
@@ -930,7 +956,7 @@ shepherd.get('/electrum/coins', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
+shepherd.kmdCalcInterest = (locktime, value) => { // value in sats
   const timestampDiff = Math.floor(Date.now() / 1000) - locktime - 777;
   const hoursPassed = Math.floor(timestampDiff / 3600);
   const minutesPassed = Math.floor((timestampDiff - (hoursPassed * 3600)) / 60);
@@ -938,9 +964,10 @@ shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
   let timestampDiffMinutes = timestampDiff / 60;
   let interest = 0;
 
-  console.log(`locktime ${locktime}`);
-  console.log(`minutes converted ${timestampDiffMinutes}`);
-  console.log(`passed ${hoursPassed}h ${minutesPassed}m ${secondsPassed}s`);
+  shepherd.log('kmdCalcInterest', true);
+  shepherd.log(`locktime ${locktime}`, true);
+  shepherd.log(`minutes converted ${timestampDiffMinutes}`, true);
+  shepherd.log(`passed ${hoursPassed}h ${minutesPassed}m ${secondsPassed}s`, true);
 
   // calc interest
   if (timestampDiffMinutes >= 60) {
@@ -949,7 +976,7 @@ shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
     }
     timestampDiffMinutes -= 59;
 
-    console.log(`minutes if statement ${timestampDiffMinutes}`);
+    shepherd.log(`minutes if statement ${timestampDiffMinutes}`, true);
 
     // TODO: check if interest is > 5% yr
     // calc ytd and 5% for 1 yr
@@ -957,15 +984,17 @@ shepherd.kdmCalcInterest = function(locktime, value) { // value in sats
     // const hoursDiff = hoursInOneYear - hoursPassed;
 
     interest = ((Number(value) * 0.00000001) / 10512000) * timestampDiffMinutes;
-    console.log(`interest ${interest}`);
+    shepherd.log(`interest ${interest}`, true);
   }
 
   return interest;
 }
 
-shepherd.get('/electrum/getbalance', function(req, res, next) {
+shepherd.get('/electrum/getbalance', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  shepherd.log('electrum getbalance =>', true);
 
   ecl.connect();
   ecl.blockchainAddressGetBalance(req.query.address)
@@ -983,15 +1012,15 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
             let _utxo = [];
 
             for (let i = 0; i < utxoList.length; i++) {
-              console.log(`utxo ${utxoList[i]['tx_hash']} sats ${utxoList[i].value} value ${Number(utxoList[i].value) * 0.00000001}`);
+              shepherd.log(`utxo ${utxoList[i]['tx_hash']} sats ${utxoList[i].value} value ${Number(utxoList[i].value) * 0.00000001}`, true);
 
               if (Number(utxoList[i].value) * 0.00000001 >= 10) {
                 _utxo.push(utxoList[i]);
               }
             }
 
-            console.log('filtered utxo list =>');
-            console.log(_utxo);
+            shepherd.log('filtered utxo list =>', true);
+            shepherd.log(_utxo, true);
 
             if (_utxo &&
                 _utxo.length) {
@@ -1001,9 +1030,9 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
                 return new Promise((resolve, reject) => {
                   ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
                   .then((_rawtxJSON) => {
-                    console.log('electrum gettransaction ==>');
-                    console.log(index + ' | ' + (_rawtxJSON.length - 1));
-                    console.log(_rawtxJSON);
+                    shepherd.log('electrum gettransaction ==>', true);
+                    shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);
+                    shepherd.log(_rawtxJSON, true);
 
                     // decode tx
                     const _network = shepherd.getNetworkData(network);
@@ -1012,11 +1041,11 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
                     if (decodedTx &&
                         decodedTx.format &&
                         decodedTx.format.locktime > 0) {
-                      interestTotal += shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                      interestTotal += shepherd.kmdCalcInterest(decodedTx.format.locktime, _utxoItem.value);
                     }
 
-                    console.log('decoded tx =>');
-                    console.log(decodedTx);
+                    shepherd.log('decoded tx =>', true);
+                    shepherd.log(decodedTx, true);
 
                     resolve(true);
                   });
@@ -1078,8 +1107,8 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
         });
       } else {
         ecl.close();
-        console.log('electrum getbalance ==>');
-        console.log(json);
+        shepherd.log('electrum getbalance ==>', true);
+        shepherd.log(json, true);
 
         const successObj = {
           msg: 'success',
@@ -1104,8 +1133,8 @@ shepherd.get('/electrum/getbalance', function(req, res, next) {
   });
 });
 
-shepherd.sortTransactions = function(transactions) {
-  return transactions.sort(function(b, a) {
+shepherd.sortTransactions = (transactions) => {
+  return transactions.sort((b, a) => {
     if (a.height < b.height) {
       return -1;
     }
@@ -1118,25 +1147,24 @@ shepherd.sortTransactions = function(transactions) {
   });
 }
 
-shepherd.get('/electrum/listtransactions', function(req, res, next) {
+shepherd.get('/electrum/listtransactions', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  shepherd.log('electrum listtransactions ==>', true);
 
   if (!req.query.full) {
     ecl.connect();
     ecl.blockchainAddressGetHistory(req.query.address)
     .then((json) => {
       ecl.close();
-      console.log('electrum listtransactions ==>');
-      console.log(json);
+      shepherd.log(json, true);
 
       json = shepherd.sortTransactions(json);
 
       const successObj = {
         msg: 'success',
-        result: {
-          listtransactions: json,
-        },
+        result: json,
       };
 
       res.end(JSON.stringify(successObj));
@@ -1157,8 +1185,9 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
               json.length) {
             json = shepherd.sortTransactions(json);
             json = json.slice(0, MAX_TX);
-            console.log(json.length);
             let _rawtx = [];
+
+            shepherd.log(json.length, true);
 
             Promise.all(json.map((transaction, index) => {
               return new Promise((resolve, reject) => {
@@ -1168,9 +1197,9 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                       blockInfo.timestamp) {
                     ecl.blockchainTransactionGet(transaction['tx_hash'])
                     .then((_rawtxJSON) => {
-                      console.log('electrum gettransaction ==>');
-                      console.log(index + ' | ' + (_rawtxJSON.length - 1));
-                      console.log(_rawtxJSON);
+                      shepherd.log('electrum gettransaction ==>', true);
+                      shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);
+                      shepherd.log(_rawtxJSON, true);
 
                       // decode tx
                       const _network = shepherd.getNetworkData(network);
@@ -1178,8 +1207,8 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
 
                       let txInputs = [];
 
-                      console.log('decodedtx =>');
-                      console.log(decodedTx.outputs);
+                      shepherd.log('decodedtx =>', true);
+                      shepherd.log(decodedTx.outputs, true);
 
                       if (decodedTx &&
                           decodedTx.inputs) {
@@ -1188,11 +1217,12 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
                             if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
                               ecl.blockchainTransactionGet(_decodedInput.txid)
                               .then((rawInput) => {
-                                console.log('electrum raw input tx ==>');
                                 const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
 
+                                shepherd.log('electrum raw input tx ==>', true);
+
                                 if (decodedVinVout) {
-                                  console.log(decodedVinVout.outputs[_decodedInput.n]);
+                                  shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
                                   txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
                                   _resolve(true);
                                 } else {
@@ -1310,29 +1340,28 @@ shepherd.get('/electrum/listtransactions', function(req, res, next) {
   }
 });
 
-shepherd.get('/electrum/gettransaction', function(req, res, next) {
+shepherd.get('/electrum/gettransaction', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  shepherd.log('electrum gettransaction =>', true);
 
   ecl.connect();
   ecl.blockchainTransactionGet(req.query.txid)
   .then((json) => {
     ecl.close();
-    console.log('electrum gettransaction ==>');
-    console.log(json);
+    shepherd.log(json, true);
 
     const successObj = {
       msg: 'success',
-      result: {
-        gettransaction: json,
-      },
+      result: json,
     };
 
     res.end(JSON.stringify(successObj));
   });
 });
 
-shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
+shepherd.parseTransactionAddresses = (tx, targetAddress, network) => {
   // TODO: - sum vins / sum vouts to the same address
   //       - multi vin multi vout
   //       - detect change address
@@ -1349,6 +1378,8 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
     inputs: 0,
     outputs: 0,
   };
+
+  shepherd.log('parseTransactionAddresses result ==>', true);
 
   if (tx.format === 'cant parse') {
     return {
@@ -1370,9 +1401,9 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
     }
 
     for (let i = 0; i < _parse[key].length; i++) {
-      console.log(key + ' ==>');
-      console.log(_parse[key][i]);
-      console.log(Number(_parse[key][i].value));
+      shepherd.log(`key ==>`, true);
+      shepherd.log(_parse[key][i], true);
+      shepherd.log(Number(_parse[key][i].value), true);
 
       _total[key] += Number(_parse[key][i].value);
 
@@ -1441,29 +1472,25 @@ shepherd.parseTransactionAddresses = function(tx, targetAddress, network) {
     };
   }
 
-  console.log('parseTransactionAddresses result ==>');
+  shepherd.log(_sum, true);
+  shepherd.log(result, true);
 
-  console.log(_sum);
-
-  console.log(result);
   return result;
 }
 
-shepherd.get('/electrum/getblockinfo', function(req, res, next) {
+shepherd.get('/electrum/getblockinfo', (req, res, next) => {
   shepherd.electrumGetBlockInfo(req.query.height, req.query.network)
-  .then(function(json) {
+  .then((json) => {
     const successObj = {
       msg: 'success',
-      result: {
-        getblockinfo: json,
-      },
+      result: json,
     };
 
     res.end(JSON.stringify(successObj));
   });
 });
 
-shepherd.electrumGetBlockInfo = function(height, network) {
+shepherd.electrumGetBlockInfo = (height, network) => {
   return new Promise((resolve, reject) => {
     const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
@@ -1471,29 +1498,27 @@ shepherd.electrumGetBlockInfo = function(height, network) {
     ecl.blockchainBlockGetHeader(height)
     .then((json) => {
       ecl.close();
-      console.log('electrum getblockinfo ==>');
-      console.log(json);
+      shepherd.log('electrum getblockinfo ==>', true);
+      shepherd.log(json, true);
 
       resolve(json);
     });
   });
 }
 
-shepherd.get('/electrum/getcurrentblock', function(req, res, next) {
+shepherd.get('/electrum/getcurrentblock', (req, res, next) => {
   shepherd.electrumGetCurrentBlock(req.query.network)
-  .then(function(json) {
+  .then((json) => {
     const successObj = {
       msg: 'success',
-      result: {
-        getcurrentblock: json,
-      },
+      result: json,
     };
 
     res.end(JSON.stringify(successObj));
   });
 });
 
-shepherd.electrumGetCurrentBlock = function(network) {
+shepherd.electrumGetCurrentBlock = (network) => {
   return new Promise((resolve, reject) => {
     const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
@@ -1501,33 +1526,35 @@ shepherd.electrumGetCurrentBlock = function(network) {
     ecl.blockchainNumblocksSubscribe()
     .then((json) => {
       ecl.close();
-      console.log('electrum currentblock ==>');
-      console.log(json);
+      shepherd.log('electrum currentblock ==>', true);
+      shepherd.log(json, true);
 
       resolve(json);
     });
   });
 }
 
-shepherd.get('/electrum/decoderawtx', function(req, res, next) {
+shepherd.get('/electrum/decoderawtx', (req, res, next) => {
   const _network = shepherd.getNetworkData(req.query.network);
   const _rawtx = req.query.rawtx;
   // const _rawtx = '0100000001dd6d064f5665f8454293ecaa9dbb55accf4f7e443d35f3b5ab7760f54b6c15fe000000006a473044022056355585a4a501ec9afc96aa5df124cf29ad3ac6454b47cd07cd7d89ec95ec2b022074c4604ee349d30e5336f210598e4dc576bf16ebeb67eeac3f4e82f56e930fee012103b90ba01af308757054e0484bb578765d5df59c4a57adbb94e2419df5e7232a63feffffff0289fc923b000000001976a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac20a10700000000001976a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac49258b58';
   const decodedTx = electrumJSTxDecoder(_rawtx, _network);
+
+  shepherd.log('electrum decoderawtx input tx ==>', true);
 
   if (req.query.parseonly ||
       decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {
     const successObj = {
       msg: 'success',
       result: {
-        decodedTx: {
-          network: decodedTx.network,
-          format: decodedTx.format,
-          inputs: decodedTx.inputs,
-          outputs: decodedTx.outputs,
-        },
+        network: decodedTx.network,
+        format: decodedTx.format,
+        inputs: decodedTx.inputs,
+        outputs: decodedTx.outputs,
       },
     };
+
+    shepherd.log(successObj.result, true);
 
     res.end(JSON.stringify(successObj));
   } else {
@@ -1537,20 +1564,17 @@ shepherd.get('/electrum/decoderawtx', function(req, res, next) {
     ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
     .then((json) => {
       ecl.close();
-      console.log('electrum decoderawtx input tx ==>');
-      console.log(json);
+      shepherd.log(json, true);
 
       const decodedVin = electrumJSTxDecoder(json, _network);
 
       const successObj = {
         msg: 'success',
         result: {
-          decodedTx: {
-            network: decodedTx.network,
-            format: decodedTx.format,
-            inputs: decodedVin.outputs[decodedTx.inputs[0].n],
-            outputs: decodedTx.outputs,
-          },
+          network: decodedTx.network,
+          format: decodedTx.format,
+          inputs: decodedVin.outputs[decodedTx.inputs[0].n],
+          outputs: decodedTx.outputs,
         },
       };
 
@@ -1600,6 +1624,7 @@ shepherd.findUtxoSet = function(utxoList, target) {
   };
 }
 
+// remove
 shepherd.get('/electrum/subset', function(req, res, next) {
   const _utxoSet = shepherd.findUtxoSet(null, Number(req.query.target) + Number(electrumServers[req.query.network].txfee)); // target + txfee
 
@@ -1615,12 +1640,13 @@ shepherd.get('/electrum/subset', function(req, res, next) {
 });
 
 // single sig
-shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) {
+shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
   let key = bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
   let tx = new bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
 
+  shepherd.log('buildSignedTx');
   // console.log(`buildSignedTx priv key ${wif}`);
-  console.log(`buildSignedTx pub key ${key.getAddress().toString()}`);
+  shepherd.log(`buildSignedTx pub key ${key.getAddress().toString()}`, true);
   // console.log('buildSignedTx std tx fee ' + electrumServers[network].txfee);
 
   for (let i = 0; i < utxo.length; i++) {
@@ -1637,28 +1663,29 @@ shepherd.buildSignedTx = function(sendTo, changeAddress, wif, network, utxo, cha
       network === 'KMD') {
     const _locktime = Math.floor(Date.now() / 1000) - 777;
     tx.setLockTime(_locktime);
-    console.log(`kmd tx locktime set to ${_locktime}`);
+    shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
   }
 
-  console.log('buildSignedTx unsigned tx data vin');
-  console.log(tx.tx.ins);
-  console.log('buildSignedTx unsigned tx data vout');
-  console.log(tx.tx.outs);
-  console.log('buildSignedTx unsigned tx data');
-  console.log(tx);
+  shepherd.log('buildSignedTx unsigned tx data vin', true);
+  shepherd.log(tx.tx.ins, true);
+  shepherd.log('buildSignedTx unsigned tx data vout', true);
+  shepherd.log(tx.tx.outs, true);
+  shepherd.log('buildSignedTx unsigned tx data', true);
+  shepherd.log(tx, true);
 
   for (let i = 0; i < utxo.length; i++) {
     tx.sign(i, key);
   }
 
   const rawtx = tx.build().toHex();
-  console.log('buildSignedTx signed tx hex');
-  console.log(rawtx);
+
+  shepherd.log('buildSignedTx signed tx hex', true);
+  shepherd.log(rawtx, true);
 
   return rawtx;
 }
 
-shepherd.maxSpendBalance = function(utxoList, fee) {
+shepherd.maxSpendBalance = (utxoList, fee) => {
   let maxSpendBalance = 0;
 
   for (let i = 0; i < utxoList.length; i++) {
@@ -1672,20 +1699,22 @@ shepherd.maxSpendBalance = function(utxoList, fee) {
   }
 }
 
-shepherd.get('/electrum/createrawtx', function(req, res, next) {
+shepherd.get('/electrum/createrawtx', (req, res, next) => {
   // txid 64 char
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
   const outputAddress = req.query.address;
   const changeAddress = req.query.change;
-  let wif = req.query.wif;
   const value = Number(req.query.value);
   const push = req.query.push;
   const fee = electrumServers[network].txfee;
+  let wif = req.query.wif;
 
   if (req.query.gui) {
     wif = electrumKeys[req.query.coin].priv;
   }
+
+  shepherd.log('electrum createrawtx =>', true);
 
   ecl.connect();
   shepherd.listunspent(ecl, changeAddress, network, true, true)
@@ -1719,19 +1748,20 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
         }
       }
 
-      console.log('electrum listunspent unformatted ==>');
-      console.log(utxoList);
+      shepherd.log('electrum listunspent unformatted ==>', true);
+      shepherd.log(utxoList, true);
 
-      console.log('electrum listunspent formatted ==>');
-      console.log(utxoListFormatted);
+      shepherd.log('electrum listunspent formatted ==>', true);
+      shepherd.log(utxoListFormatted, true);
 
       const _maxSpendBalance = Number(shepherd.maxSpendBalance(utxoListFormatted));
       let targets = [{
         address: outputAddress,
         value: value > _maxSpendBalance ? _maxSpendBalance : value,
       }];
-      console.log('targets =>');
-      console.log(targets);
+      shepherd.log('targets =>', true);
+      shepherd.log(targets, true);
+
       const feeRate = 20; // sats/byte
 
       // default coin selection algo blackjack with fallback to accumulative
@@ -1739,32 +1769,32 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
       // if ins and outs are empty reduce max spend by txfee
       let { inputs, outputs, fee } = coinSelect(utxoListFormatted, targets, feeRate);
 
-      console.log('coinselect res =>');
-      console.log('coinselect inputs =>');
-      console.log(inputs);
-      console.log('coinselect outputs =>');
-      console.log(outputs);
-      console.log('coinselect calculated fee =>');
-      console.log(fee);
+      shepherd.log('coinselect res =>', true);
+      shepherd.log('coinselect inputs =>', true);
+      shepherd.log(inputs, true);
+      shepherd.log('coinselect outputs =>', true);
+      shepherd.log(outputs, true);
+      shepherd.log('coinselect calculated fee =>', true);
+      shepherd.log(fee, true);
 
       if (!inputs &&
           !outputs) {
         targets[0].value = targets[0].value - electrumServers[network].txfee;
-        console.log('second run');
-        console.log('coinselect adjusted targets =>');
-        console.log(targets);
+        shepherd.log('second run', true);
+        shepherd.log('coinselect adjusted targets =>', true);
+        shepherd.log(targets, true);
 
         const secondRun = coinSelect(utxoListFormatted, targets, feeRate);
         inputs = secondRun.inputs;
         outputs = secondRun.outputs;
         fee = secondRun.fee;
 
-        console.log('coinselect inputs =>');
-        console.log(inputs);
-        console.log('coinselect outputs =>');
-        console.log(outputs);
-        console.log('coinselect fee =>');
-        console.log(fee);
+        shepherd.log('coinselect inputs =>', true);
+        shepherd.log(inputs, true);
+        shepherd.log('coinselect outputs =>', true);
+        shepherd.log(outputs, true);
+        shepherd.log('coinselect fee =>', true);
+        shepherd.log(fee, true);
       }
 
       let _change = 0;
@@ -1802,10 +1832,10 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
 
         res.end(JSON.stringify(successObj));
       } else {
-        console.log(`maxspend ${_maxSpend} (${_maxSpend * 0.00000001})`);
-        console.log(`value ${value}`);
-        console.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`);
-        console.log(`changeto ${changeAddress} amount ${_change} (${_change * 0.00000001})`);
+        shepherd.log(`maxspend ${_maxSpend} (${_maxSpend * 0.00000001})`, true);
+        shepherd.log(`value ${value}`, true);
+        shepherd.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`, true);
+        shepherd.log(`changeto ${changeAddress} amount ${_change} (${_change * 0.00000001})`, true);
 
         // account for KMD interest
         if (network === 'komodo' &&
@@ -1813,9 +1843,10 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
           // account for extra vout
           const _feeOverhead = outputs.length === 1 ? shepherd.estimateTxSize(0, 1) * feeRate : 0;
 
-          console.log(`max interest to claim ${totalInterest} (${totalInterest * 0.00000001})`);
-          console.log('estimated fee overhead ' + _feeOverhead);
-          console.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`);
+          shepherd.log(`max interest to claim ${totalInterest} (${totalInterest * 0.00000001})`, true);
+          shepherd.log(`estimated fee overhead ${_feeOverhead}`, true);
+          shepherd.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`, true);
+
           _change = _change + (totalInterest - _feeOverhead);
         }
 
@@ -1834,11 +1865,20 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
             vinSum += inputs[i].value;
           }
 
-          console.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`);
           const _estimatedFee = vinSum - outputs[0].value - _change;
-          console.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`);
 
-          const _rawtx = shepherd.buildSignedTx(outputAddress, changeAddress, wif, network, inputs, _change, value);
+          shepherd.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`, true);
+          shepherd.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`, true);
+
+          const _rawtx = shepherd.buildSignedTx(
+            outputAddress,
+            changeAddress,
+            wif,
+            network,
+            inputs,
+            _change,
+            value
+          );
 
           if (!push ||
               push === 'false') {
@@ -1987,7 +2027,7 @@ shepherd.get('/electrum/createrawtx', function(req, res, next) {
   });
 });
 
-shepherd.get('/electrum/pushtx', function(req, res, next) {
+shepherd.get('/electrum/pushtx', (req, res, next) => {
   const rawtx = req.query.rawtx;
   const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
 
@@ -1995,25 +2035,23 @@ shepherd.get('/electrum/pushtx', function(req, res, next) {
   ecl.blockchainTransactionBroadcast(rawtx)
   .then((json) => {
     ecl.close();
-    console.log('electrum pushtx ==>');
-    console.log(json);
+    shepherd.log('electrum pushtx ==>', true);
+    shepherd.log(json, true);
 
     const successObj = {
       msg: 'success',
-      result: {
-        txid: json,
-      },
+      result: json,
     };
 
     res.end(JSON.stringify(successObj));
   });
 });
 
-shepherd.listunspent = function(ecl, address, network, full, verify) {
+shepherd.listunspent = (ecl, address, network, full, verify) => {
   let _atLeastOneDecodeTxFailed = false;
 
   if (full) {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       ecl.connect();
       ecl.blockchainAddressListunspent(address)
       .then((_utxoJSON) => {
@@ -2040,16 +2078,16 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
                   return new Promise((resolve, reject) => {
                     ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
                     .then((_rawtxJSON) => {
-                      console.log('electrum gettransaction ==>');
-                      console.log(index + ' | ' + (_rawtxJSON.length - 1));
-                      console.log(_rawtxJSON);
+                      shepherd.log('electrum gettransaction ==>', true);
+                      shepherd.log(index + ' | ' + (_rawtxJSON.length - 1), true);
+                      shepherd.log(_rawtxJSON, true);
 
                       // decode tx
                       const _network = shepherd.getNetworkData(network);
                       const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
 
-                      console.log('decoded tx =>');
-                      console.log(decodedTx);
+                      shepherd.log('decoded tx =>', true);
+                      shepherd.log(decodedTx, true);
 
                       if (!decodedTx) {
                         _atLeastOneDecodeTxFailed = true;
@@ -2060,7 +2098,7 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
 
                           if (Number(_utxoItem.value) * 0.00000001 >= 10 &&
                               decodedTx.format.locktime > 0) {
-                            interest = shepherd.kdmCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                            interest = shepherd.kmdCalcInterest(decodedTx.format.locktime, _utxoItem.value);
                           }
 
                           let _resolveObj = {
@@ -2126,10 +2164,10 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
                   ecl.close();
 
                   if (!_atLeastOneDecodeTxFailed) {
-                    console.log(promiseResult);
+                    shepherd.log(promiseResult, true);
                     resolve(promiseResult);
                   } else {
-                    console.log('listunspent error, cant decode tx(s)');
+                    shepherd.log('listunspent error, cant decode tx(s)', true);
                     resolve('decode error');
                   }
                 });
@@ -2145,7 +2183,7 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
       });
     });
   } else {
-    return new Promise(function(resolve, reject) {
+    return new Promise((resolve, reject) => {
       ecl.connect();
       ecl.blockchainAddressListunspent(address)
       .then((json) => {
@@ -2162,15 +2200,20 @@ shepherd.listunspent = function(ecl, address, network, full, verify) {
   }
 }
 
-shepherd.get('/electrum/listunspent', function(req, res, next) {
+shepherd.get('/electrum/listunspent', (req, res, next) => {
   const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
   const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
 
   if (req.query.full &&
       req.query.full === 'true') {
-    shepherd.listunspent(ecl, req.query.address, network, true, req.query.verify)
-    .then((listunspent) => {
-      console.log('electrum listunspent ==>');
+    shepherd.listunspent(
+      ecl,
+      req.query.address,
+      network,
+      true,
+      req.query.verify
+    ).then((listunspent) => {
+      shepherd.log('electrum listunspent ==>', true);
 
       const successObj = {
         msg: 'success',
@@ -2183,7 +2226,7 @@ shepherd.get('/electrum/listunspent', function(req, res, next) {
     shepherd.listunspent(ecl, req.query.address, network)
     .then((listunspent) => {
       ecl.close();
-      console.log('electrum listunspent ==>');
+      shepherd.log('electrum listunspent ==>', true);
 
       const successObj = {
         msg: 'success',
@@ -2195,27 +2238,25 @@ shepherd.get('/electrum/listunspent', function(req, res, next) {
   }
 });
 
-shepherd.get('/electrum/estimatefee', function(req, res, next) {
+shepherd.get('/electrum/estimatefee', (req, res, next) => {
   const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
 
   ecl.connect();
   ecl.blockchainEstimatefee(req.query.blocks)
   .then((json) => {
     ecl.close();
-    console.log('electrum estimatefee ==>');
+    shepherd.log('electrum estimatefee ==>', true);
 
     const successObj = {
       msg: 'success',
-      result: {
-        estimatefee: json,
-      },
+      result: json,
     };
 
     res.end(JSON.stringify(successObj));
   });
 });
 
-shepherd.estimateTxSize = function(numVins, numOuts) {
+shepherd.estimateTxSize = (numVins, numOuts) => {
   // in x 180 + out x 34 + 10 plus or minus in
   return numVins * 180 + numOuts * 34 + 11;
 }
@@ -2225,7 +2266,7 @@ shepherd.estimateTxSize = function(numVins, numOuts) {
  *  type:
  *  params:
  */
-shepherd.get('/coind/list', function(req, res, next) {
+shepherd.get('/coind/list', (req, res, next) => {
   const successObj = {
     msg: 'success',
     result: shepherd.nativeCoindList,
@@ -2234,7 +2275,7 @@ shepherd.get('/coind/list', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.scanNativeCoindBins = function() {
+shepherd.scanNativeCoindBins = () => {
   let nativeCoindList = {};
 
   // check if coind bins are present in agama
@@ -2261,13 +2302,13 @@ shepherd.scanNativeCoindBins = function() {
   return nativeCoindList;
 }
 
-shepherd.getAppRuntimeLog = function() {
+shepherd.getAppRuntimeLog = () => {
   return new Promise((resolve, reject) => {
     resolve(appRuntimeLog);
   });
 };
 
-shepherd.startSPV = function(coin) {
+shepherd.startSPV = (coin) => {
   if (coin === 'KMD+REVS+JUMBLR') {
     shepherd.addElectrumCoin('KMD');
     shepherd.addElectrumCoin('REVS');
@@ -2277,7 +2318,7 @@ shepherd.startSPV = function(coin) {
   }
 }
 
-shepherd.startKMDNative = function(selection, isManual) {
+shepherd.startKMDNative = (selection, isManual) => {
   if (isManual) {
     shepherd.kmdMainPassiveMode = true;
   }
@@ -2303,7 +2344,7 @@ shepherd.startKMDNative = function(selection, isManual) {
       })
     };
 
-    request(options, function(error, response, body) {
+    request(options, (error, response, body) => {
       if (response &&
           response.statusCode &&
           response.statusCode === 200) {
@@ -2353,7 +2394,7 @@ shepherd.startKMDNative = function(selection, isManual) {
           })
         };
 
-        request(options, function(error, response, body) {
+        request(options, (error, response, body) => {
           if (response &&
               response.statusCode &&
               response.statusCode === 200) {
@@ -2372,7 +2413,7 @@ shepherd.startKMDNative = function(selection, isManual) {
  *  type: GET
  *  params: coin
  */
-shepherd.post('/native/dashboard/update', function(req, res, next) {
+shepherd.post('/native/dashboard/update', (req, res, next) => {
   let _returnObj;
   let _promiseStack;
   const _coin = req.body.coin;
@@ -2407,7 +2448,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
     ];
   }
 
-  function getAddressesNative(coin) {
+  const getAddressesNative = (coin) => {
     const type = [
       'public',
       'private'
@@ -2423,7 +2464,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           coin,
           _type === 'public' ? 'getaddressesbyaccount' : 'z_listaddresses',
           ['']
-        ).then(function(_json) {
+        ).then((_json) => {
           if (_json === 'Work queue depth exceeded' ||
               !_json) {
             resolve({ error: 'daemon is busy' });
@@ -2436,7 +2477,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
     .then(result => {
       if (result[0] &&
           result[0].length) {
-        function calcBalance(result, json) {
+        const calcBalance = (result, json) => {
           if (json &&
               json.length) {
             const allAddrArray = json.map(res => res.address).filter((x, i, a) => a.indexOf(x) == i);
@@ -2466,13 +2507,13 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           // remove addr duplicates
           if (result[0] &&
               result[0].length) {
-            result[0] = result[0].filter(function(elem, pos) {
+            result[0] = result[0].filter((elem, pos) => {
               return result[0].indexOf(elem) === pos;
             });
           }
           if (result[1] &&
               result[1].length) {
-            result[1] = result[1].filter(function(elem, pos) {
+            result[1] = result[1].filter((elem, pos) => {
               return result[1].indexOf(elem) === pos;
             });
           }
@@ -2507,7 +2548,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
             Promise.all(result[1].map((_address, index) => {
               return new Promise((resolve, reject) => {
                 _bitcoinRPC(coin, 'z_getbalance', [_address])
-                .then(function(__json) {
+                .then((__json) => {
                   __json = JSON.parse(__json);
                   if (__json &&
                       __json.error) {
@@ -2552,7 +2593,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
         }
 
         _bitcoinRPC(coin, 'listunspent')
-        .then(function(__json) {
+        .then((__json) => {
           if (__json === 'Work queue depth exceeded' ||
               !__json) {
             const returnObj = {
@@ -2586,8 +2627,8 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
     })
   }
 
-  function _bitcoinRPC(coin, cmd, params) {
-    return new Promise(function(resolve, reject) {
+  const _bitcoinRPC = (coin, cmd, params) => {
+    return new Promise((resolve, reject) => {
       let _payload;
 
       if (params) {
@@ -2615,7 +2656,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
         timeout: 120000,
       };
 
-      request(options, function(error, response, body) {
+      request(options, (error, response, body) => {
         if (response &&
             response.statusCode &&
             response.statusCode === 200) {
@@ -2642,7 +2683,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
         _call,
         _params
       )
-      .then(function(json) {
+      .then((json) => {
         if (json === 'Work queue depth exceeded' ||
             !json) {
           _returnObj[_call] = { error: 'daemon is busy' };
@@ -2658,15 +2699,15 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
   });
 });
 
-shepherd.testClearAll = function() {
-  return new Promise(function(resolve, reject) {
+shepherd.testClearAll = () => {
+  return new Promise((resolve, reject) => {
     fs.removeSync(`${iguanaTestDir}`);
     resolve('done');
   });
 }
 
-shepherd.testBins = function(daemonName) {
-  return new Promise(function(resolve, reject) {
+shepherd.testBins = (daemonName) => {
+  return new Promise((resolve, reject) => {
     const _bins = {
       komodod: komododBin,
       komodoCli: komodocliBin,
@@ -2681,7 +2722,7 @@ shepherd.testBins = function(daemonName) {
     }
 
     try {
-      _fs.access(`${agamaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, function(err) {
+      _fs.access(`${agamaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, (err) => {
         if (!err) {
           try {
             _fs.unlinkSync(`${agamaTestDir}/${daemonName}Test.log`);
@@ -2694,7 +2735,7 @@ shepherd.testBins = function(daemonName) {
 
     if (daemonName === 'komodod') {
       try {
-        _fs.access(`${iguanaTestDir}/debug.log`, fs.constants.R_OK, function(err) {
+        _fs.access(`${iguanaTestDir}/debug.log`, fs.constants.R_OK, (err) => {
           if (!err) {
             _fs.unlinkSync(`${iguanaTestDir}/db.log`);
             _fs.unlinkSync(`${iguanaTestDir}/debug.log`);
@@ -2715,7 +2756,7 @@ shepherd.testBins = function(daemonName) {
         });
       } catch (e) {}
 
-      function execKomodod() {
+      const execKomodod = () => {
         let _komododTest = {
           port: 'unknown',
           start: 'unknown',
@@ -2749,13 +2790,13 @@ shepherd.testBins = function(daemonName) {
           'addnode=185.106.121.32\n' +
           'addnode=27.100.36.201\n';
 
-        fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, function(err) {
+        fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, (err) => {
           if (err) {
             shepherd.log(`test: error writing komodo conf in ${iguanaTestDir}`);
           }
         });
 
-        portscanner.checkPortStatus('7771', '127.0.0.1', function(error, status) {
+        portscanner.checkPortStatus('7771', '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'closed') {
             _komododTest.port = 'passed';
@@ -2802,7 +2843,7 @@ shepherd.testBins = function(daemonName) {
           });
         });*/
 
-        setTimeout(function() {
+        setTimeout(() => {
           const options = {
             url: `http://localhost:7771`,
             method: 'POST',
@@ -2816,7 +2857,7 @@ shepherd.testBins = function(daemonName) {
             }),
           };
 
-          request(options, function(error, response, body) {
+          request(options, (error, response, body) => {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
@@ -2829,7 +2870,7 @@ shepherd.testBins = function(daemonName) {
           });
         }, 10000);
 
-        setTimeout(function() {
+        setTimeout(() => {
           pm2.delete('komodod');
           resolve(_komododTest);
         }, 20000);
@@ -2871,8 +2912,8 @@ shepherd.testBins = function(daemonName) {
 }
 
 // komodod datadir location test
-shepherd.testLocation = function(path) {
-  return new Promise(function(resolve, reject) {
+shepherd.testLocation = (path) => {
+  return new Promise((resolve, reject) => {
     if (path.indexOf(' ') > -1) {
       shepherd.log(`error testing path ${path}`);
       resolve(-1);
@@ -2895,7 +2936,7 @@ shepherd.testLocation = function(path) {
 }
 
 // osx and linux
-shepherd.binFixRights = function() {
+shepherd.binFixRights = () => {
   const osPlatform = os.platform();
   const _bins = [
     komododBin,
@@ -2905,7 +2946,7 @@ shepherd.binFixRights = function() {
   if (osPlatform === 'darwin' ||
       osPlatform === 'linux') {
     for (let i = 0; i < _bins.length; i++) {
-      _fs.stat(_bins[i], function(err, stat) {
+      _fs.stat(_bins[i], (err, stat) => {
         if (!err) {
           if (parseInt(stat.mode.toString(8), 10) !== 100775) {
             shepherd.log(`${_bins[i]} fix permissions`);
@@ -2919,7 +2960,7 @@ shepherd.binFixRights = function() {
   }
 }
 
-shepherd.killRogueProcess = function(processName) {
+shepherd.killRogueProcess = (processName) => {
   // kill rogue process copies on start
   let processGrep;
   const osPlatform = os.platform();
@@ -2936,14 +2977,14 @@ shepherd.killRogueProcess = function(processName) {
       break;
   }
 
-  exec(processGrep, function(error, stdout, stderr) {
+  exec(processGrep, (error, stdout, stderr) => {
     if (stdout.indexOf(processName) > -1) {
       const pkillCmd = osPlatform === 'win32' ? `taskkill /f /im ${processName}.exe` : `pkill -15 ${processName}`;
 
       shepherd.log(`found another ${processName} process(es)`);
       shepherd.writeLog(`found another ${processName} process(es)`);
 
-      exec(pkillCmd, function(error, stdout, stderr) {
+      exec(pkillCmd, (error, stdout, stderr) => {
         shepherd.log(`${pkillCmd} is issued`);
         shepherd.writeLog(`${pkillCmd} is issued`);
 
@@ -2961,7 +3002,7 @@ shepherd.killRogueProcess = function(processName) {
   });
 }
 
-shepherd.zcashParamsExist = function() {
+shepherd.zcashParamsExist = () => {
   let _checkList = {
     rootDir: _fs.existsSync(zcashParamsDir),
     provingKey: _fs.existsSync(`${zcashParamsDir}/sprout-proving.key`),
@@ -3001,7 +3042,7 @@ shepherd.zcashParamsExist = function() {
   return _checkList;
 }
 
-shepherd.readVersionFile = function() {
+shepherd.readVersionFile = () => {
   // read app version
   const rootLocation = path.join(__dirname, '../');
   const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
@@ -3009,7 +3050,7 @@ shepherd.readVersionFile = function() {
   return localVersionFile;
 }
 
-shepherd.createAgamaDirs = function() {
+shepherd.createAgamaDirs = () => {
   if (!fs.existsSync(agamaDir)) {
     fs.mkdirSync(agamaDir);
 
@@ -3048,7 +3089,7 @@ shepherd.createAgamaDirs = function() {
  *  type: POST
  *  params: none
  */
-shepherd.post('/encryptkey', function(req, res, next) {
+shepherd.post('/encryptkey', (req, res, next) => {
   if (req.body.key &&
       req.body.string &&
       req.body.pubkey) {
@@ -3063,7 +3104,7 @@ shepherd.post('/encryptkey', function(req, res, next) {
     const _pin = req.body.key;
     const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
 
-    fs.writeFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, function(err) {
+    fs.writeFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, (err) => {
       if (err) {
         shepherd.log('error writing pin file');
       }
@@ -3098,11 +3139,11 @@ shepherd.post('/encryptkey', function(req, res, next) {
   }
 });
 
-shepherd.post('/decryptkey', function(req, res, next) {
+shepherd.post('/decryptkey', (req, res, next) => {
   if (req.body.key &&
       req.body.pubkey) {
     if (fs.existsSync(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
-      fs.readFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', function(err, data) {
+      fs.readFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', (err, data) => {
         if (err) {
           const errorObj = {
             msg: 'error',
@@ -3150,9 +3191,9 @@ shepherd.post('/decryptkey', function(req, res, next) {
   }
 });
 
-shepherd.get('/getpinlist', function(req, res, next) {
+shepherd.get('/getpinlist', (req, res, next) => {
   if (fs.existsSync(`${agamaDir}/shepherd/pin`)) {
-    fs.readdir(`${agamaDir}/shepherd/pin`, function(err, items) {
+    fs.readdir(`${agamaDir}/shepherd/pin`, (err, items) => {
       let _pins = [];
 
       for (let i = 0; i < items.length; i++) {
@@ -3190,8 +3231,8 @@ shepherd.get('/getpinlist', function(req, res, next) {
 /**
  * Promise based download file method
  */
-function downloadFile(configuration) {
-  return new Promise(function(resolve, reject) {
+const downloadFile = (configuration) => {
+  return new Promise((resolve, reject) => {
     // Save variable to know progress
     let receivedBytes = 0;
     let totalBytes = 0;
@@ -3208,26 +3249,26 @@ function downloadFile(configuration) {
     let out = fs.createWriteStream(configuration.localFile);
     req.pipe(out);
 
-    req.on('response', function(data) {
+    req.on('response', (data) => {
       // Change the total bytes value to get progress later.
       totalBytes = parseInt(data.headers['content-length']);
     });
 
     // Get progress if callback exists
     if (configuration.hasOwnProperty('onProgress')) {
-      req.on('data', function(chunk) {
+      req.on('data', (chunk) => {
         // Update the received bytes
         receivedBytes += chunk.length;
         configuration.onProgress(receivedBytes, totalBytes);
       });
     } else {
-      req.on('data', function(chunk) {
+      req.on('data', (chunk) => {
         // Update the received bytes
         receivedBytes += chunk.length;
       });
     }
 
-    req.on('end', function() {
+    req.on('end', () => {
       resolve();
     });
   });
@@ -3279,7 +3320,7 @@ let binsToUpdate = [];
  *  params:
  */
  // TODO: promises
-shepherd.get('/update/bins/check', function(req, res, next) {
+shepherd.get('/update/bins/check', (req, res, next) => {
   const rootLocation = path.join(__dirname, '../');
   const successObj = {
     msg: 'success',
@@ -3300,7 +3341,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
   });
   // get list of bins/dlls that can be updated to the latest
   for (let i = 0; i < latestBins[_os].length; i++) {
-    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], function(err, remoteBinSize) {
+    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], (err, remoteBinSize) => {
       const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
 
       shepherd.log('remote url: ' + (remoteBinLocation[_os] + latestBins[_os][i]) + ' (' + remoteBinSize + ')');
@@ -3333,7 +3374,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
  *  type:
  *  params:
  */
-shepherd.get('/update/bins', function(req, res, next) {
+shepherd.get('/update/bins', (req, res, next) => {
   const rootLocation = path.join(__dirname, '../');
   const _os = os.platform();
   const successObj = {
@@ -3350,7 +3391,7 @@ shepherd.get('/update/bins', function(req, res, next) {
     downloadFile({
       remoteFile: remoteBinLocation[_os] + binsToUpdate[i].name,
       localFile: `${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`,
-      onProgress: function(received, total) {
+      onProgress: (received, total) => {
         const percentage = (received * 100) / total;
 
         if (percentage.toString().indexOf('.10') > -1) {
@@ -3367,7 +3408,7 @@ shepherd.get('/update/bins', function(req, res, next) {
         }
       }
     })
-    .then(function() {
+    .then(() => {
       // verify that remote file is matching to DL'ed file
       const localBinSize = fs.statSync(`${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`).size;
       shepherd.log('compare dl file size');
@@ -3400,7 +3441,7 @@ shepherd.get('/update/bins', function(req, res, next) {
  *  type: GET
  *  params: patchList
  */
-shepherd.get('/update/patch', function(req, res, next) {
+shepherd.get('/update/patch', (req, res, next) => {
   const successObj = {
     msg: 'success',
     result: 'dl started'
@@ -3411,13 +3452,13 @@ shepherd.get('/update/patch', function(req, res, next) {
   shepherd.updateAgama();
 });
 
-shepherd.updateAgama = function() {
+shepherd.updateAgama = () => {
   const rootLocation = path.join(__dirname, '../');
 
   downloadFile({
     remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
     localFile: `${rootLocation}patch.zip`,
-    onProgress: function(received, total) {
+    onProgress: (received, total) => {
       const percentage = (received * 100) / total;
 
       if (percentage.toString().indexOf('.10') > -1) {
@@ -3434,8 +3475,8 @@ shepherd.updateAgama = function() {
       }
     }
   })
-  .then(function() {
-    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', function(err, remotePatchSize) {
+  .then(() => {
+    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', (err, remotePatchSize) => {
       // verify that remote file is matching to DL'ed file
       const localPatchSize = fs.statSync(`${rootLocation}patch.zip`).size;
       shepherd.log('compare dl file size');
@@ -3480,14 +3521,14 @@ shepherd.updateAgama = function() {
  *  type:
  *  params:
  */
-shepherd.get('/update/patch/check', function(req, res, next) {
+shepherd.get('/update/patch/check', (req, res, next) => {
   const rootLocation = path.join(__dirname, '../');
   const options = {
     url: 'https://github.com/pbca26/dl-test/raw/master/version',
     method: 'GET',
   };
 
-  request(options, function(error, response, body) {
+  request(options, (error, response, body) => {
     if (response &&
         response.statusCode &&
         response.statusCode === 200) {
@@ -3533,7 +3574,7 @@ shepherd.get('/update/patch/check', function(req, res, next) {
  *  type:
  *  params:
  */
-shepherd.get('/unpack', function(req, res, next) {
+shepherd.get('/unpack', (req, res, next) => {
   const dlLocation = path.join(__dirname, '../');
   const zip = new AdmZip(`${dlLocation}patch.zip`);
   zip.extractAllTo(/*target path*/ `${dlLocation}/patch/unpack`, /*overwrite*/true);
@@ -3551,7 +3592,7 @@ shepherd.get('/unpack', function(req, res, next) {
  *  type:
  *  params:
  */
-shepherd.get('/zcparamsdl', function(req, res, next) {
+shepherd.get('/zcparamsdl', (req, res, next) => {
   // const dlLocation = zcashParamsDir + '/test';
   const dlLocation = zcashParamsDir;
   const dlOption = req.query.dloption;
@@ -3567,7 +3608,7 @@ shepherd.get('/zcparamsdl', function(req, res, next) {
     downloadFile({
       remoteFile: zcashParamsDownloadLinks[dlOption][key],
       localFile: dlLocation + '/' + 'sprout-' + key + '.key',
-      onProgress: function(received, total) {
+      onProgress: (received, total) => {
         const percentage = (received * 100) / total;
 
         if (percentage.toString().indexOf('.10') > -1) {
@@ -3585,7 +3626,7 @@ shepherd.get('/zcparamsdl', function(req, res, next) {
         }
       }
     })
-    .then(function() {
+    .then(() => {
       const checkZcashParams = shepherd.zcashParamsExist();
 
       shepherd.log(`${key} dl done`);
@@ -3619,9 +3660,9 @@ shepherd.get('/zcparamsdl', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/coinslist', function(req, res, next) {
+shepherd.get('/coinslist', (req, res, next) => {
   if (fs.existsSync(`${agamaDir}/shepherd/coinslist.json`)) {
-    fs.readFile(`${agamaDir}/shepherd/coinslist.json`, 'utf8', function(err, data) {
+    fs.readFile(`${agamaDir}/shepherd/coinslist.json`, 'utf8', (err, data) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -3652,7 +3693,7 @@ shepherd.get('/coinslist', function(req, res, next) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/guilog', function(req, res, next) {
+shepherd.post('/guilog', (req, res, next) => {
   const logLocation = `${agamaDir}/shepherd`;
 
   if (!guiLog[shepherd.appSessionHash]) {
@@ -3672,7 +3713,7 @@ shepherd.post('/guilog', function(req, res, next) {
     };
   }
 
-  fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(guiLog), function(err) {
+  fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(guiLog), (err) => {
     if (err) {
       shepherd.writeLog('error writing gui log file');
     }
@@ -3690,11 +3731,11 @@ shepherd.post('/guilog', function(req, res, next) {
  *  type: GET
  *  params: type
  */
-shepherd.get('/getlog', function(req, res, next) {
+shepherd.get('/getlog', (req, res, next) => {
   const logExt = req.query.type === 'txt' ? 'txt' : 'json';
 
   if (fs.existsSync(`${agamaDir}/shepherd/agamalog.${logExt}`)) {
-    fs.readFile(`${agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', function(err, data) {
+    fs.readFile(`${agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', (err, data) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -3725,7 +3766,7 @@ shepherd.get('/getlog', function(req, res, next) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/coinslist', function(req, res, next) {
+shepherd.post('/coinslist', (req, res, next) => {
   const _payload = req.body.payload;
 
   if (!_payload) {
@@ -3736,7 +3777,7 @@ shepherd.post('/coinslist', function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   } else {
-    fs.writeFile(`${agamaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), function(err) {
+    fs.writeFile(`${agamaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), (err) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -3757,7 +3798,7 @@ shepherd.post('/coinslist', function(req, res, next) {
 });
 
 // TODO: check if komodod is running
-shepherd.quitKomodod = function(timeout = 100) {
+shepherd.quitKomodod = (timeout = 100) => {
   // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
   let coindExitInterval = {};
@@ -3775,7 +3816,7 @@ shepherd.quitKomodod = function(timeout = 100) {
       _coindQuitCmd = chipscliBin;
     }
 
-    function execCliStop() {
+    const execCliStop = () => {
       let _arg = [];
       if (chain && !shepherd.nativeCoindList[key.toLowerCase()] && key !== 'CHIPS') {
         _arg.push(`-ac_name=${chain}`);
@@ -3788,7 +3829,7 @@ shepherd.quitKomodod = function(timeout = 100) {
       }
 
       _arg.push('stop');
-      execFile(`${_coindQuitCmd}`, _arg, function(error, stdout, stderr) {
+      execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
         shepherd.log(`stdout: ${stdout}`);
         shepherd.log(`stderr: ${stderr}`);
 
@@ -3803,8 +3844,8 @@ shepherd.quitKomodod = function(timeout = 100) {
 
         // workaround for AGT-65
         const _port = assetChainPorts[key];
-        setTimeout(function() {
-          portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+        setTimeout(() => {
+          portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
             // Status is 'open' if currently in use or 'closed' if available
             if (status === 'closed') {
               delete coindInstanceRegistry[key];
@@ -3818,11 +3859,11 @@ shepherd.quitKomodod = function(timeout = 100) {
         }
 
         if (key === 'CHIPS') {
-          setTimeout(function() {
+          setTimeout(() => {
             shepherd.killRogueProcess('chips-cli');
           }, 100);
         } else {
-          setTimeout(function() {
+          setTimeout(() => {
             shepherd.killRogueProcess('komodo-cli');
           }, 100);
         }
@@ -3830,13 +3871,13 @@ shepherd.quitKomodod = function(timeout = 100) {
     }
 
     execCliStop();
-    coindExitInterval[key] = setInterval(function() {
+    coindExitInterval[key] = setInterval(() => {
       execCliStop();
     }, timeout);
   }
 }
 
-shepherd.getConf = function(chain) {
+shepherd.getConf = (chain) => {
   let _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
   _confLocation = chain === 'CHIPS' ? `${chipsDir}/chips.conf` : _confLocation;
 
@@ -3893,7 +3934,7 @@ shepherd.getConf = function(chain) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/cli', function(req, res, next) {
+shepherd.post('/cli', (req, res, next) => {
   if (!req.body.payload) {
     const errorObj = {
       msg: 'error',
@@ -3966,7 +4007,7 @@ shepherd.post('/cli', function(req, res, next) {
           }
 
           shepherd.readDebugLog(coindDebugLogLocation, 1)
-          .then(function(result) {
+          .then((result) => {
             const _obj = {
               'msg': 'success',
               'result': result,
@@ -3976,7 +4017,7 @@ shepherd.post('/cli', function(req, res, next) {
             // console.log(result);
 
             res.end(JSON.stringify(_obj));
-          }, function(result) {
+          }, (result) => {
             const _obj = {
               error: result,
               result: 'error',
@@ -4023,7 +4064,7 @@ shepherd.post('/cli', function(req, res, next) {
 
           // send back body on both success and error
           // this bit replicates iguana core's behaviour
-          request(options, function (error, response, body) {
+          request(options, (error, response, body) => {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
@@ -4050,7 +4091,7 @@ shepherd.post('/cli', function(req, res, next) {
       }
 
       _arg = _arg.trim().split(' ');
-      execFile(_coindCliBin, _arg, function(error, stdout, stderr) {
+      execFile(_coindCliBin, _arg, (error, stdout, stderr) => {
         shepherd.log(`stdout: ${stdout}`);
         shepherd.log(`stderr: ${stderr}`);
 
@@ -4083,7 +4124,7 @@ shepherd.post('/cli', function(req, res, next) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/appconf', function(req, res, next) {
+shepherd.post('/appconf', (req, res, next) => {
   if (!req.body.payload) {
     const errorObj = {
       msg: 'error',
@@ -4107,7 +4148,7 @@ shepherd.post('/appconf', function(req, res, next) {
  *  type: POST
  *  params: none
  */
-shepherd.post('/appconf/reset', function(req, res, next) {
+shepherd.post('/appconf/reset', (req, res, next) => {
   shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
 
   const successObj = {
@@ -4127,7 +4168,7 @@ shepherd.writeLog(`komodo dir: ${komododBin}`);
 shepherd.writeLog(`komodo bin: ${komodoDir}`);
 
 // default route
-shepherd.get('/', function(req, res, next) {
+shepherd.get('/', (req, res, next) => {
   res.send('Agama app server');
 });
 
@@ -4135,7 +4176,7 @@ shepherd.get('/', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/appconf', function(req, res, next) {
+shepherd.get('/appconf', (req, res, next) => {
   const obj = shepherd.loadLocalConfig();
   res.send(obj);
 });
@@ -4144,7 +4185,7 @@ shepherd.get('/appconf', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/sysinfo', function(req, res, next) {
+shepherd.get('/sysinfo', (req, res, next) => {
   const obj = shepherd.SystemInfo();
   res.send(obj);
 });
@@ -4153,17 +4194,17 @@ shepherd.get('/sysinfo', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/appinfo', function(req, res, next) {
+shepherd.get('/appinfo', (req, res, next) => {
   const obj = shepherd.appInfo();
   res.send(obj);
 });
 
 // expose sockets obj
-shepherd.setIO = function(io) {
+shepherd.setIO = (io) => {
   shepherd.io = io;
 };
 
-shepherd.setVar = function(_name, _body) {
+shepherd.setVar = (_name, _body) => {
   shepherd[_name] = _body;
 };
 
@@ -4171,7 +4212,7 @@ shepherd.setVar = function(_name, _body) {
  *  type: GET
  *
  */
-shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
+shepherd.get('/InstantDEX/allcoins', (req, res, next) => {
   let successObj;
   let nativeCoindList = [];
   let electrumCoinsList = [];
@@ -4199,7 +4240,7 @@ shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/auth/status', function(req, res, next) { // not finished
+shepherd.get('/auth/status', (req, res, next) => { // not finished
   let successObj;
   let _status = false;
 
@@ -4230,7 +4271,7 @@ shepherd.get('/auth/status', function(req, res, next) { // not finished
  *  type: GET
  *  params: herd, lastLines
  */
-shepherd.post('/debuglog', function(req, res) {
+shepherd.post('/debuglog', (req, res) => {
   let _herd = req.body.herdname;
   let _ac = req.body.ac;
   let _lastNLines = req.body.lastLines;
@@ -4262,14 +4303,14 @@ shepherd.post('/debuglog', function(req, res) {
   }
 
   shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
-  .then(function(result) {
+  .then((result) => {
     const _obj = {
       msg: 'success',
       result: result,
     };
 
     res.end(JSON.stringify(_obj));
-  }, function(result) {
+  }, (result) => {
     const _obj = {
       msg: 'error',
       result: result,
@@ -4283,17 +4324,17 @@ shepherd.post('/debuglog', function(req, res) {
  *  type: POST
  *  params: herd
  */
-shepherd.post('/herd', function(req, res) {
+shepherd.post('/herd', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
   if (req.body.options &&
       !shepherd.kmdMainPassiveMode) {
-    function testCoindPort(skipError) {
+    const testCoindPort = (skipError) => {
       if (!lockDownAddCoin) {
         const _port = assetChainPorts[req.body.options.ac_name];
 
-        portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+        portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'open') {
             if (!skipError) {
@@ -4338,7 +4379,7 @@ shepherd.post('/herd', function(req, res) {
     if (req.body.herd === 'komodod') {
       // check if komodod instance is already running
       testCoindPort();
-      setTimeout(function() {
+      setTimeout(() => {
         testCoindPort(true);
       }, 10000);
     } else {
@@ -4367,7 +4408,7 @@ shepherd.post('/herd', function(req, res) {
 /*
  *  type: POST
  */
-shepherd.post('/setconf', function(req, res) {
+shepherd.post('/setconf', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
@@ -4389,7 +4430,7 @@ shepherd.post('/setconf', function(req, res) {
 /*
  *  type: POST
  */
-shepherd.post('/getconf', function(req, res) {
+shepherd.post('/getconf', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
@@ -4413,7 +4454,7 @@ shepherd.post('/getconf', function(req, res) {
  *  params: coin, type
  *  TODO: reorganize to work with coind
  */
-shepherd.get('/kick', function(req, res, next) {
+shepherd.get('/kick', (req, res, next) => {
   const _coin = req.query.coin;
   const _type = req.query.type;
 
@@ -4555,19 +4596,19 @@ shepherd.get('/kick', function(req, res, next) {
   }
 });
 
-shepherd.readDebugLog = function(fileLocation, lastNLines) {
+shepherd.readDebugLog = (fileLocation, lastNLines) => {
   return new Promise(
-    function(resolve, reject) {
+    (resolve, reject) => {
       if (lastNLines) {
         try {
-          _fs.access(fileLocation, fs.constants.R_OK, function(err) {
+          _fs.access(fileLocation, fs.constants.R_OK, (err) => {
             if (err) {
               shepherd.log(`error reading ${fileLocation}`);
               shepherd.writeLog(`error reading ${fileLocation}`);
               reject(`readDebugLog error: ${err}`);
             } else {
               shepherd.log(`reading ${fileLocation}`);
-              _fs.readFile(fileLocation, 'utf-8', function(err, data) {
+              _fs.readFile(fileLocation, 'utf-8', (err, data) => {
                 if (err) {
                   shepherd.writeLog(`readDebugLog err: ${err}`);
                   shepherd.log(`readDebugLog err: ${err}`);
@@ -4590,29 +4631,31 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
   );
 };
 
-function herder(flock, data, coind) {
+// TODO: json.stringify wrapper
+
+const herder = (flock, data, coind) => {
   if (data === undefined) {
     data = 'none';
     shepherd.log('it is undefined');
   }
 
-  shepherd.log('herder ' + flock + ' ' + coind);
+  shepherd.log(`herder flock: ${flock} coind: ${coind}`);
   shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
 
   // TODO: notify gui that reindex/rescan param is used to reflect on the screen
   //       asset chain debug.log unlink
   if (flock === 'komodod') {
-    let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir) + '/debug.log';
+    let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? `${komodoDir}/${data.ac_name}` : komodoDir) + '/debug.log';
 
     shepherd.log('komodod flock selected...');
-    shepherd.log('selected data: ' + JSON.stringify(data, null, '\t'));
+    shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
     shepherd.writeLog('komodod flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
 
     // datadir case, check if komodo/chain folder exists
     if (shepherd.appConfig.dataDir.length &&
         data.ac_name !== 'komodod') {
-      const _dir = data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir;
+      const _dir = data.ac_name !== 'komodod' ? `${komodoDir}/${data.ac_name}` : komodoDir;
 
       try {
          _fs.accessSync(_dir, fs.R_OK | fs.W_OK);
@@ -4660,7 +4703,7 @@ function herder(flock, data, coind) {
 
     try {
       // check if komodod instance is already running
-      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+      portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
@@ -4698,7 +4741,7 @@ function herder(flock, data, coind) {
             _arg = _arg.trim().split(' ');
             execFile(`${komododBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
-            }, function(error, stdout, stderr) {
+            }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
               shepherd.writeLog(`stderr: ${stderr}`);
 
@@ -4765,7 +4808,7 @@ function herder(flock, data, coind) {
 
     try {
       // check if komodod instance is already running
-      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+      portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
@@ -4798,7 +4841,7 @@ function herder(flock, data, coind) {
               _arg.length > 1) {
             execFile(`${chipsBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
-            }, function(error, stdout, stderr) {
+            }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
               shepherd.writeLog(`stderr: ${stderr}`);
 
@@ -4818,7 +4861,7 @@ function herder(flock, data, coind) {
           } else {
             execFile(`${chipsBin}`, {
               maxBuffer: 1024 * 1000000 // 1000 mb
-            }, function(error, stdout, stderr) {
+            }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
               shepherd.writeLog(`stderr: ${stderr}`);
 
@@ -4888,7 +4931,7 @@ function herder(flock, data, coind) {
 
      // truncate debug.log
      try {
-       _fs.access(coindDebugLogLocation, fs.constants.R_OK, function(err) {
+       _fs.access(coindDebugLogLocation, fs.constants.R_OK, (err) => {
          if (err) {
            shepherd.log(`error accessing ${coindDebugLogLocation}`);
            shepherd.writeLog(`error accessing ${coindDebugLogLocation}`);
@@ -4909,7 +4952,7 @@ function herder(flock, data, coind) {
 
      try {
        // check if coind instance is already running
-       portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+       portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
          // Status is 'open' if currently in use or 'closed' if available
          if (status === 'closed') {
            shepherd.log(`exec ${coindBin} ${data.ac_options.join(' ')}`);
@@ -4920,7 +4963,7 @@ function herder(flock, data, coind) {
             _arg = _arg.trim().split(' ');
             execFile(`${coindBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
-            }, function(error, stdout, stderr) {
+            }, (error, stdout, stderr) => {
              shepherd.writeLog(`stdout: ${stdout}`);
              shepherd.writeLog(`stderr: ${stderr}`);
 
@@ -4941,9 +4984,9 @@ function herder(flock, data, coind) {
   }
 }
 
-shepherd.setConfKMD = function(isChips) {
+shepherd.setConfKMD = (isChips) => {
   // check if kmd conf exists
-  _fs.access(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
+  _fs.access(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, (err) => {
     if (err) {
       shepherd.log(isChips ? 'creating chips conf' : 'creating komodo conf');
       shepherd.writeLog(isChips ? `creating chips conf in ${chipsDir}/chips.conf` : `creating komodo conf in ${komodoDir}/komodo.conf`);
@@ -4963,7 +5006,7 @@ shepherd.setConfKMD = function(isChips) {
   });
 }
 
-function setConf(flock, coind) {
+const setConf = (flock, coind) => {
   let nativeCoindDir;
   let DaemonConfPath;
 
@@ -5051,11 +5094,11 @@ function setConf(flock, coind) {
     });
   }
 
-  const RemoveLines = function() {
-    return new Promise(function(resolve, reject) {
+  const RemoveLines = () => {
+    return new Promise((resolve, reject) => {
       const result = 'RemoveLines is done';
 
-      fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
+      fs.readFile(DaemonConfPath, 'utf8', (err, data) => {
         if (err) {
           shepherd.writeLog(`setconf error ${err}`);
           return shepherd.log(err);
@@ -5063,7 +5106,7 @@ function setConf(flock, coind) {
 
         const rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
 
-        fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
+        fs.writeFile(DaemonConfPath, rmlines, 'utf8', (err) => {
           if (err)
             return shepherd.log(err);
 
@@ -5317,7 +5360,7 @@ shepherd.setMaxconKMDConf = (limit) => {
   });
 }
 
-function getConf(flock, coind) {
+const getConf = (flock, coind) => {
   let DaemonConfPath = '';
   let nativeCoindDir;
 
@@ -5377,7 +5420,7 @@ function getConf(flock, coind) {
   return DaemonConfPath;
 }
 
-function formatBytes(bytes, decimals) {
+const formatBytes = (bytes, decimals) => {
   if (bytes === 0)
     return '0 Bytes';
 
