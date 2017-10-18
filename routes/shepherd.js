@@ -4415,6 +4415,7 @@ shepherd.post('/setconf', (req, res) => {
   if (os.platform() === 'win32' &&
       req.body.chain == 'komodod') {
     setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+    //setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
   } else {
     setConf(req.body.chain);
   }
@@ -4594,7 +4595,7 @@ shepherd.get('/kick', (req, res, next) => {
 
     res.end(JSON.stringify(successObj));
   }
-});
+});*/
 
 shepherd.readDebugLog = (fileLocation, lastNLines) => {
   return new Promise(
@@ -5064,7 +5065,7 @@ const setConf = (flock, coind) => {
 
   shepherd.log(DaemonConfPath);
   shepherd.writeLog(`setconf ${DaemonConfPath}`);
-
+  
   const CheckFileExists = () => {
     return new Promise((resolve, reject) => {
       const result = 'Check Conf file exists is done';

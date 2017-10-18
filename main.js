@@ -7,7 +7,8 @@ const electron = require('electron'),
 			path = require('path'),
 			url = require('url'),
 			os = require('os'),
-			md5 = require('./routes/md5.js'),
+			md5 = require('./routes/md5'),
+			exec = require('child_process').exec,
 			{ Menu } = require('electron'),
 			portscanner = require('portscanner'),
 			osPlatform = os.platform(),
@@ -280,7 +281,7 @@ function createAppCloseWindow() {
 	// initialise window
 	appCloseWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 500,
-		height: 300,
+		height: 355,
 		frame: false,
 		icon: agamaIcon,
 		show: false,
