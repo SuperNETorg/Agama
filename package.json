@@ -1,7 +1,7 @@
 {
   "name": "agama_app",
   "productName": "Agama",
-  "version": "0.2.22",
+  "version": "0.2.23",
   "description": "Agama Desktop App",
   "main": "main.js",
   "scripts": {
@@ -10,34 +10,35 @@
   },
   "repository": "https://github.com/SuperNETorg/Agama/",
   "keywords": [
-    "iguana",
     "agama",
-    "superNET",
+    "SuperNET",
     "komodo",
-    "easydex",
-    "instantdex",
     "pax"
   ],
-  "author": "ca333, grewalsatinder",
+  "author": "SuperNET",
   "license": "MIT",
   "devDependencies": {
     "electron": "^1.4.1"
   },
   "dependencies": {
     "adm-zip": "^0.4.7",
+    "bitcoinjs-lib": "^3.2.0",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
+    "buffer-reverse": "^1.0.1",
+    "coinkey": "^2.0.0",
+    "coinselect": "github:bitcoinjs/coinselect",
     "electron": "1.6.5",
     "express": "^4.14.0",
     "fix-path": "^2.1.0",
     "fs-extra": "^1.0.0",
     "graceful-fs": "^4.1.11",
     "nodejs-aes256": "^1.0.1",
-    "pm2": "^2.4.3",
     "portscanner": "^2.1.1",
     "ps-node": "^0.1.5",
     "remote-file-size": "^3.0.3",
     "request": "^2.80.0",
+    "sha256": "^0.2.0",
     "socket.io": "^1.7.3"
   }
 }

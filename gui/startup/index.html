@@ -3,14 +3,12 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
     <link rel="stylesheet" href="../EasyDEX-GUI/assets/global/css/bootstrap.min.css">
-    <link rel="stylesheet" href="../EasyDEX-GUI/assets/mainWindow/css/jRoll.min.css">
     <link rel="stylesheet" href="../EasyDEX-GUI/assets/mainWindow/css/loading.css">
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/module-hack.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/global/vendor/jquery/jquery.min.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/scripts/config.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/bluebird.min.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/loading.js"></script>
-    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/jRoll.min.js"></script>
     <script>if (window.module) module = window.module;</script>
   </head>
   <body class="agamaMode loading-window">
@@ -40,7 +38,7 @@
           onClick="toggleDropdown()">
           <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
         </div>
-        <ul class="dropdown-menu hide">
+        <ul class="dropdown-menu native hide">
           <li onClick="closeMainWindow()">
             <a>KMD + REVS + JUMBLR</a>
           </li>
@@ -51,22 +49,42 @@
             <a>KMD (passive)</a>
           </li>
         </ul>
+
         <button
-          id="normalStartBtn"
-          onClick="normalStart()"
-          class="btn btn-primary btn-mode">
-          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cubes.png"> All modes
+          id="spvBtn"
+          onClick="startSPV('KMD')"
+          class="btn btn-primary btn-mode btn-native margin-left-20">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-flash.png"> KMD lite
         </button>
-        <div class="margin-top-20 settings-stick-to-right">
+        <div
+          id="spvBtnCarret"
+          class="btn btn-primary btn-caret"
+          onClick="toggleDropdown('lite')">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
+        </div>
+        <ul class="dropdown-menu lite hide">
+          <li onClick="startSPV('KMD+REVS+JUMBLR')">
+            <a>Lite: KMD + REVS + JUMBLR</a>
+          </li>
+          <li onClick="startSPV('CHIPS')">
+            <a>CHIPS lite</a>
+          </li>
+          <li onClick="closeMainWindow(null, true)">
+            <a>Custom</a>
+          </li>
+        </ul>
+
+        <div class="margin-top-20">
           <button
             id="settingsBtn"
             onClick="openSettingsWindow()"
             class="btn btn-info btn-mode">
             <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cogs.png"> Settings
           </button>
+          <button class="btn btn-primary btn-mode hide" onClick="closeMainWindow(null, true)">Custom</button>
         </div>
       </div>
     </div>
-    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/init.js"></script>
+    <script type="text/javascript">init()</script>
   </body>
 </html>

@@ -1,4 +1,4 @@
-// main proc for EasyDEX GUI
+// main proc for Agama
 // this app spawns iguana in background in nontech-mode
 
 const electron = require('electron'),
@@ -19,20 +19,21 @@ var express = require('express'),
 		fs = require('fs'),
 		fsnode = require('fs'),
 		fs = require('fs-extra'),
-		pm2 = require('pm2'),
-		cluster = require('cluster'),
 		numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
 
 if (osPlatform === 'linux') {
 	process.env.ELECTRON_RUN_AS_NODE = true;
-	// console.log(process.env);
 }
 
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd');
 var guiapp = express();
+var appConfig = shepherd.loadLocalConfig(); // load app config
+
+const nativeCoindList = shepherd.scanNativeCoindBins();
+shepherd.setVar('nativeCoindList', nativeCoindList);
 
 let localVersion;
 let localVersionFile = shepherd.readVersionFile();
@@ -52,7 +53,7 @@ app.setName(appBasicInfo.name);
 app.setVersion(appBasicInfo.version);
 
 shepherd.binFixRights();
-shepherd.createIguanaDirs();
+shepherd.createAgamaDirs();
 
 const appSessionHash = md5(Date.now().toString());
 
@@ -67,20 +68,28 @@ shepherd.writeLog(`platform: ${osPlatform}`);
 shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
-var appConfig = shepherd.loadLocalConfig(); // load app config
+shepherd.log(`app init ${appSessionHash}`);
+shepherd.log(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
+shepherd.log('sys info:');
+shepherd.log(`totalmem_readable: ${formatBytes(os.totalmem())}`);
+shepherd.log(`arch: ${os.arch()}`);
+shepherd.log(`cpu: ${os.cpus()[0].model}`);
+shepherd.log(`cpu_cores: ${os.cpus().length}`);
+shepherd.log(`platform: ${osPlatform}`);
+shepherd.log(`os_release: ${os.release()}`);
+shepherd.log(`os_type: ${os.type()}`);
+
 appConfig['daemonOutput'] = false; // shadow setting
 
 let __defaultAppSettings = require('./routes/appConfig.js').config;
 __defaultAppSettings['daemonOutput'] = false; // shadow setting
 const _defaultAppSettings = __defaultAppSettings;
 
+shepherd.log(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
 shepherd.setConfKMD();
-
-if (appConfig.killIguanaOnStart) {
-	shepherd.killRogueProcess('iguana');
-}
+shepherd.setConfKMD('CHIPS');
 
 guiapp.use(function(req, res, next) {
 	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:3000');
@@ -103,7 +112,7 @@ process.once('loaded', () => {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
 		app.setAboutPanelOptions({
 			applicationName: app.getName(),
-			applicationVersion: app.getVersion(),
+			applicationVersion: `app.getVersion().replace('version=', '')}-beta`,
 			copyright: 'Released under the MIT license',
 			credits: 'SuperNET Team'
 		})
@@ -148,13 +157,13 @@ let forceQuitApp = false;
 const _zcashParamsExist = shepherd.zcashParamsExist();
 
 module.exports = guiapp;
-let iguanaIcon;
+let agamaIcon;
 
 if (os.platform() === 'linux') {
-	iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
+	agamaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png');
 }
 if (os.platform() === 'win32') {
-	iguanaIcon = path.join(__dirname, '/assets/icons/agama_app_icon.ico');
+	agamaIcon = path.join(__dirname, '/assets/icons/agama_app_icon.ico');
 }
 
 function createLoadingWindow() {
@@ -166,7 +175,7 @@ function createLoadingWindow() {
 			width: 500,
 			height: 355,
 			frame: false,
-			icon: iguanaIcon,
+			icon: agamaIcon,
 			show: false,
 		});
 	} catch(e) {}
@@ -183,7 +192,7 @@ function createLoadingWindow() {
 				// start sockets.io
 				io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
 
-				io.on('connection', function(client) {
+				/*io.on('connection', function(client) {
 					shepherd.log('EDEX GUI is connected...');
 					shepherd.writeLog('EDEX GUI is connected...');
 
@@ -197,7 +206,7 @@ function createLoadingWindow() {
 						shepherd.log(data);
 						client.emit('messages', 'Sockets server is listening');
 					});
-				});
+				});*/
 			});
 		} else {
 			willQuitApp = true;
@@ -219,6 +228,7 @@ function createLoadingWindow() {
 	loadingWindow.forseCloseApp = forseCloseApp;
 	loadingWindow.createAppSettingsWindow = createAppSettingsWindow;
 	loadingWindow.startKMDNative = shepherd.startKMDNative;
+	loadingWindow.startSPV = shepherd.startSPV;
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup`);
@@ -228,9 +238,6 @@ function createLoadingWindow() {
     }, 40);
   });
 	shepherd.writeLog('show loading window');
-
-	// DEVTOOLS - only for dev purposes - ca333
-	// loadingWindow.webContents.openDevTools()
 
 	// if window closed we kill iguana proc
 	loadingWindow.on('hide', function() {
@@ -276,7 +283,7 @@ function createAppCloseWindow() {
 		width: 500,
 		height: 355,
 		frame: false,
-		icon: iguanaIcon,
+		icon: agamaIcon,
 		show: false,
 	});
 
@@ -299,9 +306,9 @@ function createAppSettingsWindow() {
 	// initialise window
 	appSettingsWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 750,
-		height: !appConfig.experimentalFeatures ? 570 : 700,
+		height: 570,
 		frame: false,
-		icon: iguanaIcon,
+		icon: agamaIcon,
 		show: false,
 	});
 
@@ -343,7 +350,7 @@ function createWindow(status) {
 		mainWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 			width: closeAppAfterLoading ? 1 : 1280,
 			height: closeAppAfterLoading ? 1 : 800,
-			icon: iguanaIcon,
+			icon: agamaIcon,
 			show: false,
 		});
 
@@ -371,38 +378,35 @@ function createWindow(status) {
 		]);
 
 		// load our index.html (i.e. easyDEX GUI)
-		if (appConfig.edexGuiOnly) {
-			if (appConfig.v2) {
-				shepherd.writeLog('show edex gui');
-				mainWindow.appConfig = appConfig;
-				mainWindow.appConfigSchema = shepherd.appConfigSchema;
-				mainWindow.appBasicInfo = appBasicInfo;
-				mainWindow.appSessionHash = appSessionHash;
-				mainWindow.assetChainPorts = require('./routes/ports.js');
-				mainWindow.zcashParamsExist = _zcashParamsExist;
-				mainWindow.iguanaIcon = iguanaIcon;
-				mainWindow.testLocation = shepherd.testLocation;
-				mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
-				mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
+		shepherd.writeLog('show edex gui');
+		mainWindow.appConfig = appConfig;
+		mainWindow.appConfigSchema = shepherd.appConfigSchema;
+		mainWindow.appBasicInfo = appBasicInfo;
+		mainWindow.appSessionHash = appSessionHash;
+		mainWindow.assetChainPorts = require('./routes/ports.js');
+		mainWindow.zcashParamsExist = _zcashParamsExist;
+		mainWindow.agamaIcon = agamaIcon;
+		mainWindow.testLocation = shepherd.testLocation;
+		mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
+		mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
+		mainWindow.nativeCoindList = nativeCoindList;
+		mainWindow.zcashParamsDownloadLinks = shepherd.zcashParamsDownloadLinks;
+		mainWindow.isWindows = os.platform() === 'win32' ? true : false;
+		mainWindow.appExit = appExit;
+		mainWindow.getMaxconKMDConf = shepherd.getMaxconKMDConf;
+		mainWindow.setMaxconKMDConf = shepherd.setMaxconKMDConf;
 
-				if (appConfig.dev) {
-					mainWindow.loadURL('http://127.0.0.1:3000');
-				} else {
-					mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
-				}
-
-			  mainWindow.webContents.on('did-finish-load', function() {
-			    setTimeout(function() {
-			      mainWindow.show();
-			    }, 40);
-			  });
-			} else {
-				shepherd.writeLog('show edex gui');
-				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/`);
-			}
+		if (appConfig.dev) {
+			mainWindow.loadURL('http://127.0.0.1:3000');
 		} else {
-			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/main.html`);
+			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
 		}
+
+	  mainWindow.webContents.on('did-finish-load', function() {
+	    setTimeout(function() {
+	      mainWindow.show();
+	    }, 40);
+	  });
 
 		mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
 			const { selectionText, isEditable } = params; // params obj
@@ -417,54 +421,19 @@ function createWindow(status) {
 		// DEVTOOLS - only for dev purposes - ca333
 		// mainWindow.webContents.openDevTools()
 
-		function pm2Exit() {
-			const ConnectToPm2 = function() {
+		function appExit() {
+			const CloseDaemons = function() {
 				return new Promise(function(resolve, reject) {
 					shepherd.log('Closing Main Window...');
 					shepherd.writeLog('exiting app...');
 
-					shepherd.dumpCacheBeforeExit();
 					shepherd.quitKomodod(1000);
 
-					pm2.connect(true, function(err) {
-						shepherd.log('connecting to pm2...');
-						shepherd.writeLog('connecting to pm2...');
-
-						if (err) {
-							shepherd.log(err);
-						}
-					});
-
-					const result = 'Connecting To Pm2: done';
+					const result = 'Closing daemons: done';
 
 					shepherd.log(result);
 					shepherd.writeLog(result);
 					resolve(result);
-				})
-			}
-
-			const KillPm2 = function() {
-				return new Promise(function(resolve, reject) {
-					shepherd.log('killing to pm2...');
-					shepherd.writeLog('killing to pm2...');
-
-					pm2.killDaemon(function(err) {
-						pm2.disconnect();
-						shepherd.log('killed to pm2...');
-						shepherd.writeLog('killed to pm2...');
-
-						if (err)
-							throw err;
-					});
-
-					const result = 'Killing Pm2: done';
-
-					setTimeout(function() {
-						shepherd.log(result);
-						shepherd.writeLog(result);
-
-						resolve(result);
-					}, 2000);
 				})
 			}
 
@@ -490,7 +459,6 @@ function createWindow(status) {
 				return new Promise(function(resolve, reject) {
 					const result = 'Quiting App: done';
 
-					KillPm2(); // required for normal app quit in iguana-less mode
 					app.quit();
 					shepherd.log(result);
 					resolve(result);
@@ -498,10 +466,7 @@ function createWindow(status) {
 			}
 
 			const closeApp = function() {
-				ConnectToPm2()
-				.then(function(result) {
-					return KillPm2();
-				})
+				CloseDaemons()
 				.then(HideMainWindow)
 				.then(HideAppClosingWindow)
 				.then(QuitApp);
@@ -524,7 +489,7 @@ function createWindow(status) {
 
 		// if window closed we kill iguana proc
 		mainWindow.on('closed', function() {
-			pm2Exit();
+			appExit();
 		});
 	}
 }
@@ -543,13 +508,15 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	shepherd.log('before-quit');
-	shepherd.killRogueProcess('iguana'); // kill any rogue iguana core instances
 
-	if (!forceQuitApp && mainWindow === null && loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
+	if (!forceQuitApp &&
+			mainWindow === null &&
+			loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
 		shepherd.log('before-quit prevented');
 		shepherd.writeLog('quit app after loading is done');
 		closeAppAfterLoading = true;
+		// obsolete(?)
 		let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
 		loadingWindow.webContents.executeJavaScript(code);
 		event.preventDefault();
@@ -559,7 +526,9 @@ app.on('before-quit', function(event) {
 // Emitted when all windows have been closed and the application will quit.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('will-quit', function(event) {
-	if (!forceQuitApp && mainWindow === null && loadingWindow != null) {
+	if (!forceQuitApp &&
+			mainWindow === null &&
+			loadingWindow != null) {
 		// loading window is still open
 		shepherd.log('will-quit while loading window active');
 		event.preventDefault();
@@ -569,17 +538,19 @@ app.on('will-quit', function(event) {
 // Emitted when the application is quitting.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', function(event) {
-	if (!forceQuitApp && mainWindow === null && loadingWindow != null) {
+	if (!forceQuitApp &&
+			mainWindow === null &&
+			loadingWindow != null) {
 		shepherd.log('quit while loading window active');
 		event.preventDefault();
 	}
 })
 
 app.on('activate', function() {
-	if (mainWindow === null) {
-		// createWindow('open');
-	}
+	if (mainWindow === null) {}
 });
+
+app.commandLine.appendSwitch('ignore-certificate-errors'); // dirty hack
 
 function formatBytes(bytes, decimals) {
   if (bytes === 0) {

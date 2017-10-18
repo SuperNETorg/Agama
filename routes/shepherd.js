@@ -1,95 +1,447 @@
-const electron = require('electron'),
-      app = electron.app,
-      BrowserWindow = electron.BrowserWindow,
-      path = require('path'),
-      url = require('url'),
-      os = require('os'),
-      fsnode = require('fs'),
-      fs = require('fs-extra'),
-      _fs = require('graceful-fs'),
-      express = require('express'),
-      exec = require('child_process').exec,
-      spawn = require('child_process').spawn,
-      md5 = require('./md5'),
-      pm2 = require('pm2'),
-      request = require('request'),
-      async = require('async'),
-      portscanner = require('portscanner'),
-      aes256 = require('nodejs-aes256'),
-      AdmZip = require('adm-zip'),
-      remoteFileSize = require('remote-file-size'),
-      Promise = require('bluebird'),
-      {shell} = require('electron'),
-      {execFile} = require('child_process');
-
+const electron = require('electron');
+const app = electron.app;
+const BrowserWindow = electron.BrowserWindow;
+const path = require('path');
+const url = require('url');
+const os = require('os');
+const fsnode = require('fs');
+const fs = require('fs-extra');
+const _fs = require('graceful-fs');
+const express = require('express');
+const exec = require('child_process').exec;
+const spawn = require('child_process').spawn;
+const md5 = require('./md5.js');
+const request = require('request');
+const async = require('async');
+const portscanner = require('portscanner');
+const aes256 = require('nodejs-aes256');
+const AdmZip = require('adm-zip');
+const remoteFileSize = require('remote-file-size');
+const Promise = require('bluebird');
+const {shell} = require('electron');
+const {execFile} = require('child_process');
+const sha256 = require('sha256');
+const CoinKey = require('coinkey');
+const bitcoinJS = require('bitcoinjs-lib');
+const coinSelect = require('coinselect');
 const fixPath = require('fix-path');
-var ps = require('ps-node'),
-    setconf = require('../private/setconf.js'),
-    assetChainPorts = require('./ports.js'),
-    _appConfig = require('./appConfig.js'),
-    shepherd = express.Router(),
-    iguanaInstanceRegistry = {},
-    coindInstanceRegistry = {},
-    syncOnlyIguanaInstanceInfo = {},
-    syncOnlyInstanceInterval = -1,
-    guiLog = {},
-    rpcConf = {},
-    appRuntimeLog = [],
-    lockDownAddCoin = false;
+const crypto = require('crypto');
+
+var ps = require('ps-node');
+var setconf = require('../private/setconf.js');
+var nativeCoind = require('./nativeCoind.js');
+var assetChainPorts = require('./ports.js');
+var _appConfig = require('./appConfig.js');
+var shepherd = express.Router();
+var coindInstanceRegistry = {};
+var guiLog = {};
+var rpcConf = {};
+var appRuntimeLog = [];
+var appRuntimeSPVLog = [];
+var lockDownAddCoin = false;
+var electrumCoins = {
+  auth: false,
+};
+var electrumKeys = {};
+
+const electrumJSCore = require('./electrumjs/electrumjs.core.js');
+const electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
+const electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
+let electrumServers = {
+  /*zcash: {
+    address: '173.212.225.176',
+    port: 50032,
+    proto: 'tcp',
+  },*/
+  revs: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50050,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'REVS',
+    serverList: [
+      '173.212.225.176:50050',
+      '136.243.45.140:50050'
+    ],
+  },
+  mnz: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50053,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'MNZ',
+    serverList: [
+      '173.212.225.176:50053',
+      '136.243.45.140:50053'
+    ],
+  },
+  wlc: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50052,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'WLC',
+    serverList: [
+      '173.212.225.176:50052',
+      '136.243.45.140:50052'
+    ],
+  },
+  jumblr: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50051,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'JUMBLR',
+    serverList: [
+      '173.212.225.176:50051',
+      '136.243.45.140:50051'
+    ],
+  },
+  komodo: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50011,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'KMD',
+    serverList: [
+      '173.212.225.176:50011',
+      '136.243.45.140:50011'
+    ],
+  },
+  dogecoin: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50015,
+    proto: 'tcp',
+    txfee: 100000000,
+    abbr: 'DOGE',
+  },
+  viacoin: { // !estimatefee
+    address: 'vialectrum.bitops.me',
+    port: 50002,
+    proto: 'ssl',
+    txfee: 100000,
+    abbr: 'VIA',
+  },
+  vertcoin: {
+    address: '173.212.225.176',
+    port: 50088,
+    proto: 'tcp',
+    txfee: 100000,
+    abbr: 'VTC',
+  },
+  namecoin: {
+    address: '173.212.225.176',
+    port: 50036,
+    proto: 'tcp',
+    txfee: 100000,
+    abbr: 'NMC',
+  },
+  monacoin: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50002,
+    proto: 'tcp',
+    txfee: 100000,
+    abbr: 'MONA',
+  },
+  litecoin: {
+    address: '173.212.225.176',
+    port: 50012,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'LTC',
+  },
+  faircoin: {
+    address: '173.212.225.176',
+    port: 50005,
+    proto: 'tcp',
+    txfee: 1000000,
+    abbr: 'FAIR',
+  },
+  digibyte: {
+    address: '173.212.225.176',
+    port: 50022,
+    proto: 'tcp',
+    txfee: 100000,
+    abbr: 'DGB',
+  },
+  dash: {
+    address: '173.212.225.176',
+    port: 50098,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'DASH',
+  },
+  crown: {
+    address: '173.212.225.176',
+    port: 50041,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'CRW',
+  },
+  bitcoin: {
+    address: '173.212.225.176',
+    port: 50001,
+    proto: 'tcp',
+    abbr: 'BTC',
+  },
+  argentum: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50081,
+    proto: 'tcp',
+    txfee: 50000,
+    abbr: 'ARG',
+  },
+  chips: { // !estimatefee
+    address: '173.212.225.176',
+    port: 50076,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'CHIPS',
+    serverList: [
+      '173.212.225.176:50076',
+      '136.243.45.140:50076'
+    ],
+  },
+};
+
+const zcashParamsDownloadLinks = {
+  'agama.komodoplatform.com': {
+    proving: 'https://agama.komodoplatform.com/file/supernet/sprout-proving.key',
+    verifying: 'https://agama.komodoplatform.com/file/supernet/sprout-verifying.key',
+  },
+  'agama-yq0ysrdtr.stackpathdns.com': {
+    proving: 'http://agama-yq0ysrdtr.stackpathdns.com/file/supernet/sprout-proving.key',
+    verifying: 'http://agama-yq0ysrdtr.stackpathdns.com/file/supernet/sprout-verifying.key',
+  },
+  'zcash.dl.mercerweiss.com': {
+    proving: 'https://zcash.dl.mercerweiss.com/sprout-proving.key',
+    verifying: 'https://zcash.dl.mercerweiss.com/sprout-verifying.key',
+  },
+};
+
+shepherd.zcashParamsDownloadLinks = zcashParamsDownloadLinks;
+
+const CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';
 
 shepherd.appConfig = _appConfig.config;
 
-// IGUANA FILES AND CONFIG SETTINGS
-var iguanaConfsDirSrc = path.join(__dirname, '../assets/deps/confs');
+var agamaDir;
+switch (os.platform()) {
+  case 'darwin':
+    fixPath();
+    agamaDir = `${process.env.HOME}/Library/Application Support/Agama`;
+    break;
 
-// SETTING OS DIR TO RUN IGUANA FROM
-// SETTING APP ICON FOR LINUX AND WINDOWS
+  case 'linux':
+    agamaDir = `${process.env.HOME}/.agama`;
+    break;
+
+  case 'win32':
+    agamaDir = `${process.env.APPDATA}/Agama`;
+    agamaDir = path.normalize(agamaDir);
+    break;
+}
+
+shepherd.log = function(msg, isSpvOut) {
+  if (shepherd.appConfig.dev ||
+      shepherd.appConfig.debug) {
+    console.log(msg);
+  }
+
+  if (!isSpvOut) {
+    appRuntimeLog.push({
+      time: Date.now(),
+      msg: msg,
+    });
+  } else {
+    appRuntimeSPVLog.push({
+      time: Date.now(),
+      msg: msg,
+    });
+  }
+};
+
+shepherd.get('/log/runtime', function(req, res, next) {
+
+  const successObj = {
+    msg: 'success',
+    result: req.query.spv && req.query.spv === 'true' ? appRuntimeSPVLog : appRuntimeLog,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.writeLog = function(data) {
+  const logLocation = `${agamaDir}/shepherd`;
+  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
+
+  if (shepherd.appConfig.debug) {
+    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
+      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, (err) => {
+        if (err) {
+          shepherd.log('error writing log file');
+        }
+      });
+    } else {
+      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, (err) => {
+        if (err) {
+          shepherd.log('error writing log file');
+        }
+      });
+    }
+  }
+}
+
+shepherd.loadLocalConfig = () => {
+  if (fs.existsSync(`${agamaDir}/config.json`)) {
+    let localAppConfig = fs.readFileSync(`${agamaDir}/config.json`, 'utf8');
+
+    shepherd.log('app config set from local file');
+    shepherd.writeLog('app config set from local file');
+
+    // find diff between local and hardcoded configs
+    // append diff to local config
+    const compareJSON = (obj1, obj2) => {
+      let result = {};
+
+      for (let i in obj1) {
+        if (!obj2.hasOwnProperty(i)) {
+          result[i] = obj1[i];
+        }
+      }
+
+      return result;
+    };
+
+    if (localAppConfig) {
+      const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
+
+      if (Object.keys(compareConfigs).length) {
+        const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
+
+        shepherd.log('config diff is found, updating local config');
+        shepherd.log('config diff:');
+        shepherd.log(compareConfigs);
+        shepherd.writeLog('aconfig diff is found, updating local config');
+        shepherd.writeLog('config diff:');
+        shepherd.writeLog(compareConfigs);
+
+        shepherd.saveLocalAppConf(newConfig);
+        return newConfig;
+      } else {
+        return JSON.parse(localAppConfig);
+      }
+    } else {
+      return shepherd.appConfig;
+    }
+  } else {
+    shepherd.log('local config file is not found!');
+    shepherd.writeLog('local config file is not found!');
+    shepherd.saveLocalAppConf(shepherd.appConfig);
+
+    return shepherd.appConfig;
+  }
+};
+
+shepherd.saveLocalAppConf = (appSettings) => {
+  let appConfFileName = `${agamaDir}/config.json`;
+
+  _fs.access(agamaDir, fs.constants.R_OK, (err) => {
+    if (!err) {
+
+      const FixFilePermissions = () => {
+        return new Promise((resolve, reject) => {
+          const result = 'config.json file permissions updated to Read/Write';
+
+          fsnode.chmodSync(appConfFileName, '0666');
+
+          setTimeout(() => {
+            shepherd.log(result);
+            shepherd.writeLog(result);
+            resolve(result);
+          }, 1000);
+        });
+      }
+
+      const FsWrite = () => {
+        return new Promise((resolve, reject) => {
+          const result = 'config.json write file is done';
+
+          fs.writeFile(appConfFileName,
+                      JSON.stringify(appSettings)
+                      .replace(/,/g, ',\n') // format json in human readable form
+                      .replace(/":/g, '": ')
+                      .replace(/{/g, '{\n')
+                      .replace(/}/g, '\n}'), 'utf8', (err) => {
+            if (err)
+              return shepherd.log(err);
+          });
+
+          fsnode.chmodSync(appConfFileName, '0666');
+          setTimeout(() => {
+            shepherd.log(result);
+            shepherd.log(`app conf.json file is created successfully at: ${agamaDir}`);
+            shepherd.writeLog(`app conf.json file is created successfully at: ${agamaDir}`);
+            resolve(result);
+          }, 2000);
+        });
+      }
+
+      FsWrite()
+      .then(FixFilePermissions());
+    }
+  });
+}
+
+shepherd.appConfig = shepherd.loadLocalConfig();
+
 if (os.platform() === 'darwin') {
   fixPath();
-  var iguanaBin = path.join(__dirname, '../assets/bin/osx/iguana'),
-      iguanaDir = `${process.env.HOME}/Library/Application Support/iguana`,
-      iguanaTestDir = `${process.env.HOME}/Library/Application Support/iguana/test`,
-      iguanaConfsDir = `${iguanaDir}/confs`,
+  var agamaTestDir = `${process.env.HOME}/Library/Application Support/Agama/test`,
       komododBin = path.join(__dirname, '../assets/bin/osx/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/osx/komodo-cli'),
       komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`,
       zcashdBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcashd',
       zcashcliBin = '/Applications/ZCashSwingWalletUI.app/Contents/MacOS/zcash-cli',
       zcashDir = `${process.env.HOME}/Library/Application Support/Zcash`,
-      zcashParamsDir = `${process.env.HOME}/Library/Application Support/ZcashParams`;
+      zcashParamsDir = `${process.env.HOME}/Library/Application Support/ZcashParams`,
+      chipsBin = path.join(__dirname, '../assets/bin/osx/chipsd'),
+      chipscliBin = path.join(__dirname, '../assets/bin/osx/chips-cli'),
+      chipsDir = `${process.env.HOME}/Library/Application Support/Chips`,
+      coindRootDir = path.join(__dirname, '../assets/bin/osx/dex/coind');
 }
 
 if (os.platform() === 'linux') {
-  var iguanaBin = path.join(__dirname, '../assets/bin/linux64/iguana'),
-      iguanaDir = `${process.env.HOME}/.iguana`,
-      iguanaTestDir = `${process.env.HOME}/.iguana/test`,
-      iguanaConfsDir = `${iguanaDir}/confs`,
-      iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/128x128.png'),
+  var agamaTestDir = `${process.env.HOME}/.agama/test`,
       komododBin = path.join(__dirname, '../assets/bin/linux64/komodod'),
       komodocliBin = path.join(__dirname, '../assets/bin/linux64/komodo-cli'),
       komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`,
-      zcashParamsDir = `${process.env.HOME}/.zcash-params`;
+      zcashParamsDir = `${process.env.HOME}/.zcash-params`,
+      chipsBin = path.join(__dirname, '../assets/bin/linux64/chipsd'),
+      chipscliBin = path.join(__dirname, '../assets/bin/linux64/chips-cli'),
+      chipsDir = `${process.env.HOME}/.chips`,
+      coindRootDir = path.join(__dirname, '../assets/bin/linux64/dex/coind');
 }
 
 if (os.platform() === 'win32') {
-  var iguanaBin = path.join(__dirname, '../assets/bin/win64/iguana.exe');
-      iguanaBin = path.normalize(iguanaBin);
-      iguanaDir = `${process.env.APPDATA}/iguana`;
-      iguanaDir = path.normalize(iguanaDir);
-      iguanaTestDir = `${process.env.APPDATA}/iguana/test`;
-      iguanaTestDir = path.normalize(iguanaTestDir);
-      iguanaConfsDir = `${process.env.APPDATA}/iguana/confs`;
-      iguanaConfsDir = path.normalize(iguanaConfsDir);
-      iguanaIcon = path.join(__dirname, '/assets/icons/agama_icons/agama_app_icon.ico'),
-      iguanaConfsDirSrc = path.normalize(iguanaConfsDirSrc),
+  var agamaTestDir = `${process.env.APPDATA}/Agama/test`;
+      agamaTestDir = path.normalize(agamaTestDir);
       komododBin = path.join(__dirname, '../assets/bin/win64/komodod.exe'),
       komododBin = path.normalize(komododBin),
       komodocliBin = path.join(__dirname, '../assets/bin/win64/komodo-cli.exe'),
       komodocliBin = path.normalize(komodocliBin),
       komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`,
       komodoDir = path.normalize(komodoDir);
+      chipsBin = path.join(__dirname, '../assets/bin/win64/chipsd.exe'),
+      chipsBin = path.normalize(chipsBin),
+      chipscliBin = path.join(__dirname, '../assets/bin/win64/chips-cli.exe'),
+      chipscliBin = path.normalize(chipscliBin),
+      chipsDir = `${process.env.APPDATA}/Chips`,
+      chipsDir = path.normalize(chipsDir);
       zcashParamsDir = `${process.env.APPDATA}/ZcashParams`;
       zcashParamsDir = path.normalize(zcashParamsDir);
+      coindRootDir = path.join(__dirname, '../assets/bin/osx/dex/coind');
+      coindRootDir = path.normalize(coindRootDir);
 }
 
 shepherd.appConfigSchema = _appConfig.schema;
@@ -98,24 +450,1875 @@ shepherd.kmdMainPassiveMode = false;
 
 shepherd.coindInstanceRegistry = coindInstanceRegistry;
 
-shepherd.getAppRuntimeLog = function() {
+shepherd.getNetworkData = (network) => {
+  const coin = shepherd.findNetworkObj(network) || shepherd.findNetworkObj(network.toUpperCase()) || shepherd.findNetworkObj(network.toLowerCase());
+  const coinUC = coin ? coin.toUpperCase() : null;
+
+  if (coin === 'SUPERNET' ||
+      coin === 'REVS' ||
+      coin === 'SUPERNET' ||
+      coin === 'PANGEA' ||
+      coin === 'DEX' ||
+      coin === 'JUMBLR' ||
+      coin === 'BET' ||
+      coin === 'CRYPTO' ||
+      coin === 'COQUI' ||
+      coin === 'HODL' ||
+      coin === 'SHARK' ||
+      coin === 'BOTS' ||
+      coin === 'MGW' ||
+      coin === 'MVP' ||
+      coin === 'KV' ||
+      coin === 'CEAL' ||
+      coin === 'MESH' ||
+      coin === 'WLC' ||
+      coin === 'MNZ' ||
+      coinUC === 'SUPERNET' ||
+      coinUC === 'REVS' ||
+      coinUC === 'SUPERNET' ||
+      coinUC === 'PANGEA' ||
+      coinUC === 'DEX' ||
+      coinUC === 'JUMBLR' ||
+      coinUC === 'BET' ||
+      coinUC === 'CRYPTO' ||
+      coinUC === 'COQUI' ||
+      coinUC === 'HODL' ||
+      coinUC === 'SHARK' ||
+      coinUC === 'BOTS' ||
+      coinUC === 'MGW' ||
+      coinUC === 'MVP' ||
+      coinUC === 'KV' ||
+      coinUC === 'CEAL' ||
+      coinUC === 'MESH' ||
+      coinUC === 'WLC' ||
+      coinUC === 'MNZ') {
+    return electrumJSNetworks.komodo;
+  } else {
+    return electrumJSNetworks[network];
+  }
+}
+
+shepherd.seedToWif = (seed, network, iguana) => {
+  const bytes = sha256(seed, { asBytes: true });
+
+  if (iguana) {
+    bytes[0] &= 248;
+    bytes[31] &= 127;
+    bytes[31] |= 64;
+  }
+
+  const toHexString = (byteArray) => {
+    return Array.from(byteArray, (byte) => {
+      return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+    }).join('');
+  }
+
+  const hex = toHexString(bytes);
+
+  const key = new CoinKey(new Buffer(hex, 'hex'), {
+    private: shepherd.getNetworkData(network).wif,
+    public: shepherd.getNetworkData(network).pubKeyHash,
+  });
+
+  key.compressed = true;
+
+  shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
+  shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);
+
+  return {
+    priv: key.privateWif,
+    pub: key.publicAddress,
+  };
+}
+
+shepherd.get('/electrum/seedtowif', (req, res, next) => {
+  const keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
+
+  const successObj = {
+    msg: 'success',
+    result: {
+      keys,
+    },
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.findNetworkObj = (coin) => {
+  for (let key in electrumServers) {
+    if (electrumServers[key].abbr === coin) {
+      return key;
+    }
+  }
+}
+
+shepherd.findCoinName = (network) => {
+  for (let key in electrumServers) {
+    if (key === network) {
+      return electrumServers[key].abbr;
+    }
+  }
+}
+
+shepherd.get('/electrum/servers/test', (req, res, next) => {
+  const ecl = new electrumJSCore(req.query.port, req.query.address, 'tcp'); // tcp or tls
+
+  ecl.connect();
+  ecl.serverVersion()
+  .then((serverData) => {
+    ecl.close();
+    shepherd.log('serverData', true);
+    shepherd.log(serverData, true);
+
+    if (serverData &&
+        typeof serverData === 'string' &&
+        serverData.indexOf('Electrum') > -1) {
+      const successObj = {
+        msg: 'success',
+        result: true,
+      };
+
+      res.end(JSON.stringify(successObj));
+    } else {
+      const successObj = {
+        msg: 'error',
+        result: false,
+      };
+
+      res.end(JSON.stringify(successObj));
+    }
+  });
+});
+
+shepherd.get('/electrum/keys', (req, res, next) => {
+  let _matchingKeyPairs = 0;
+  let _electrumKeys = {};
+
+  for (let key in electrumServers) {
+    const _abbr = electrumServers[key].abbr;
+    const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
+
+    if (electrumKeys[_abbr].pub === pub &&
+        electrumKeys[_abbr].priv === priv) {
+      _matchingKeyPairs++;
+    }
+  }
+
+  if (req.query.active) {
+    _electrumKeys = JSON.parse(JSON.stringify(electrumKeys));
+
+    for (let key in _electrumKeys) {
+      if (!electrumCoins[key]) {
+        delete _electrumKeys[key];
+      }
+    }
+  } else {
+    _electrumKeys = electrumKeys;
+  }
+
+  shepherd.log(JSON.stringify(_electrumKeys, null, '\t'), true);
+
+  const successObj = {
+    msg: 'success',
+    result: _matchingKeyPairs === Object.keys(electrumKeys).length ? _electrumKeys : false,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.get('/electrum/login', (req, res, next) => {
+  for (let key in electrumServers) {
+    const _abbr = electrumServers[key].abbr;
+    const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
+
+    electrumKeys[_abbr] = {
+      priv,
+      pub,
+    };
+  }
+
+  electrumCoins.auth = true;
+
+  shepherd.log(JSON.stringify(electrumKeys, null, '\t'), true);
+
+  const successObj = {
+    msg: 'success',
+    result: 'true',
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.get('/electrum/dev/logout', (req, res, next) => {
+  electrumCoins.auth = false;
+  electrumKeys = {};
+
+  const successObj = {
+    msg: 'success',
+    result: 'true',
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+// spv v2
+/*shepherd.get('/electrum/bip39/seed', (req, res, next) => {
+  // TODO
+  const bip39 = require('bip39'); // npm i -S bip39
+  const crypto = require('crypto');
+
+  // what you describe as 'seed'
+  const randomBytes = crypto.randomBytes(16); // 128 bits is enough
+
+  // your 12 word phrase
+  const mnemonic = bip39.entropyToMnemonic(randomBytes.toString('hex'));
+
+  // what is accurately described as the wallet seed
+  // var seed = bip39.mnemonicToSeed(mnemonic) // you'll use this in #3 below
+  const seed = bip39.mnemonicToSeed(req.query.seed);
+
+  console.log(seed);
+
+  const successObj = {
+    msg: 'success',
+    result: {
+      servers: electrumServers,
+    },
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  console.log(bitcoinJS.networks.komodo);
+  const hdMaster = bitcoinJS.HDNode.fromSeedBuffer(seed, electrumJSNetworks.komodo); // seed from above
+
+  const key1 = hdMaster.derivePath('m/0');
+  const key2 = hdMaster.derivePath('m/1');
+  console.log(hdMaster);
+
+  console.log(key1.keyPair.toWIF());
+  console.log(key1.keyPair.getAddress());
+  console.log(key2.keyPair.toWIF());
+
+  const hdnode = bitcoinJS.HDNode.fromSeedBuffer(seed, electrumJSNetworks.komodo).deriveHardened(0).derive(0).derive(1);
+  console.log(`address: ${hdnode.getAddress()}`);
+  console.log(`priv (WIF): ${hdnode.keyPair.toWIF()}`);
+});*/
+
+// get merkle root
+shepherd.getMerkleRoot = (txid, proof, pos) => {
+  const reverse = require('buffer-reverse');
+  let hash = txid;
+  let serialized;
+  const _sha256 = (data) => {
+    return crypto.createHash('sha256').update(data).digest();
+  }
+
+  shepherd.log(`getMerkleRoot txid ${txid}`, true);
+  shepherd.log(`getMerkleRoot pos ${pos}`, true);
+  shepherd.log('getMerkleRoot proof', true);
+  shepherd.log(`getMerkleRoot ${proof}`, true);
+
+  for (i = 0; i < proof.length; i++) {
+    const _hashBuff = new Buffer(hash, 'hex');
+    const _proofBuff = new Buffer(proof[i], 'hex');
+
+    if ((pos & 1) == 0) {
+      serialized = Buffer.concat([reverse(_hashBuff), reverse(_proofBuff)]);
+    } else {
+      serialized = Buffer.concat([reverse(_proofBuff), reverse(_hashBuff)]);
+    }
+
+    hash = reverse(_sha256(_sha256(serialized))).toString('hex');
+    pos /= 2;
+  }
+
+  return hash;
+}
+
+shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
+  // select random server
+  const getRandomIntInclusive = (min, max) => {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    return Math.floor(Math.random() * (max - min + 1)) + min; // the maximum is inclusive and the minimum is inclusive
+  }
+
+  const _rnd = getRandomIntInclusive(0, serverList.length - 1);
+  const randomServer = serverList[_rnd];
+  const _randomServer = randomServer.split(':');
+  const _mainServer = mainServer.split(':');
+
+  let ecl = new electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
+
+  return new Promise((resolve, reject) => {
+    shepherd.log(`main server: ${mainServer}`, true);
+    shepherd.log(`verification server: ${randomServer}`, true);
+
+    ecl.connect();
+    ecl.blockchainTransactionGetMerkle(txid, height)
+    .then((merkleData) => {
+      if (merkleData &&
+          merkleData.merkle &&
+          merkleData.pos) {
+        shepherd.log('electrum getmerkle =>', true);
+        shepherd.log(merkleData, true);
+        ecl.close();
+
+        const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
+        shepherd.log(_res, true);
+
+        ecl = new electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
+        ecl.connect();
+
+        ecl.blockchainBlockGetHeader(height)
+        .then((blockInfo) => {
+          if (blockInfo &&
+              blockInfo['merkle_root']) {
+            ecl.close();
+            shepherd.log('blockinfo =>', true);
+            shepherd.log(blockInfo, true);
+            shepherd.log(blockInfo['merkle_root'], true);
+
+            if (blockInfo &&
+                blockInfo['merkle_root']) {
+              if (_res === blockInfo['merkle_root']) {
+                resolve(true);
+              } else {
+                resolve(false);
+              }
+            } else {
+              resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+            }
+          } else {
+            resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+          }
+        });
+      } else {
+        resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+      }
+    });
+  });
+}
+
+shepherd.verifyMerkleByCoin = (coin, txid, height) => {
+  const _serverList = electrumCoins[coin].serverList;
+
+  shepherd.log(`verifyMerkleByCoin`, true);
+  shepherd.log(electrumCoins[coin].server, true);
+  shepherd.log(electrumCoins[coin].serverList, true);
+
+  return new Promise((resolve, reject) => {
+    if (_serverList !== 'none') {
+      let _filteredServerList = [];
+
+      for (let i = 0; i < _serverList.length; i++) {
+        if (_serverList[i] !== electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port) {
+          _filteredServerList.push(_serverList[i]);
+        }
+      }
+
+      shepherd.verifyMerkle(
+        txid,
+        height,
+        _filteredServerList,
+        electrumCoins[coin].server.ip + ':' + electrumCoins[coin].server.port
+      ).then((proof) => {
+        resolve(proof);
+      });
+    } else {
+      resolve(false);
+    }
+  });
+}
+
+shepherd.get('/electrum/merkle/verify', (req, res, next) => {
+  shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
+  .then((verifyMerkleRes) => {
+    const successObj = {
+      msg: 'success',
+      result: {
+        merkleProof: verifyMerkleRes,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.get('/electrum/servers', (req, res, next) => {
+  if (req.query.abbr) {
+    let _electrumServers = {};
+
+    for (let key in electrumServers) {
+      _electrumServers[electrumServers[key].abbr] = electrumServers[key];
+    }
+
+    const successObj = {
+      msg: 'success',
+      result: {
+        servers: _electrumServers,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  } else {
+    const successObj = {
+      msg: 'success',
+      result: {
+        servers: electrumServers,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  }
+});
+
+shepherd.get('/electrum/coins/server/set', (req, res, next) => {
+  electrumCoins[req.query.coin].server = {
+    ip: req.query.address,
+    port: req.query.port,
+  };
+
+  for (let key in electrumServers) {
+    if (electrumServers[key].abbr === req.query.coin) { // a bit risky
+      electrumServers[key].address = req.query.address;
+      electrumServers[key].port = req.query.port;
+      break;
+    }
+  }
+
+  shepherd.log(JSON.stringify(electrumCoins[req.query.coin], null, '\t'), true);
+
+  const successObj = {
+    msg: 'success',
+    result: true,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.addElectrumCoin = (coin) => {
+  for (let key in electrumServers) {
+    if (electrumServers[key].abbr === coin) {
+      electrumCoins[coin] = {
+        name: key,
+        abbr: coin,
+        server: {
+          ip: electrumServers[key].address,
+          port: electrumServers[key].port,
+        },
+        serverList: electrumServers[key].serverList ? electrumServers[key].serverList : 'none',
+        txfee: 'calculated' /*electrumServers[key].txfee*/,
+      };
+
+      return true;
+    }
+  }
+}
+
+shepherd.get('/electrum/coins/remove', (req, res, next) => {
+  delete electrumCoins[req.query.coin];
+
+  const successObj = {
+    msg: 'success',
+    result,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.get('/electrum/coins/add', (req, res, next) => {
+  const result = shepherd.addElectrumCoin(req.query.coin);
+
+  const successObj = {
+    msg: 'success',
+    result,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.get('/electrum/coins', (req, res, next) => {
+  let _electrumCoins = JSON.parse(JSON.stringify(electrumCoins)); // deep cloning
+
+  for (let key in _electrumCoins) {
+    if (electrumKeys[key]) {
+      _electrumCoins[key].pub = electrumKeys[key].pub;
+    }
+  }
+
+  const successObj = {
+    msg: 'success',
+    result: _electrumCoins,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.kmdCalcInterest = (locktime, value) => { // value in sats
+  const timestampDiff = Math.floor(Date.now() / 1000) - locktime - 777;
+  const hoursPassed = Math.floor(timestampDiff / 3600);
+  const minutesPassed = Math.floor((timestampDiff - (hoursPassed * 3600)) / 60);
+  const secondsPassed = timestampDiff - (hoursPassed * 3600) - (minutesPassed * 60);
+  let timestampDiffMinutes = timestampDiff / 60;
+  let interest = 0;
+
+  shepherd.log('kmdCalcInterest', true);
+  shepherd.log(`locktime ${locktime}`, true);
+  shepherd.log(`minutes converted ${timestampDiffMinutes}`, true);
+  shepherd.log(`passed ${hoursPassed}h ${minutesPassed}m ${secondsPassed}s`, true);
+
+  // calc interest
+  if (timestampDiffMinutes >= 60) {
+    if (timestampDiffMinutes > 365 * 24 * 60) {
+      timestampDiffMinutes = 365 * 24 * 60;
+    }
+    timestampDiffMinutes -= 59;
+
+    shepherd.log(`minutes if statement ${timestampDiffMinutes}`, true);
+
+    // TODO: check if interest is > 5% yr
+    // calc ytd and 5% for 1 yr
+    // const hoursInOneYear = 365 * 24;
+    // const hoursDiff = hoursInOneYear - hoursPassed;
+
+    interest = ((Number(value) * 0.00000001) / 10512000) * timestampDiffMinutes;
+    shepherd.log(`interest ${interest}`, true);
+  }
+
+  return interest;
+}
+
+shepherd.get('/electrum/getbalance', (req, res, next) => {
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  shepherd.log('electrum getbalance =>', true);
+
+  ecl.connect();
+  ecl.blockchainAddressGetBalance(req.query.address)
+  .then((json) => {
+    if (json &&
+        json.hasOwnProperty('confirmed') &&
+        json.hasOwnProperty('unconfirmed')) {
+      if (network === 'komodo') {
+        ecl.connect();
+        ecl.blockchainAddressListunspent(req.query.address)
+        .then((utxoList) => {
+          if (utxoList &&
+              utxoList.length) {
+            // filter out < 10 KMD amounts
+            let _utxo = [];
+
+            for (let i = 0; i < utxoList.length; i++) {
+              shepherd.log(`utxo ${utxoList[i]['tx_hash']} sats ${utxoList[i].value} value ${Number(utxoList[i].value) * 0.00000001}`, true);
+
+              if (Number(utxoList[i].value) * 0.00000001 >= 10) {
+                _utxo.push(utxoList[i]);
+              }
+            }
+
+            shepherd.log('filtered utxo list =>', true);
+            shepherd.log(_utxo, true);
+
+            if (_utxo &&
+                _utxo.length) {
+              let interestTotal = 0;
+
+              Promise.all(_utxo.map((_utxoItem, index) => {
+                return new Promise((resolve, reject) => {
+                  ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                  .then((_rawtxJSON) => {
+                    shepherd.log('electrum gettransaction ==>', true);
+                    shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);
+                    shepherd.log(_rawtxJSON, true);
+
+                    // decode tx
+                    const _network = shepherd.getNetworkData(network);
+                    const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+
+                    if (decodedTx &&
+                        decodedTx.format &&
+                        decodedTx.format.locktime > 0) {
+                      interestTotal += shepherd.kmdCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                    }
+
+                    shepherd.log('decoded tx =>', true);
+                    shepherd.log(decodedTx, true);
+
+                    resolve(true);
+                  });
+                });
+              }))
+              .then(promiseResult => {
+                ecl.close();
+
+                const successObj = {
+                  msg: 'success',
+                  result: {
+                    balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+                    unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+                    unconfirmedSats: json.unconfirmed,
+                    balanceSats: json.confirmed,
+                    interest: Number(interestTotal.toFixed(8)),
+                    interestSats: Math.floor(interestTotal * 100000000),
+                    total: interestTotal > 0 ? Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)) : 0,
+                    totalSats: interestTotal > 0 ?json.confirmed + Math.floor(interestTotal * 100000000) : 0,
+                  },
+                };
+
+                res.end(JSON.stringify(successObj));
+              });
+            } else {
+              const successObj = {
+                msg: 'success',
+                result: {
+                  balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+                  unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+                  unconfirmedSats: json.unconfirmed,
+                  balanceSats: json.confirmed,
+                  interest: 0,
+                  interestSats: 0,
+                  total: 0,
+                  totalSats: 0,
+                },
+              };
+
+              res.end(JSON.stringify(successObj));
+            }
+          } else {
+            const successObj = {
+              msg: 'success',
+              result: {
+                balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+                unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+                unconfirmedSats: json.unconfirmed,
+                balanceSats: json.confirmed,
+                interest: 0,
+                interestSats: 0,
+                total: 0,
+                totalSats: 0,
+              },
+            };
+
+            res.end(JSON.stringify(successObj));
+          }
+        });
+      } else {
+        ecl.close();
+        shepherd.log('electrum getbalance ==>', true);
+        shepherd.log(json, true);
+
+        const successObj = {
+          msg: 'success',
+          result: {
+            balance: Number((0.00000001 * json.confirmed).toFixed(8)),
+            unconfirmed: Number((0.00000001 * json.unconfirmed).toFixed(8)),
+            unconfirmedSats: json.unconfirmed,
+            balanceSats: json.confirmed,
+          },
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    } else {
+      const successObj = {
+        msg: 'error',
+        result: CONNECTION_ERROR_OR_INCOMPLETE_DATA,
+      };
+
+      res.end(JSON.stringify(successObj));
+    }
+  });
+});
+
+shepherd.sortTransactions = (transactions) => {
+  return transactions.sort((b, a) => {
+    if (a.height < b.height) {
+      return -1;
+    }
+
+    if (a.height > b.height) {
+      return 1;
+    }
+
+    return 0;
+  });
+}
+
+shepherd.get('/electrum/listtransactions', (req, res, next) => {
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  shepherd.log('electrum listtransactions ==>', true);
+
+  if (!req.query.full) {
+    ecl.connect();
+    ecl.blockchainAddressGetHistory(req.query.address)
+    .then((json) => {
+      ecl.close();
+      shepherd.log(json, true);
+
+      json = shepherd.sortTransactions(json);
+
+      const successObj = {
+        msg: 'success',
+        result: json,
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  } else {
+    // !expensive call!
+    // TODO: limit e.g. 1-10, 10-20 etc
+    const MAX_TX = req.query.maxlength || 10;
+    ecl.connect();
+
+    ecl.blockchainNumblocksSubscribe()
+    .then((currentHeight) => {
+      if (currentHeight &&
+          Number(currentHeight) > 0) {
+        ecl.blockchainAddressGetHistory(req.query.address)
+        .then((json) => {
+          if (json &&
+              json.length) {
+            json = shepherd.sortTransactions(json);
+            json = json.slice(0, MAX_TX);
+            let _rawtx = [];
+
+            shepherd.log(json.length, true);
+
+            Promise.all(json.map((transaction, index) => {
+              return new Promise((resolve, reject) => {
+                ecl.blockchainBlockGetHeader(transaction.height)
+                .then((blockInfo) => {
+                  if (blockInfo &&
+                      blockInfo.timestamp) {
+                    ecl.blockchainTransactionGet(transaction['tx_hash'])
+                    .then((_rawtxJSON) => {
+                      shepherd.log('electrum gettransaction ==>', true);
+                      shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);
+                      shepherd.log(_rawtxJSON, true);
+
+                      // decode tx
+                      const _network = shepherd.getNetworkData(network);
+                      const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+
+                      let txInputs = [];
+
+                      shepherd.log('decodedtx =>', true);
+                      shepherd.log(decodedTx.outputs, true);
+
+                      if (decodedTx &&
+                          decodedTx.inputs) {
+                        Promise.all(decodedTx.inputs.map((_decodedInput, index) => {
+                          return new Promise((_resolve, _reject) => {
+                            if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
+                              ecl.blockchainTransactionGet(_decodedInput.txid)
+                              .then((rawInput) => {
+                                const decodedVinVout = electrumJSTxDecoder(rawInput, _network);
+
+                                shepherd.log('electrum raw input tx ==>', true);
+
+                                if (decodedVinVout) {
+                                  shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
+                                  txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
+                                  _resolve(true);
+                                } else {
+                                  _resolve(true);
+                                }
+                              });
+                            } else {
+                              _resolve(true);
+                            }
+                          });
+                        }))
+                        .then(promiseResult => {
+                          const _parsedTx = {
+                            network: decodedTx.network,
+                            format: decodedTx.format,
+                            inputs: txInputs,
+                            outputs: decodedTx.outputs,
+                            height: transaction.height,
+                            timestamp: blockInfo.timestamp,
+                            confirmations: currentHeight - transaction.height,
+                          };
+
+                          const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
+
+                          if (formattedTx.type) {
+                            formattedTx.height = transaction.height;
+                            formattedTx.blocktime = blockInfo.timestamp;
+                            formattedTx.timereceived = blockInfo.timereceived;
+                            formattedTx.hex = _rawtxJSON;
+                            formattedTx.inputs = decodedTx.inputs;
+                            formattedTx.outputs = decodedTx.outputs;
+                            formattedTx.locktime = decodedTx.format.locktime;
+                            _rawtx.push(formattedTx);
+                          } else {
+                            formattedTx[0].height = transaction.height;
+                            formattedTx[0].blocktime = blockInfo.timestamp;
+                            formattedTx[0].timereceived = blockInfo.timereceived;
+                            formattedTx[0].hex = _rawtxJSON;
+                            formattedTx[0].inputs = decodedTx.inputs;
+                            formattedTx[0].outputs = decodedTx.outputs;
+                            formattedTx[0].locktime = decodedTx.format.locktime;
+                            formattedTx[1].height = transaction.height;
+                            formattedTx[1].blocktime = blockInfo.timestamp;
+                            formattedTx[1].timereceived = blockInfo.timereceived;
+                            formattedTx[1].hex = _rawtxJSON;
+                            formattedTx[1].inputs = decodedTx.inputs;
+                            formattedTx[1].outputs = decodedTx.outputs;
+                            formattedTx[1].locktime = decodedTx.format.locktime;
+                            _rawtx.push(formattedTx[0]);
+                            _rawtx.push(formattedTx[1]);
+                          }
+                          resolve(true);
+                        });
+                      } else {
+                        const _parsedTx = {
+                          network: decodedTx.network,
+                          format: 'cant parse',
+                          inputs: 'cant parse',
+                          outputs: 'cant parse',
+                          height: transaction.height,
+                          timestamp: blockInfo.timestamp,
+                          confirmations: currentHeight - transaction.height,
+                        };
+
+                        const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
+                        _rawtx.push(formattedTx);
+                        resolve(true);
+                      }
+                    });
+                  } else {
+                    const _parsedTx = {
+                      network: 'cant parse',
+                      format: 'cant parse',
+                      inputs: 'cant parse',
+                      outputs: 'cant parse',
+                      height: transaction.height,
+                      timestamp: 'cant get block info',
+                      confirmations: currentHeight - transaction.height,
+                    };
+                    const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
+                    _rawtx.push(formattedTx);
+                    resolve(true);
+                  }
+                });
+              });
+            }))
+            .then(promiseResult => {
+              ecl.close();
+
+              const successObj = {
+                msg: 'success',
+                result: _rawtx,
+              };
+
+              res.end(JSON.stringify(successObj));
+            });
+          } else {
+            const successObj = {
+              msg: 'success',
+              result: [],
+            };
+
+            res.end(JSON.stringify(successObj));
+          }
+        });
+      } else {
+        const successObj = {
+          msg: 'error',
+          result: 'cant get current height',
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    });
+  }
+});
+
+shepherd.get('/electrum/gettransaction', (req, res, next) => {
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  shepherd.log('electrum gettransaction =>', true);
+
+  ecl.connect();
+  ecl.blockchainTransactionGet(req.query.txid)
+  .then((json) => {
+    ecl.close();
+    shepherd.log(json, true);
+
+    const successObj = {
+      msg: 'success',
+      result: json,
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.parseTransactionAddresses = (tx, targetAddress, network) => {
+  // TODO: - sum vins / sum vouts to the same address
+  //       - multi vin multi vout
+  //       - detect change address
+  let result = [];
+  let _parse = {
+    inputs: {},
+    outputs: {},
+  };
+  let _sum = {
+    inputs: 0,
+    outputs: 0,
+  };
+  let _total = {
+    inputs: 0,
+    outputs: 0,
+  };
+
+  shepherd.log('parseTransactionAddresses result ==>', true);
+
+  if (tx.format === 'cant parse') {
+    return {
+      type: 'unknown',
+      amount: 'unknown',
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    }
+  }
+
+  for (let key in _parse) {
+    if (!tx[key].length) {
+      _parse[key] = [];
+      _parse[key].push(tx[key]);
+    } else {
+      _parse[key] = tx[key];
+    }
+
+    for (let i = 0; i < _parse[key].length; i++) {
+      shepherd.log(`key ==>`, true);
+      shepherd.log(_parse[key][i], true);
+      shepherd.log(Number(_parse[key][i].value), true);
+
+      _total[key] += Number(_parse[key][i].value);
+
+      if (_parse[key][i].scriptPubKey &&
+          _parse[key][i].scriptPubKey.addresses &&
+          _parse[key][i].scriptPubKey.addresses[0] === targetAddress &&
+          _parse[key][i].value) {
+        _sum[key] += Number(_parse[key][i].value);
+      }
+    }
+  }
+
+  if (_sum.inputs > 0 &&
+      _sum.outputs > 0) {
+    // vin + change, break into two tx
+    result = [{ // reorder since tx sort by default is from newest to oldest
+      type: 'sent',
+      amount: Number(_sum.inputs.toFixed(8)),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    }, {
+      type: 'received',
+      amount: Number(_sum.outputs.toFixed(8)),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    }];
+
+    if (network === 'komodo') { // calc claimed interest amount
+      const vinVoutDiff = _total.inputs - _total.outputs;
+
+      if (vinVoutDiff < 0) {
+        result[1].interest = Number(vinVoutDiff.toFixed(8));
+      }
+    }
+  } else if (_sum.inputs === 0 && _sum.outputs > 0) {
+    result = {
+      type: 'received',
+      amount: Number(_sum.outputs.toFixed(8)),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    };
+  } else if (_sum.inputs > 0 && _sum.outputs === 0) {
+    result = {
+      type: 'sent',
+      amount: Number(_sum.inputs.toFixed(8)),
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    };
+  } else {
+    // (?)
+    result = {
+      type: 'other',
+      amount: 'unknown',
+      address: targetAddress,
+      timestamp: tx.timestamp,
+      txid: tx.format.txid,
+      confirmations: tx.confirmations,
+    };
+  }
+
+  shepherd.log(_sum, true);
+  shepherd.log(result, true);
+
+  return result;
+}
+
+shepherd.get('/electrum/getblockinfo', (req, res, next) => {
+  shepherd.electrumGetBlockInfo(req.query.height, req.query.network)
+  .then((json) => {
+    const successObj = {
+      msg: 'success',
+      result: json,
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.electrumGetBlockInfo = (height, network) => {
+  return new Promise((resolve, reject) => {
+    const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+    ecl.connect();
+    ecl.blockchainBlockGetHeader(height)
+    .then((json) => {
+      ecl.close();
+      shepherd.log('electrum getblockinfo ==>', true);
+      shepherd.log(json, true);
+
+      resolve(json);
+    });
+  });
+}
+
+shepherd.get('/electrum/getcurrentblock', (req, res, next) => {
+  shepherd.electrumGetCurrentBlock(req.query.network)
+  .then((json) => {
+    const successObj = {
+      msg: 'success',
+      result: json,
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.electrumGetCurrentBlock = (network) => {
+  return new Promise((resolve, reject) => {
+    const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+    ecl.connect();
+    ecl.blockchainNumblocksSubscribe()
+    .then((json) => {
+      ecl.close();
+      shepherd.log('electrum currentblock ==>', true);
+      shepherd.log(json, true);
+
+      resolve(json);
+    });
+  });
+}
+
+shepherd.get('/electrum/decoderawtx', (req, res, next) => {
+  const _network = shepherd.getNetworkData(req.query.network);
+  const _rawtx = req.query.rawtx;
+  // const _rawtx = '0100000001dd6d064f5665f8454293ecaa9dbb55accf4f7e443d35f3b5ab7760f54b6c15fe000000006a473044022056355585a4a501ec9afc96aa5df124cf29ad3ac6454b47cd07cd7d89ec95ec2b022074c4604ee349d30e5336f210598e4dc576bf16ebeb67eeac3f4e82f56e930fee012103b90ba01af308757054e0484bb578765d5df59c4a57adbb94e2419df5e7232a63feffffff0289fc923b000000001976a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac20a10700000000001976a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac49258b58';
+  const decodedTx = electrumJSTxDecoder(_rawtx, _network);
+
+  shepherd.log('electrum decoderawtx input tx ==>', true);
+
+  if (req.query.parseonly ||
+      decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {
+    const successObj = {
+      msg: 'success',
+      result: {
+        network: decodedTx.network,
+        format: decodedTx.format,
+        inputs: decodedTx.inputs,
+        outputs: decodedTx.outputs,
+      },
+    };
+
+    shepherd.log(successObj.result, true);
+
+    res.end(JSON.stringify(successObj));
+  } else {
+    const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+    ecl.connect();
+    ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
+    .then((json) => {
+      ecl.close();
+      shepherd.log(json, true);
+
+      const decodedVin = electrumJSTxDecoder(json, _network);
+
+      const successObj = {
+        msg: 'success',
+        result: {
+          network: decodedTx.network,
+          format: decodedTx.format,
+          inputs: decodedVin.outputs[decodedTx.inputs[0].n],
+          outputs: decodedTx.outputs,
+        },
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  }
+});
+
+// deprecated, remove
+shepherd.findUtxoSet = function(utxoList, target) {
+  let result = [];
+  let sum = 0;
+
+  function findUtxoSubset() {
+    if (Number(utxoList[0].value) >= Number(target)) {
+      sum = utxoList[0].value;
+      result.push(utxoList[0]);
+    } else {
+      for (let i = 0; i < utxoList.length; i++) {
+        sum += Number(utxoList[i].value);
+        result.push(utxoList[i]);
+
+        if (sum >= Number(target)) {
+          break;
+        }
+      }
+    }
+  }
+
+  // search time
+  const startTime = process.hrtime();
+  const res = findUtxoSubset();
+  const diff = process.hrtime(startTime);
+
+  const change = sum - target;
+
+  // console.log('utxo set search result: ', result);
+  console.log('target: ' + target);
+  console.log('total utxos: ' + utxoList.length);
+  console.log('utxo sum: ' + sum);
+  console.log('change: ' + change);
+  console.log(`Time: ${ (diff[0] * 1e9 + diff[1]) / 1000000} ms`);
+
+  return {
+    set: result,
+    change
+  };
+}
+
+// remove
+shepherd.get('/electrum/subset', function(req, res, next) {
+  const _utxoSet = shepherd.findUtxoSet(null, Number(req.query.target) + Number(electrumServers[req.query.network].txfee)); // target + txfee
+
+  const successObj = {
+    msg: 'success',
+    result: {
+      utxoSet: _utxoSet.set,
+      change: _utxoSet.change,
+    },
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+// single sig
+shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
+  let key = bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
+  let tx = new bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+
+  shepherd.log('buildSignedTx');
+  // console.log(`buildSignedTx priv key ${wif}`);
+  shepherd.log(`buildSignedTx pub key ${key.getAddress().toString()}`, true);
+  // console.log('buildSignedTx std tx fee ' + electrumServers[network].txfee);
+
+  for (let i = 0; i < utxo.length; i++) {
+    tx.addInput(utxo[i].txid, utxo[i].vout);
+  }
+
+  tx.addOutput(sendTo, Number(spendValue));
+
+  if (changeValue > 0) {
+    tx.addOutput(changeAddress, Number(changeValue));
+  }
+
+  if (network === 'komodo' ||
+      network === 'KMD') {
+    const _locktime = Math.floor(Date.now() / 1000) - 777;
+    tx.setLockTime(_locktime);
+    shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
+  }
+
+  shepherd.log('buildSignedTx unsigned tx data vin', true);
+  shepherd.log(tx.tx.ins, true);
+  shepherd.log('buildSignedTx unsigned tx data vout', true);
+  shepherd.log(tx.tx.outs, true);
+  shepherd.log('buildSignedTx unsigned tx data', true);
+  shepherd.log(tx, true);
+
+  for (let i = 0; i < utxo.length; i++) {
+    tx.sign(i, key);
+  }
+
+  const rawtx = tx.build().toHex();
+
+  shepherd.log('buildSignedTx signed tx hex', true);
+  shepherd.log(rawtx, true);
+
+  return rawtx;
+}
+
+shepherd.maxSpendBalance = (utxoList, fee) => {
+  let maxSpendBalance = 0;
+
+  for (let i = 0; i < utxoList.length; i++) {
+    maxSpendBalance += Number(utxoList[i].value);
+  }
+
+  if (fee) {
+    return Number(maxSpendBalance) - Number(fee);
+  } else {
+    return maxSpendBalance;
+  }
+}
+
+shepherd.get('/electrum/createrawtx', (req, res, next) => {
+  // txid 64 char
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+  const outputAddress = req.query.address;
+  const changeAddress = req.query.change;
+  const value = Number(req.query.value);
+  const push = req.query.push;
+  const fee = electrumServers[network].txfee;
+  let wif = req.query.wif;
+
+  if (req.query.gui) {
+    wif = electrumKeys[req.query.coin].priv;
+  }
+
+  shepherd.log('electrum createrawtx =>', true);
+
+  ecl.connect();
+  shepherd.listunspent(ecl, changeAddress, network, true, true)
+  .then((utxoList) => {
+    ecl.close();
+
+    if (utxoList &&
+        utxoList.length) {
+      let utxoListFormatted = [];
+      let totalInterest = 0;
+      let totalInterestUTXOCount = 0;
+      let interestClaimThreshold = 200;
+      let utxoVerified = true;
+
+      for (let i = 0; i < utxoList.length; i++) {
+        if (network === 'komodo') {
+          utxoListFormatted.push({
+            txid: utxoList[i].txid,
+            vout: utxoList[i].vout,
+            value: Number(utxoList[i].amountSats),
+            interestSats: Number(utxoList[i].interestSats),
+            verified: utxoList[i].verified ? utxoList[i].verified : false,
+          });
+        } else {
+          utxoListFormatted.push({
+            txid: utxoList[i].txid,
+            vout: utxoList[i].vout,
+            value: Number(utxoList[i].amountSats),
+            verified: utxoList[i].verified ? utxoList[i].verified : false,
+          });
+        }
+      }
+
+      shepherd.log('electrum listunspent unformatted ==>', true);
+      shepherd.log(utxoList, true);
+
+      shepherd.log('electrum listunspent formatted ==>', true);
+      shepherd.log(utxoListFormatted, true);
+
+      const _maxSpendBalance = Number(shepherd.maxSpendBalance(utxoListFormatted));
+      let targets = [{
+        address: outputAddress,
+        value: value > _maxSpendBalance ? _maxSpendBalance : value,
+      }];
+      shepherd.log('targets =>', true);
+      shepherd.log(targets, true);
+
+      const feeRate = 20; // sats/byte
+
+      // default coin selection algo blackjack with fallback to accumulative
+      // make a first run, calc approx tx fee
+      // if ins and outs are empty reduce max spend by txfee
+      let { inputs, outputs, fee } = coinSelect(utxoListFormatted, targets, feeRate);
+
+      shepherd.log('coinselect res =>', true);
+      shepherd.log('coinselect inputs =>', true);
+      shepherd.log(inputs, true);
+      shepherd.log('coinselect outputs =>', true);
+      shepherd.log(outputs, true);
+      shepherd.log('coinselect calculated fee =>', true);
+      shepherd.log(fee, true);
+
+      if (!inputs &&
+          !outputs) {
+        targets[0].value = targets[0].value - electrumServers[network].txfee;
+        shepherd.log('second run', true);
+        shepherd.log('coinselect adjusted targets =>', true);
+        shepherd.log(targets, true);
+
+        const secondRun = coinSelect(utxoListFormatted, targets, feeRate);
+        inputs = secondRun.inputs;
+        outputs = secondRun.outputs;
+        fee = secondRun.fee;
+
+        shepherd.log('coinselect inputs =>', true);
+        shepherd.log(inputs, true);
+        shepherd.log('coinselect outputs =>', true);
+        shepherd.log(outputs, true);
+        shepherd.log('coinselect fee =>', true);
+        shepherd.log(fee, true);
+      }
+
+      let _change = 0;
+
+      if (outputs &&
+          outputs.length === 2) {
+        _change = outputs[1].value;
+      }
+
+      // check if any outputs are unverified
+      if (inputs &&
+          inputs.length) {
+        for (let i = 0; i < inputs.length; i++) {
+          if (!inputs[i].verified) {
+            utxoVerified = false;
+            break;
+          }
+        }
+
+        for (let i = 0; i < inputs.length; i++) {
+          if (Number(inputs[i].interestSats) > interestClaimThreshold) {
+            totalInterest += Number(inputs[i].interestSats);
+            totalInterestUTXOCount++;
+          }
+        }
+      }
+
+      const _maxSpend = shepherd.maxSpendBalance(utxoListFormatted);
+
+      if (value > _maxSpend) {
+        const successObj = {
+          msg: 'error',
+          result: `Spend value is too large. Max available amount is ${Number((_maxSpend * 0.00000001.toFixed(8)))}`,
+        };
+
+        res.end(JSON.stringify(successObj));
+      } else {
+        shepherd.log(`maxspend ${_maxSpend} (${_maxSpend * 0.00000001})`, true);
+        shepherd.log(`value ${value}`, true);
+        shepherd.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`, true);
+        shepherd.log(`changeto ${changeAddress} amount ${_change} (${_change * 0.00000001})`, true);
+
+        // account for KMD interest
+        if (network === 'komodo' &&
+            totalInterest > 0) {
+          // account for extra vout
+          const _feeOverhead = outputs.length === 1 ? shepherd.estimateTxSize(0, 1) * feeRate : 0;
+
+          shepherd.log(`max interest to claim ${totalInterest} (${totalInterest * 0.00000001})`, true);
+          shepherd.log(`estimated fee overhead ${_feeOverhead}`, true);
+          shepherd.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`, true);
+
+          _change = _change + (totalInterest - _feeOverhead);
+        }
+
+        if (!inputs &&
+            !outputs) {
+          const successObj = {
+            msg: 'error',
+            result: 'Can\'t find best fit utxo. Try lower amount.',
+          };
+
+          res.end(JSON.stringify(successObj));
+        } else {
+          let vinSum = 0;
+
+          for (let i = 0; i < inputs.length; i++) {
+            vinSum += inputs[i].value;
+          }
+
+          const _estimatedFee = vinSum - outputs[0].value - _change;
+
+          shepherd.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`, true);
+          shepherd.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`, true);
+
+          const _rawtx = shepherd.buildSignedTx(
+            outputAddress,
+            changeAddress,
+            wif,
+            network,
+            inputs,
+            _change,
+            value
+          );
+
+          if (!push ||
+              push === 'false') {
+            const successObj = {
+              msg: 'success',
+              result: {
+                utxoSet: inputs,
+                change: _change,
+                // wif,
+                fee,
+                value,
+                outputAddress,
+                changeAddress,
+                network,
+                rawtx: _rawtx,
+                utxoVerified,
+              },
+            };
+
+            res.end(JSON.stringify(successObj));
+          } else {
+            const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+            ecl.connect();
+            ecl.blockchainTransactionBroadcast(_rawtx)
+            .then((txid) => {
+              ecl.close();
+
+              if (txid &&
+                  txid.indexOf('bad-txns-inputs-spent') > -1) {
+                const successObj = {
+                  msg: 'error',
+                  result: 'Bad transaction inputs spent',
+                  raw: {
+                    utxoSet: inputs,
+                    change: _change,
+                    fee,
+                    value,
+                    outputAddress,
+                    changeAddress,
+                    network,
+                    rawtx: _rawtx,
+                    txid,
+                    utxoVerified,
+                  },
+                };
+
+                res.end(JSON.stringify(successObj));
+              } else {
+                if (txid &&
+                    txid.length === 64) {
+                  if (txid.indexOf('bad-txns-in-belowout') > -1) {
+                    const successObj = {
+                      msg: 'error',
+                      result: 'Bad transaction inputs spent',
+                      raw: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  } else {
+                    const successObj = {
+                      msg: 'success',
+                      result: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        // wif,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
+                } else {
+                  if (txid &&
+                      txid.indexOf('bad-txns-in-belowout') > -1) {
+                    const successObj = {
+                      msg: 'error',
+                      result: 'Bad transaction inputs spent',
+                      raw: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  } else {
+                    const successObj = {
+                      msg: 'error',
+                      result: 'Can\'t broadcast transaction',
+                      raw: {
+                        utxoSet: inputs,
+                        change: _change,
+                        fee,
+                        value,
+                        outputAddress,
+                        changeAddress,
+                        network,
+                        rawtx: _rawtx,
+                        txid,
+                        utxoVerified,
+                      },
+                    };
+
+                    res.end(JSON.stringify(successObj));
+                  }
+                }
+              }
+            });
+          }
+        }
+      }
+    } else {
+      const successObj = {
+        msg: 'error',
+        result: utxoList,
+      };
+
+      res.end(JSON.stringify(successObj));
+    }
+  });
+});
+
+shepherd.get('/electrum/pushtx', (req, res, next) => {
+  const rawtx = req.query.rawtx;
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainTransactionBroadcast(rawtx)
+  .then((json) => {
+    ecl.close();
+    shepherd.log('electrum pushtx ==>', true);
+    shepherd.log(json, true);
+
+    const successObj = {
+      msg: 'success',
+      result: json,
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.listunspent = (ecl, address, network, full, verify) => {
+  let _atLeastOneDecodeTxFailed = false;
+
+  if (full) {
+    return new Promise((resolve, reject) => {
+      ecl.connect();
+      ecl.blockchainAddressListunspent(address)
+      .then((_utxoJSON) => {
+        if (_utxoJSON &&
+            _utxoJSON.length) {
+          let formattedUtxoList = [];
+          let _utxo = [];
+
+          ecl.blockchainNumblocksSubscribe()
+          .then((currentHeight) => {
+            if (currentHeight &&
+                Number(currentHeight) > 0) {
+              // filter out unconfirmed utxos
+              for (let i = 0; i < _utxoJSON.length; i++) {
+                if (Number(currentHeight) - Number(_utxoJSON[i].height) !== 0) {
+                  _utxo.push(_utxoJSON[i]);
+                }
+              }
+
+              if (!_utxo.length) { // no confirmed utxo
+                resolve('no valid utxo');
+              } else {
+                Promise.all(_utxo.map((_utxoItem, index) => {
+                  return new Promise((resolve, reject) => {
+                    ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                    .then((_rawtxJSON) => {
+                      shepherd.log('electrum gettransaction ==>', true);
+                      shepherd.log(index + ' | ' + (_rawtxJSON.length - 1), true);
+                      shepherd.log(_rawtxJSON, true);
+
+                      // decode tx
+                      const _network = shepherd.getNetworkData(network);
+                      const decodedTx = electrumJSTxDecoder(_rawtxJSON, _network);
+
+                      shepherd.log('decoded tx =>', true);
+                      shepherd.log(decodedTx, true);
+
+                      if (!decodedTx) {
+                        _atLeastOneDecodeTxFailed = true;
+                        resolve('cant decode tx');
+                      } else {
+                        if (network === 'komodo') {
+                          let interest = 0;
+
+                          if (Number(_utxoItem.value) * 0.00000001 >= 10 &&
+                              decodedTx.format.locktime > 0) {
+                            interest = shepherd.kmdCalcInterest(decodedTx.format.locktime, _utxoItem.value);
+                          }
+
+                          let _resolveObj = {
+                            txid: _utxoItem['tx_hash'],
+                            vout: _utxoItem['tx_pos'],
+                            address,
+                            amount: Number(_utxoItem.value) * 0.00000001,
+                            amountSats: _utxoItem.value,
+                            interest: interest,
+                            interestSats: Math.floor(interest * 100000000),
+                            confirmations: currentHeight - _utxoItem.height,
+                            spendable: true,
+                            verified: false,
+                          };
+
+                          // merkle root verification agains another electrum server
+                          if (verify) {
+                            shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
+                            .then((verifyMerkleRes) => {
+                              if (verifyMerkleRes && verifyMerkleRes === CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                                verifyMerkleRes = false;
+                              }
+
+                              _resolveObj.verified = verifyMerkleRes;
+                              resolve(_resolveObj);
+                            });
+                          } else {
+                            resolve(_resolveObj);
+                          }
+                        } else {
+                          let _resolveObj = {
+                            txid: _utxoItem['tx_hash'],
+                            vout: _utxoItem['tx_pos'],
+                            address,
+                            amount: Number(_utxoItem.value) * 0.00000001,
+                            amountSats: _utxoItem.value,
+                            confirmations: currentHeight - _utxoItem.height,
+                            spendable: true,
+                            verified: false,
+                          };
+
+                          // merkle root verification agains another electrum server
+                          if (verify) {
+                            shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
+                            .then((verifyMerkleRes) => {
+                              if (verifyMerkleRes &&
+                                  verifyMerkleRes === CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                                verifyMerkleRes = false;
+                              }
+
+                              _resolveObj.verified = verifyMerkleRes;
+                              resolve(_resolveObj);
+                            });
+                          } else {
+                            resolve(_resolveObj);
+                          }
+                        }
+                      }
+                    });
+                  });
+                }))
+                .then(promiseResult => {
+                  ecl.close();
+
+                  if (!_atLeastOneDecodeTxFailed) {
+                    shepherd.log(promiseResult, true);
+                    resolve(promiseResult);
+                  } else {
+                    shepherd.log('listunspent error, cant decode tx(s)', true);
+                    resolve('decode error');
+                  }
+                });
+              }
+            } else {
+              resolve('cant get current height');
+            }
+          });
+        } else {
+          ecl.close();
+          resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+        }
+      });
+    });
+  } else {
+    return new Promise((resolve, reject) => {
+      ecl.connect();
+      ecl.blockchainAddressListunspent(address)
+      .then((json) => {
+        ecl.close();
+
+        if (json &&
+            json.length) {
+          resolve(json);
+        } else {
+          resolve(CONNECTION_ERROR_OR_INCOMPLETE_DATA);
+        }
+      });
+    });
+  }
+}
+
+shepherd.get('/electrum/listunspent', (req, res, next) => {
+  const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  const ecl = new electrumJSCore(electrumServers[network].port, electrumServers[network].address, electrumServers[network].proto); // tcp or tls
+
+  if (req.query.full &&
+      req.query.full === 'true') {
+    shepherd.listunspent(
+      ecl,
+      req.query.address,
+      network,
+      true,
+      req.query.verify
+    ).then((listunspent) => {
+      shepherd.log('electrum listunspent ==>', true);
+
+      const successObj = {
+        msg: 'success',
+        result: listunspent,
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  } else {
+    shepherd.listunspent(ecl, req.query.address, network)
+    .then((listunspent) => {
+      ecl.close();
+      shepherd.log('electrum listunspent ==>', true);
+
+      const successObj = {
+        msg: 'success',
+        result: listunspent,
+      };
+
+      res.end(JSON.stringify(successObj));
+    });
+  }
+});
+
+shepherd.get('/electrum/estimatefee', (req, res, next) => {
+  const ecl = new electrumJSCore(electrumServers[req.query.network].port, electrumServers[req.query.network].address, electrumServers[req.query.network].proto); // tcp or tls
+
+  ecl.connect();
+  ecl.blockchainEstimatefee(req.query.blocks)
+  .then((json) => {
+    ecl.close();
+    shepherd.log('electrum estimatefee ==>', true);
+
+    const successObj = {
+      msg: 'success',
+      result: json,
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+});
+
+shepherd.estimateTxSize = (numVins, numOuts) => {
+  // in x 180 + out x 34 + 10 plus or minus in
+  return numVins * 180 + numOuts * 34 + 11;
+}
+
+/*
+ *  list native coind
+ *  type:
+ *  params:
+ */
+shepherd.get('/coind/list', (req, res, next) => {
+  const successObj = {
+    msg: 'success',
+    result: shepherd.nativeCoindList,
+  };
+
+  res.end(JSON.stringify(successObj));
+});
+
+shepherd.scanNativeCoindBins = () => {
+  let nativeCoindList = {};
+
+  // check if coind bins are present in agama
+  for (let key in nativeCoind) {
+    nativeCoindList[key] = {
+      name: nativeCoind[key].name,
+      port: nativeCoind[key].port,
+      bin: nativeCoind[key].bin,
+      bins: {
+        daemon: false,
+        cli: false,
+      },
+    };
+
+    if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}d${os.platform() === 'win32' ? '.exe' : ''}`)) {
+      nativeCoindList[key].bins.daemon = true;
+    }
+
+    if (fs.existsSync(`${coindRootDir}/${key}/${nativeCoind[key].bin}-cli${os.platform() === 'win32' ? '.exe' : ''}`)) {
+      nativeCoindList[key].bins.cli = true;
+    }
+  }
+
+  return nativeCoindList;
+}
+
+shepherd.getAppRuntimeLog = () => {
   return new Promise((resolve, reject) => {
     resolve(appRuntimeLog);
   });
 };
 
-shepherd.log = function(msg) {
-  if (shepherd.appConfig.dev) {
-    console.log(msg);
+shepherd.startSPV = (coin) => {
+  if (coin === 'KMD+REVS+JUMBLR') {
+    shepherd.addElectrumCoin('KMD');
+    shepherd.addElectrumCoin('REVS');
+    shepherd.addElectrumCoin('JUMBLR');
+  } else {
+    shepherd.addElectrumCoin(coin);
   }
+}
 
-  appRuntimeLog.push({
-    time: Date.now(),
-    msg: msg,
-  });
-};
-
-shepherd.startKMDNative = function(selection, isManual) {
+shepherd.startKMDNative = (selection, isManual) => {
   if (isManual) {
     shepherd.kmdMainPassiveMode = true;
   }
@@ -136,12 +2339,12 @@ shepherd.startKMDNative = function(selection, isManual) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        'herd': 'komodod',
-        'options': herdData,
+        herd: 'komodod',
+        options: herdData,
       })
     };
 
-    request(options, function(error, response, body) {
+    request(options, (error, response, body) => {
       if (response &&
           response.statusCode &&
           response.statusCode === 200) {
@@ -186,12 +2389,12 @@ shepherd.startKMDNative = function(selection, isManual) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            'herd': 'komodod',
-            'options': herdData[i],
+            herd: 'komodod',
+            options: herdData[i],
           })
         };
 
-        request(options, function(error, response, body) {
+        request(options, (error, response, body) => {
           if (response &&
               response.statusCode &&
               response.statusCode === 200) {
@@ -210,28 +2413,50 @@ shepherd.startKMDNative = function(selection, isManual) {
  *  type: GET
  *  params: coin
  */
-shepherd.post('/native/dashboard/update', function(req, res, next) {
-  let _returnObj = {
-    getinfo: {},
-    listtransactions: [],
-    z_gettotalbalance: {},
-    z_getoperationstatus: {},
-    listunspent: {},
-    addresses: {},
-  };
-  const _promiseStack = [
-    'getinfo',
-    'listtransactions',
-    'z_gettotalbalance',
-    'z_getoperationstatus'
-  ];
+shepherd.post('/native/dashboard/update', (req, res, next) => {
+  let _returnObj;
+  let _promiseStack;
   const _coin = req.body.coin;
 
-  function getAddressesNative(coin) {
+  if (_coin === 'CHIPS') {
+    _returnObj = {
+      getinfo: {},
+      listtransactions: [],
+      getbalance: {},
+      listunspent: {},
+      addresses: {},
+    };
+    _promiseStack = [
+      'getinfo',
+      'listtransactions',
+      'getbalance',
+    ];
+  } else {
+    _returnObj = {
+      getinfo: {},
+      listtransactions: [],
+      z_gettotalbalance: {},
+      z_getoperationstatus: {},
+      listunspent: {},
+      addresses: {},
+    };
+    _promiseStack = [
+      'getinfo',
+      'listtransactions',
+      'z_gettotalbalance',
+      'z_getoperationstatus'
+    ];
+  }
+
+  const getAddressesNative = (coin) => {
     const type = [
       'public',
       'private'
     ];
+
+    if (coin === 'CHIPS') {
+      type.pop();
+    }
 
     Promise.all(type.map((_type, index) => {
       return new Promise((resolve, reject) => {
@@ -239,7 +2464,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           coin,
           _type === 'public' ? 'getaddressesbyaccount' : 'z_listaddresses',
           ['']
-        ).then(function(_json) {
+        ).then((_json) => {
           if (_json === 'Work queue depth exceeded' ||
               !_json) {
             resolve({ error: 'daemon is busy' });
@@ -250,8 +2475,9 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
       });
     }))
     .then(result => {
-      if (result[0] && result[0].length) {
-        function calcBalance(result, json) {
+      if (result[0] &&
+          result[0].length) {
+        const calcBalance = (result, json) => {
           if (json &&
               json.length) {
             const allAddrArray = json.map(res => res.address).filter((x, i, a) => a.indexOf(x) == i);
@@ -281,13 +2507,13 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           // remove addr duplicates
           if (result[0] &&
               result[0].length) {
-            result[0] = result[0].filter(function(elem, pos) {
+            result[0] = result[0].filter((elem, pos) => {
               return result[0].indexOf(elem) === pos;
             });
           }
           if (result[1] &&
               result[1].length) {
-            result[1] = result[1].filter(function(elem, pos) {
+            result[1] = result[1].filter((elem, pos) => {
               return result[1].indexOf(elem) === pos;
             });
           }
@@ -322,7 +2548,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
             Promise.all(result[1].map((_address, index) => {
               return new Promise((resolve, reject) => {
                 _bitcoinRPC(coin, 'z_getbalance', [_address])
-                .then(function(__json) {
+                .then((__json) => {
                   __json = JSON.parse(__json);
                   if (__json &&
                       __json.error) {
@@ -367,7 +2593,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
         }
 
         _bitcoinRPC(coin, 'listunspent')
-        .then(function(__json) {
+        .then((__json) => {
           if (__json === 'Work queue depth exceeded' ||
               !__json) {
             const returnObj = {
@@ -401,8 +2627,8 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
     })
   }
 
-  function _bitcoinRPC(coin, cmd, params) {
-    return new Promise(function(resolve, reject) {
+  const _bitcoinRPC = (coin, cmd, params) => {
+    return new Promise((resolve, reject) => {
       let _payload;
 
       if (params) {
@@ -427,10 +2653,10 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ payload: _payload }),
-        timeout: 60000,
+        timeout: 120000,
       };
 
-      request(options, function(error, response, body) {
+      request(options, (error, response, body) => {
         if (response &&
             response.statusCode &&
             response.statusCode === 200) {
@@ -457,7 +2683,7 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
         _call,
         _params
       )
-      .then(function(json) {
+      .then((json) => {
         if (json === 'Work queue depth exceeded' ||
             !json) {
           _returnObj[_call] = { error: 'daemon is busy' };
@@ -473,120 +2699,43 @@ shepherd.post('/native/dashboard/update', function(req, res, next) {
   });
 });
 
-// TODO: test functions are wip
-shepherd.testNearestIguanaPort = function() {
-  return new Promise(function(resolve, reject) {
-    const port = shepherd.appConfig.iguanaCorePort;
-    portscanner.findAPortNotInUse(port, port + 100, '127.0.0.1', function(error, _port) {
-      resolve(_port);
-    });
-  });
-}
-
-shepherd.testClearAll = function() {
-  return new Promise(function(resolve, reject) {
+shepherd.testClearAll = () => {
+  return new Promise((resolve, reject) => {
     fs.removeSync(`${iguanaTestDir}`);
     resolve('done');
   });
 }
 
-shepherd.testBins = function(daemonName) {
-  return new Promise(function(resolve, reject) {
+shepherd.testBins = (daemonName) => {
+  return new Promise((resolve, reject) => {
     const _bins = {
       komodod: komododBin,
       komodoCli: komodocliBin,
-      iguana: iguanaBin,
     };
     const _arg = null;
     let _pid;
 
     shepherd.log('testBins exec ' + _bins[daemonName]);
 
-    if (!fs.existsSync(iguanaTestDir)) {
-      fs.mkdirSync(iguanaTestDir);
-    }
-
-    if (daemonName === 'iguana') {
-      shepherd.killRogueProcess('iguana');
+    if (!fs.existsSync(agamaTestDir)) {
+      fs.mkdirSync(agamaTestDir);
     }
 
     try {
-      _fs.access(`${iguanaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, function(err) {
+      _fs.access(`${agamaTestDir}/${daemonName}Test.log`, fs.constants.R_OK, (err) => {
         if (!err) {
           try {
-            _fs.unlinkSync(`${iguanaTestDir}/${daemonName}Test.log`);
+            _fs.unlinkSync(`${agamaTestDir}/${daemonName}Test.log`);
           } catch (e) {}
         } else {
-          shepherd.log(`path ${iguanaTestDir}/${daemonName}Test.log doesnt exist`);
+          shepherd.log(`path ${agamaTestDir}/${daemonName}Test.log doesnt exist`);
         }
       });
     } catch (e) {}
 
-    if (daemonName === 'iguana') {
-      pm2.connect(true,function(err) { //start up pm2 god
-        if (err) {
-          shepherd.error(err);
-          process.exit(2);
-        }
-        shepherd.log(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-        shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-
-        pm2.start({
-          script: iguanaBin, // path to binary
-          name: 'iguana',
-          exec_mode : 'fork',
-          args: [`-port=${shepherd.appConfig.iguanaCorePort}`],
-          output: `${iguanaTestDir}/iguanaTest.log`,
-          mergeLogs: true,
-          cwd: iguanaDir // set correct iguana directory
-        }, function(err, apps) {
-          if (apps[0] &&
-              apps[0].process &&
-              apps[0].process.pid) {
-            shepherd.log(`test: got iguana instance pid = ${apps[0].process.pid}`);
-            shepherd.writeLog(`test: iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
-          } else {
-            shepherd.log(`test: unable to start iguana core at port ${shepherd.appConfig.iguanaCorePort}`);
-          }
-
-          pm2.disconnect(); // Disconnect from PM2
-          if (err) {
-            shepherd.writeLog(`test: iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-            shepherd.log(`test: iguana fork error: ${err}`);
-            // throw err;
-          }
-        });
-      });
-
-      setTimeout(function() {
-        pm2.delete('iguana');
-
-        const _iguanaTestRunLog = fs.readFileSync(`${iguanaTestDir}/iguanaTest.log`, 'utf8');
-
-        if (_iguanaTestRunLog.indexOf('iguana main') > -1 &&
-            _iguanaTestRunLog.indexOf('Basilisk initialized') > -1) {
-          let _portTest = 'unknown';
-
-          if (_iguanaTestRunLog.indexOf(`iguana_rpcloop 127.0.0.1:${shepherd.appConfig.iguanaCorePort}`) > -1) {
-            _portTest = 'passed';
-          }
-
-          if (_iguanaTestRunLog.indexOf(`ERROR BINDING PORT.${shepherd.appConfig.iguanaCorePort}`) > -1) {
-            _portTest = 'failed';
-          }
-
-          resolve({
-            res: 'success',
-            port: _portTest,
-            iguanaPort: shepherd.appConfig.iguanaCorePort,
-          });
-        } else {
-          resolve({ res: 'error' });
-        }
-      }, 30000);
-    } else if (daemonName === 'komodod') {
+    if (daemonName === 'komodod') {
       try {
-        _fs.access(`${iguanaTestDir}/debug.log`, fs.constants.R_OK, function(err) {
+        _fs.access(`${iguanaTestDir}/debug.log`, fs.constants.R_OK, (err) => {
           if (!err) {
             _fs.unlinkSync(`${iguanaTestDir}/db.log`);
             _fs.unlinkSync(`${iguanaTestDir}/debug.log`);
@@ -607,7 +2756,7 @@ shepherd.testBins = function(daemonName) {
         });
       } catch (e) {}
 
-      function execKomodod() {
+      const execKomodod = () => {
         let _komododTest = {
           port: 'unknown',
           start: 'unknown',
@@ -641,13 +2790,13 @@ shepherd.testBins = function(daemonName) {
           'addnode=185.106.121.32\n' +
           'addnode=27.100.36.201\n';
 
-        fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, function(err) {
+        fs.writeFile(`${iguanaTestDir}/komodo.conf`, _komodoConf, (err) => {
           if (err) {
             shepherd.log(`test: error writing komodo conf in ${iguanaTestDir}`);
           }
         });
 
-        portscanner.checkPortStatus('7771', '127.0.0.1', function(error, status) {
+        portscanner.checkPortStatus('7771', '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'closed') {
             _komododTest.port = 'passed';
@@ -656,7 +2805,7 @@ shepherd.testBins = function(daemonName) {
           }
         });
 
-        pm2.connect(true,function(err) { //start up pm2 god
+        /*pm2.connect(true,function(err) { //start up pm2 god
           if (err) {
             shepherd.error(err);
             process.exit(2);
@@ -692,9 +2841,9 @@ shepherd.testBins = function(daemonName) {
               // throw err;
             }
           });
-        });
+        });*/
 
-        setTimeout(function() {
+        setTimeout(() => {
           const options = {
             url: `http://localhost:7771`,
             method: 'POST',
@@ -708,7 +2857,7 @@ shepherd.testBins = function(daemonName) {
             }),
           };
 
-          request(options, function(error, response, body) {
+          request(options, (error, response, body) => {
             if (response &&
                 response.statusCode &&
                 response.statusCode === 200) {
@@ -721,7 +2870,7 @@ shepherd.testBins = function(daemonName) {
           });
         }, 10000);
 
-        setTimeout(function() {
+        setTimeout(() => {
           pm2.delete('komodod');
           resolve(_komododTest);
         }, 20000);
@@ -750,7 +2899,7 @@ shepherd.testBins = function(daemonName) {
           shepherd.writeLog(`exec error: ${error}`);
 
           if (error.toString().indexOf('using -reindex') > -1) {
-            cache.io.emit('service', {
+            shepherd.io.emit('service', {
               komodod: {
                 error: 'run -reindex',
               }
@@ -762,29 +2911,34 @@ shepherd.testBins = function(daemonName) {
   });
 }
 
-shepherd.testLocation = function(path) {
-  return new Promise(function(resolve, reject) {
-    fs.lstat(path, (err, stats) => {
-      if (err) {
-        shepherd.log(`error testing path ${path}`);
-        resolve(-1);
-      } else {
-        if (stats.isDirectory()) {
-          resolve(true);
+// komodod datadir location test
+shepherd.testLocation = (path) => {
+  return new Promise((resolve, reject) => {
+    if (path.indexOf(' ') > -1) {
+      shepherd.log(`error testing path ${path}`);
+      resolve(-1);
+    } else {
+      fs.lstat(path, (err, stats) => {
+        if (err) {
+          shepherd.log(`error testing path ${path}`);
+          resolve(-1);
         } else {
-          shepherd.log(`error testing path ${path} not a folder`);
-          resolve(false);
+          if (stats.isDirectory()) {
+            resolve(true);
+          } else {
+            shepherd.log(`error testing path ${path} not a folder`);
+            resolve(false);
+          }
         }
-      }
-    });
+      });
+    }
   });
 }
 
 // osx and linux
-shepherd.binFixRights = function() {
+shepherd.binFixRights = () => {
   const osPlatform = os.platform();
   const _bins = [
-    iguanaBin,
     komododBin,
     komodocliBin
   ];
@@ -792,7 +2946,7 @@ shepherd.binFixRights = function() {
   if (osPlatform === 'darwin' ||
       osPlatform === 'linux') {
     for (let i = 0; i < _bins.length; i++) {
-      _fs.stat(_bins[i], function(err, stat) {
+      _fs.stat(_bins[i], (err, stat) => {
         if (!err) {
           if (parseInt(stat.mode.toString(8), 10) !== 100775) {
             shepherd.log(`${_bins[i]} fix permissions`);
@@ -806,7 +2960,7 @@ shepherd.binFixRights = function() {
   }
 }
 
-shepherd.killRogueProcess = function(processName) {
+shepherd.killRogueProcess = (processName) => {
   // kill rogue process copies on start
   let processGrep;
   const osPlatform = os.platform();
@@ -823,14 +2977,14 @@ shepherd.killRogueProcess = function(processName) {
       break;
   }
 
-  exec(processGrep, function(error, stdout, stderr) {
+  exec(processGrep, (error, stdout, stderr) => {
     if (stdout.indexOf(processName) > -1) {
       const pkillCmd = osPlatform === 'win32' ? `taskkill /f /im ${processName}.exe` : `pkill -15 ${processName}`;
 
       shepherd.log(`found another ${processName} process(es)`);
       shepherd.writeLog(`found another ${processName} process(es)`);
 
-      exec(pkillCmd, function(error, stdout, stderr) {
+      exec(pkillCmd, (error, stdout, stderr) => {
         shepherd.log(`${pkillCmd} is issued`);
         shepherd.writeLog(`${pkillCmd} is issued`);
 
@@ -848,7 +3002,7 @@ shepherd.killRogueProcess = function(processName) {
   });
 }
 
-shepherd.zcashParamsExist = function() {
+shepherd.zcashParamsExist = () => {
   let _checkList = {
     rootDir: _fs.existsSync(zcashParamsDir),
     provingKey: _fs.existsSync(`${zcashParamsDir}/sprout-proving.key`),
@@ -859,16 +3013,16 @@ shepherd.zcashParamsExist = function() {
   };
 
   if (_checkList.rootDir &&
-      _checkList.provingKey &&
+      _checkList.provingKey ||
       _checkList.verifyingKey) {
     // verify each key size
-    const _provingKeySize = fs.lstatSync(`${zcashParamsDir}/sprout-proving.key`);
-    const _verifyingKeySize = fs.lstatSync(`${zcashParamsDir}/sprout-verifying.key`);
+    const _provingKeySize = _checkList.provingKey ? fs.lstatSync(`${zcashParamsDir}/sprout-proving.key`) : 0;
+    const _verifyingKeySize = _checkList.verifyingKey ? fs.lstatSync(`${zcashParamsDir}/sprout-verifying.key`) : 0;
 
-    if (_provingKeySize.size === 910173851) {
+    if (Number(_provingKeySize.size) === 910173851) { // bytes
       _checkList.provingKeySize = true;
     }
-    if (_verifyingKeySize.size === 1449) {
+    if (Number(_verifyingKeySize.size) === 1449) {
       _checkList.verifyingKeySize = true;
     }
 
@@ -888,7 +3042,7 @@ shepherd.zcashParamsExist = function() {
   return _checkList;
 }
 
-shepherd.readVersionFile = function() {
+shepherd.readVersionFile = () => {
   // read app version
   const rootLocation = path.join(__dirname, '../');
   const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
@@ -896,56 +3050,35 @@ shepherd.readVersionFile = function() {
   return localVersionFile;
 }
 
-shepherd.writeLog = function(data) {
-  const logLocation = `${iguanaDir}/shepherd`;
-  const timeFormatted = new Date(Date.now()).toLocaleString('en-US', { hour12: false });
+shepherd.createAgamaDirs = () => {
+  if (!fs.existsSync(agamaDir)) {
+    fs.mkdirSync(agamaDir);
 
-  if (shepherd.appConfig.debug) {
-    if (fs.existsSync(`${logLocation}/agamalog.txt`)) {
-      fs.appendFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
-        if (err) {
-          shepherd.log('error writing log file');
-        }
-      });
-    } else {
-      fs.writeFile(`${logLocation}/agamalog.txt`, `${timeFormatted}  ${data}\r\n`, function(err) {
-        if (err) {
-          shepherd.log('error writing log file');
-        }
-      });
-    }
-  }
-}
-
-shepherd.createIguanaDirs = function() {
-  if (!fs.existsSync(iguanaDir)) {
-    fs.mkdirSync(iguanaDir);
-
-    if (fs.existsSync(iguanaDir)) {
-      shepherd.log(`created iguana folder at ${iguanaDir}`);
-      shepherd.writeLog(`created iguana folder at ${iguanaDir}`);
+    if (fs.existsSync(agamaDir)) {
+      shepherd.log(`created agama folder at ${agamaDir}`);
+      shepherd.writeLog(`created agama folder at ${agamaDir}`);
     }
   } else {
-    shepherd.log('iguana folder already exists');
+    shepherd.log('agama folder already exists');
   }
 
-  if (!fs.existsSync(`${iguanaDir}/shepherd`)) {
-    fs.mkdirSync(`${iguanaDir}/shepherd`);
+  if (!fs.existsSync(`${agamaDir}/shepherd`)) {
+    fs.mkdirSync(`${agamaDir}/shepherd`);
 
-    if (fs.existsSync(`${iguanaDir}/shepherd`)) {
-      shepherd.log(`created shepherd folder at ${iguanaDir}/shepherd`);
-      shepherd.writeLog(`create shepherd folder at ${iguanaDir}/shepherd`);
+    if (fs.existsSync(`${agamaDir}/shepherd`)) {
+      shepherd.log(`created shepherd folder at ${agamaDir}/shepherd`);
+      shepherd.writeLog(`create shepherd folder at ${agamaDir}/shepherd`);
     }
   } else {
-    shepherd.log('iguana/shepherd folder already exists');
+    shepherd.log('agama/shepherd folder already exists');
   }
 
-  if (!fs.existsSync(`${iguanaDir}/shepherd/pin`)) {
-    fs.mkdirSync(`${iguanaDir}/shepherd/pin`);
+  if (!fs.existsSync(`${agamaDir}/shepherd/pin`)) {
+    fs.mkdirSync(`${agamaDir}/shepherd/pin`);
 
-    if (fs.existsSync(`${iguanaDir}/shepherd/pin`)) {
-      shepherd.log(`created pin folder at ${iguanaDir}/shepherd/pin`);
-      shepherd.writeLog(`create pin folder at ${iguanaDir}/shepherd/pin`);
+    if (fs.existsSync(`${agamaDir}/shepherd/pin`)) {
+      shepherd.log(`created pin folder at ${agamaDir}/shepherd/pin`);
+      shepherd.writeLog(`create pin folder at ${agamaDir}/shepherd/pin`);
     }
   } else {
     shepherd.log('shepherd/pin folder already exists');
@@ -956,7 +3089,7 @@ shepherd.createIguanaDirs = function() {
  *  type: POST
  *  params: none
  */
-shepherd.post('/encryptkey', function(req, res, next) {
+shepherd.post('/encryptkey', (req, res, next) => {
   if (req.body.key &&
       req.body.string &&
       req.body.pubkey) {
@@ -971,7 +3104,7 @@ shepherd.post('/encryptkey', function(req, res, next) {
     const _pin = req.body.key;
     const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
 
-    fs.writeFile(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, function(err) {
+    fs.writeFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, (err) => {
       if (err) {
         shepherd.log('error writing pin file');
       }
@@ -1006,11 +3139,11 @@ shepherd.post('/encryptkey', function(req, res, next) {
   }
 });
 
-shepherd.post('/decryptkey', function(req, res, next) {
+shepherd.post('/decryptkey', (req, res, next) => {
   if (req.body.key &&
       req.body.pubkey) {
-    if (fs.existsSync(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
-      fs.readFile(`${iguanaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', function(err, data) {
+    if (fs.existsSync(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
+      fs.readFile(`${agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', (err, data) => {
         if (err) {
           const errorObj = {
             msg: 'error',
@@ -1058,9 +3191,9 @@ shepherd.post('/decryptkey', function(req, res, next) {
   }
 });
 
-shepherd.get('/getpinlist', function(req, res, next) {
-  if (fs.existsSync(`${iguanaDir}/shepherd/pin`)) {
-    fs.readdir(`${iguanaDir}/shepherd/pin`, function(err, items) {
+shepherd.get('/getpinlist', (req, res, next) => {
+  if (fs.existsSync(`${agamaDir}/shepherd/pin`)) {
+    fs.readdir(`${agamaDir}/shepherd/pin`, (err, items) => {
       let _pins = [];
 
       for (let i = 0; i < items.length; i++) {
@@ -1094,11 +3227,12 @@ shepherd.get('/getpinlist', function(req, res, next) {
     res.end(JSON.stringify(errorObj));
   }
 });
+
 /**
  * Promise based download file method
  */
-function downloadFile(configuration) {
-  return new Promise(function(resolve, reject) {
+const downloadFile = (configuration) => {
+  return new Promise((resolve, reject) => {
     // Save variable to know progress
     let receivedBytes = 0;
     let totalBytes = 0;
@@ -1115,26 +3249,26 @@ function downloadFile(configuration) {
     let out = fs.createWriteStream(configuration.localFile);
     req.pipe(out);
 
-    req.on('response', function(data) {
+    req.on('response', (data) => {
       // Change the total bytes value to get progress later.
       totalBytes = parseInt(data.headers['content-length']);
     });
 
     // Get progress if callback exists
     if (configuration.hasOwnProperty('onProgress')) {
-      req.on('data', function(chunk) {
+      req.on('data', (chunk) => {
         // Update the received bytes
         receivedBytes += chunk.length;
         configuration.onProgress(receivedBytes, totalBytes);
       });
     } else {
-      req.on('data', function(chunk) {
+      req.on('data', (chunk) => {
         // Update the received bytes
         receivedBytes += chunk.length;
       });
     }
 
-    req.on('end', function() {
+    req.on('end', () => {
       resolve();
     });
   });
@@ -1152,7 +3286,6 @@ const localBinLocation = {
 };
 const latestBins = {
   win32: [
-    'iguana.exe',
     'komodo-cli.exe',
     'komodod.exe',
     'libcrypto-1_1.dll',
@@ -1166,7 +3299,6 @@ const latestBins = {
     'pthreadvc2.dll',
   ],
   darwin: [
-    'iguana',
     'komodo-cli',
     'komodod',
     'libgcc_s.1.dylib',
@@ -1175,10 +3307,9 @@ const latestBins = {
     'libstdc++.6.dylib', // encode %2B
   ],
   linux: [
-    'iguana',
     'komodo-cli',
     'komodod',
-  ]
+  ],
 };
 
 let binsToUpdate = [];
@@ -1188,7 +3319,8 @@ let binsToUpdate = [];
  *  type:
  *  params:
  */
-shepherd.get('/update/bins/check', function(req, res, next) {
+ // TODO: promises
+shepherd.get('/update/bins/check', (req, res, next) => {
   const rootLocation = path.join(__dirname, '../');
   const successObj = {
     msg: 'success',
@@ -1200,7 +3332,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
   const _os = os.platform();
   shepherd.log(`checking bins: ${_os}`);
 
-  cache.io.emit('patch', {
+  shepherd.io.emit('patch', {
     patch: {
       type: 'bins-check',
       status: 'progress',
@@ -1209,7 +3341,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
   });
   // get list of bins/dlls that can be updated to the latest
   for (let i = 0; i < latestBins[_os].length; i++) {
-    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], function(err, remoteBinSize) {
+    remoteFileSize(remoteBinLocation[_os] + latestBins[_os][i], (err, remoteBinSize) => {
       const localBinSize = fs.statSync(rootLocation + localBinLocation[_os] + latestBins[_os][i]).size;
 
       shepherd.log('remote url: ' + (remoteBinLocation[_os] + latestBins[_os][i]) + ' (' + remoteBinSize + ')');
@@ -1225,7 +3357,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
       }
 
       if (i === latestBins[_os].length - 1) {
-        cache.io.emit('patch', {
+        shepherd.io.emit('patch', {
           patch: {
             type: 'bins-check',
             status: 'done',
@@ -1242,7 +3374,7 @@ shepherd.get('/update/bins/check', function(req, res, next) {
  *  type:
  *  params:
  */
-shepherd.get('/update/bins', function(req, res, next) {
+shepherd.get('/update/bins', (req, res, next) => {
   const rootLocation = path.join(__dirname, '../');
   const _os = os.platform();
   const successObj = {
@@ -1259,27 +3391,30 @@ shepherd.get('/update/bins', function(req, res, next) {
     downloadFile({
       remoteFile: remoteBinLocation[_os] + binsToUpdate[i].name,
       localFile: `${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`,
-      onProgress: function(received, total) {
+      onProgress: (received, total) => {
         const percentage = (received * 100) / total;
-        cache.io.emit('patch', {
-          msg: {
-            type: 'bins-update',
-            status: 'progress',
-            file: binsToUpdate[i].name,
-            bytesTotal: total,
-            bytesReceived: received,
-          },
-        });
-        shepherd.log(`${binsToUpdate[i].name} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+
+        if (percentage.toString().indexOf('.10') > -1) {
+          shepherd.io.emit('patch', {
+            msg: {
+              type: 'bins-update',
+              status: 'progress',
+              file: binsToUpdate[i].name,
+              bytesTotal: total,
+              bytesReceived: received,
+            },
+          });
+          // shepherd.log(`${binsToUpdate[i].name} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+        }
       }
     })
-    .then(function() {
+    .then(() => {
       // verify that remote file is matching to DL'ed file
       const localBinSize = fs.statSync(`${rootLocation}${localBinLocation[_os]}patch/${binsToUpdate[i].name}`).size;
       shepherd.log('compare dl file size');
 
       if (localBinSize === binsToUpdate[i].rSize) {
-        cache.io.emit('patch', {
+        shepherd.io.emit('patch', {
           msg: {
             type: 'bins-update',
             file: binsToUpdate[i].name,
@@ -1288,7 +3423,7 @@ shepherd.get('/update/bins', function(req, res, next) {
         });
         shepherd.log(`file ${binsToUpdate[i].name} succesfully downloaded`);
       } else {
-        cache.io.emit('patch', {
+        shepherd.io.emit('patch', {
           msg: {
             type: 'bins-update',
             file: binsToUpdate[i].name,
@@ -1306,7 +3441,7 @@ shepherd.get('/update/bins', function(req, res, next) {
  *  type: GET
  *  params: patchList
  */
-shepherd.get('/update/patch', function(req, res, next) {
+shepherd.get('/update/patch', (req, res, next) => {
   const successObj = {
     msg: 'success',
     result: 'dl started'
@@ -1317,18 +3452,17 @@ shepherd.get('/update/patch', function(req, res, next) {
   shepherd.updateAgama();
 });
 
-shepherd.updateAgama = function() {
+shepherd.updateAgama = () => {
   const rootLocation = path.join(__dirname, '../');
 
   downloadFile({
     remoteFile: 'https://github.com/pbca26/dl-test/raw/master/patch.zip',
-    localFile: rootLocation + 'patch.zip',
-    onProgress: function(received, total) {
+    localFile: `${rootLocation}patch.zip`,
+    onProgress: (received, total) => {
       const percentage = (received * 100) / total;
-      if (Math.floor(percentage) % 5 === 0 ||
-          Math.floor(percentage) % 10 === 0) {
-        shepherd.log(`patch ${percentage}% | ${received} bytes out of ${total} bytes.`);
-        cache.io.emit('patch', {
+
+      if (percentage.toString().indexOf('.10') > -1) {
+        shepherd.io.emit('patch', {
           msg: {
             status: 'progress',
             type: 'ui',
@@ -1337,11 +3471,12 @@ shepherd.updateAgama = function() {
             bytesReceived: received,
           },
         });
+        //shepherd.log(`patch ${percentage}% | ${received} bytes out of ${total} bytes.`);
       }
     }
   })
-  .then(function() {
-    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', function(err, remotePatchSize) {
+  .then(() => {
+    remoteFileSize('https://github.com/pbca26/dl-test/raw/master/patch.zip', (err, remotePatchSize) => {
       // verify that remote file is matching to DL'ed file
       const localPatchSize = fs.statSync(`${rootLocation}patch.zip`).size;
       shepherd.log('compare dl file size');
@@ -1360,7 +3495,7 @@ shepherd.updateAgama = function() {
 
         zip.extractAllTo(/*target path*/rootLocation + (shepherd.appConfig.dev ? '/patch' : ''), /*overwrite*/true);
         // TODO: extract files in chunks
-        cache.io.emit('patch', {
+        shepherd.io.emit('patch', {
           msg: {
             type: 'ui',
             status: 'done',
@@ -1368,7 +3503,7 @@ shepherd.updateAgama = function() {
         });
         fs.unlinkSync(`${rootLocation}patch.zip`);
       } else {
-        cache.io.emit('patch', {
+        shepherd.io.emit('patch', {
           msg: {
             type: 'ui',
             status: 'error',
@@ -1386,14 +3521,14 @@ shepherd.updateAgama = function() {
  *  type:
  *  params:
  */
-shepherd.get('/update/patch/check', function(req, res, next) {
+shepherd.get('/update/patch/check', (req, res, next) => {
   const rootLocation = path.join(__dirname, '../');
   const options = {
     url: 'https://github.com/pbca26/dl-test/raw/master/version',
     method: 'GET',
   };
 
-  request(options, function(error, response, body) {
+  request(options, (error, response, body) => {
     if (response &&
         response.statusCode &&
         response.statusCode === 200) {
@@ -1439,7 +3574,7 @@ shepherd.get('/update/patch/check', function(req, res, next) {
  *  type:
  *  params:
  */
-shepherd.get('/unpack', function(req, res, next) {
+shepherd.get('/unpack', (req, res, next) => {
   const dlLocation = path.join(__dirname, '../');
   const zip = new AdmZip(`${dlLocation}patch.zip`);
   zip.extractAllTo(/*target path*/ `${dlLocation}/patch/unpack`, /*overwrite*/true);
@@ -1453,12 +3588,81 @@ shepherd.get('/unpack', function(req, res, next) {
 });
 
 /*
+ *  Update bins
+ *  type:
+ *  params:
+ */
+shepherd.get('/zcparamsdl', (req, res, next) => {
+  // const dlLocation = zcashParamsDir + '/test';
+  const dlLocation = zcashParamsDir;
+  const dlOption = req.query.dloption;
+
+  const successObj = {
+    msg: 'success',
+    result: 'zcash params dl started',
+  };
+
+  res.end(JSON.stringify(successObj));
+
+  for (let key in zcashParamsDownloadLinks[dlOption]) {
+    downloadFile({
+      remoteFile: zcashParamsDownloadLinks[dlOption][key],
+      localFile: dlLocation + '/' + 'sprout-' + key + '.key',
+      onProgress: (received, total) => {
+        const percentage = (received * 100) / total;
+
+        if (percentage.toString().indexOf('.10') > -1) {
+          shepherd.io.emit('zcparams', {
+            msg: {
+              type: 'zcpdownload',
+              status: 'progress',
+              file: key,
+              bytesTotal: total,
+              bytesReceived: received,
+              progress: percentage,
+            },
+          });
+          // shepherd.log(`${key} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+        }
+      }
+    })
+    .then(() => {
+      const checkZcashParams = shepherd.zcashParamsExist();
+
+      shepherd.log(`${key} dl done`);
+
+      if (checkZcashParams.error) {
+        shepherd.io.emit('zcparams', {
+          msg: {
+            type: 'zcpdownload',
+            file: key,
+            status: 'error',
+            message: 'size mismatch',
+            progress: 100,
+          },
+        });
+      } else {
+        shepherd.io.emit('zcparams', {
+          msg: {
+            type: 'zcpdownload',
+            file: key,
+            progress: 100,
+            status: 'done',
+          },
+        });
+        shepherd.log(`file ${key} succesfully downloaded`);
+      }
+    });
+  }
+});
+
+/*
  *  type: GET
  *
  */
-shepherd.get('/coinslist', function(req, res, next) {
-  if (fs.existsSync(`${iguanaDir}/shepherd/coinslist.json`)) {
-    fs.readFile(`${iguanaDir}/shepherd/coinslist.json`, 'utf8', function(err, data) {
+shepherd.get('/coinslist', (req, res, next) => {
+  if (fs.existsSync(`${agamaDir}/shepherd/coinslist.json`)) {
+    fs.readFile(`${agamaDir}/shepherd/coinslist.json`, 'utf8', (err, data) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -1489,8 +3693,8 @@ shepherd.get('/coinslist', function(req, res, next) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/guilog', function(req, res, next) {
-  const logLocation = `${iguanaDir}/shepherd`;
+shepherd.post('/guilog', (req, res, next) => {
+  const logLocation = `${agamaDir}/shepherd`;
 
   if (!guiLog[shepherd.appSessionHash]) {
     guiLog[shepherd.appSessionHash] = {};
@@ -1509,7 +3713,7 @@ shepherd.post('/guilog', function(req, res, next) {
     };
   }
 
-  fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(guiLog), function(err) {
+  fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(guiLog), (err) => {
     if (err) {
       shepherd.writeLog('error writing gui log file');
     }
@@ -1527,11 +3731,11 @@ shepherd.post('/guilog', function(req, res, next) {
  *  type: GET
  *  params: type
  */
-shepherd.get('/getlog', function(req, res, next) {
+shepherd.get('/getlog', (req, res, next) => {
   const logExt = req.query.type === 'txt' ? 'txt' : 'json';
 
-  if (fs.existsSync(`${iguanaDir}/shepherd/agamalog.${logExt}`)) {
-    fs.readFile(`${iguanaDir}/shepherd/agamalog.${logExt}`, 'utf8', function(err, data) {
+  if (fs.existsSync(`${agamaDir}/shepherd/agamalog.${logExt}`)) {
+    fs.readFile(`${agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', (err, data) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -1562,7 +3766,7 @@ shepherd.get('/getlog', function(req, res, next) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/coinslist', function(req, res, next) {
+shepherd.post('/coinslist', (req, res, next) => {
   const _payload = req.body.payload;
 
   if (!_payload) {
@@ -1573,7 +3777,7 @@ shepherd.post('/coinslist', function(req, res, next) {
 
     res.end(JSON.stringify(errorObj));
   } else {
-    fs.writeFile(`${cache.iguanaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), function(err) {
+    fs.writeFile(`${agamaDir}/shepherd/coinslist.json`, JSON.stringify(_payload), (err) => {
       if (err) {
         const errorObj = {
           msg: 'error',
@@ -1594,7 +3798,7 @@ shepherd.post('/coinslist', function(req, res, next) {
 });
 
 // TODO: check if komodod is running
-shepherd.quitKomodod = function(timeout = 100) {
+shepherd.quitKomodod = (timeout = 100) => {
   // if komodod is under heavy load it may not respond to cli stop the first time
   // exit komodod gracefully
   let coindExitInterval = {};
@@ -1602,14 +3806,30 @@ shepherd.quitKomodod = function(timeout = 100) {
 
   for (let key in coindInstanceRegistry) {
     const chain = key !== 'komodod' ? key : null;
+    let _coindQuitCmd = komodocliBin;
 
-    function execCliStop() {
+     // any coind
+    if (shepherd.nativeCoindList[key.toLowerCase()]) {
+      _coindQuitCmd = `${coindRootDir}/${key.toLowerCase()}/${shepherd.nativeCoindList[key.toLowerCase()].bin.toLowerCase()}-cli`;
+    }
+    if (key === 'CHIPS') {
+      _coindQuitCmd = chipscliBin;
+    }
+
+    const execCliStop = () => {
       let _arg = [];
-      if (chain) {
+      if (chain && !shepherd.nativeCoindList[key.toLowerCase()] && key !== 'CHIPS') {
         _arg.push(`-ac_name=${chain}`);
+
+        if (shepherd.appConfig.dataDir.length) {
+          _arg.push(`-datadir=${shepherd.appConfig.dataDir + (key !== 'komodod' ? '/' + key : '')}`);
+        }
+      } else if (key === 'komodod' && shepherd.appConfig.dataDir.length) {
+        _arg.push(`-datadir=${shepherd.appConfig.dataDir}`);
       }
+
       _arg.push('stop');
-      execFile(`${komodocliBin}`, _arg, function(error, stdout, stderr) {
+      execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
         shepherd.log(`stdout: ${stdout}`);
         shepherd.log(`stderr: ${stderr}`);
 
@@ -1622,51 +3842,91 @@ shepherd.quitKomodod = function(timeout = 100) {
           clearInterval(coindExitInterval[key]);
         }
 
+        // workaround for AGT-65
+        const _port = assetChainPorts[key];
+        setTimeout(() => {
+          portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+            // Status is 'open' if currently in use or 'closed' if available
+            if (status === 'closed') {
+              delete coindInstanceRegistry[key];
+              clearInterval(coindExitInterval[key]);
+            }
+          });
+        }, 100);
+
         if (error !== null) {
           shepherd.log(`exec error: ${error}`);
         }
-        shepherd.killRogueProcess('komodo-cli');
+
+        if (key === 'CHIPS') {
+          setTimeout(() => {
+            shepherd.killRogueProcess('chips-cli');
+          }, 100);
+        } else {
+          setTimeout(() => {
+            shepherd.killRogueProcess('komodo-cli');
+          }, 100);
+        }
       });
     }
 
     execCliStop();
-    coindExitInterval[key] = setInterval(function() {
+    coindExitInterval[key] = setInterval(() => {
       execCliStop();
     }, timeout);
   }
 }
 
-shepherd.getConf = function(chain) {
-  const _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
-  // komodoDir
+shepherd.getConf = (chain) => {
+  let _confLocation = chain === 'komodod' ? `${komodoDir}/komodo.conf` : `${komodoDir}/${chain}/${chain}.conf`;
+  _confLocation = chain === 'CHIPS' ? `${chipsDir}/chips.conf` : _confLocation;
 
-  if (fs.existsSync(_confLocation)) {
-    const _port = assetChainPorts[chain];
-    const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
+  // any coind
+  if (chain) {
+    if (shepherd.nativeCoindList[chain.toLowerCase()]) {
+      const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+      let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
 
-    if (_rpcConf.length) {
-      let _match;
-      let parsedRpcConfig = {
-        user: '',
-        pass: '',
-        port: _port,
-      };
-
-      if (_match = _rpcConf.match(/rpcuser=\s*(.*)/)) {
-        parsedRpcConfig.user = _match[1];
-      }
-
-      if ((_match = _rpcConf.match(/rpcpass=\s*(.*)/)) ||
-          (_match = _rpcConf.match(/rpcpassword=\s*(.*)/))) {
-        parsedRpcConfig.pass = _match[1];
-      }
-
-      rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
-    } else {
-      shepherd.log(`${_confLocation} is empty`);
+      _confLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}.conf`;
     }
-  } else {
-    shepherd.log(`${_confLocation} doesnt exist`);
+
+    if (fs.existsSync(_confLocation)) {
+      let _port = assetChainPorts[chain];
+      const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
+
+      // any coind
+      if (shepherd.nativeCoindList[chain.toLowerCase()]) {
+        _port = shepherd.nativeCoindList[chain.toLowerCase()].port;
+      }
+
+      if (_rpcConf.length) {
+        let _match;
+        let parsedRpcConfig = {
+          user: '',
+          pass: '',
+          port: _port,
+        };
+
+        if (_match = _rpcConf.match(/rpcuser=\s*(.*)/)) {
+          parsedRpcConfig.user = _match[1];
+        }
+
+        if ((_match = _rpcConf.match(/rpcpass=\s*(.*)/)) ||
+            (_match = _rpcConf.match(/rpcpassword=\s*(.*)/))) {
+          parsedRpcConfig.pass = _match[1];
+        }
+
+        if (shepherd.nativeCoindList[chain.toLowerCase()]) {
+          rpcConf[chain] = parsedRpcConfig;
+        } else {
+          rpcConf[chain === 'komodod' ? 'KMD' : chain] = parsedRpcConfig;
+        }
+      } else {
+        shepherd.log(`${_confLocation} is empty`);
+      }
+    } else {
+      shepherd.log(`${_confLocation} doesnt exist`);
+    }
   }
 }
 
@@ -1674,7 +3934,7 @@ shepherd.getConf = function(chain) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/cli', function(req, res, next) {
+shepherd.post('/cli', (req, res, next) => {
   if (!req.body.payload) {
     const errorObj = {
       msg: 'error',
@@ -1692,15 +3952,15 @@ shepherd.post('/cli', function(req, res, next) {
   } else {
     const _mode = req.body.payload.mode === 'passthru' ? 'passthru' : 'default';
     const _chain = req.body.payload.chain === 'KMD' ? null : req.body.payload.chain;
-    const _cmd = req.body.payload.cmd;
+    let _cmd = req.body.payload.cmd;
     const _params = req.body.payload.params ? ` ${req.body.payload.params}` : '';
 
     if (!rpcConf[_chain]) {
-      shepherd.getConf(req.body.payload.chain === 'KMD' ? 'komodod' : req.body.payload.chain);
+      shepherd.getConf(req.body.payload.chain === 'KMD' || !req.body.payload.chain && shepherd.kmdMainPassiveMode ? 'komodod' : req.body.payload.chain);
     }
 
     if (_mode === 'default') {
-      let _body = {
+      /*let _body = {
         agent: 'bitcoinrpc',
         method: _cmd,
       };
@@ -1733,11 +3993,105 @@ shepherd.post('/cli', function(req, res, next) {
         } else {
           res.end(body);
         }
-      });
+      });*/
+      if (_cmd === 'debug' &&
+          _chain !== 'CHIPS') {
+        if (shepherd.nativeCoindList[_chain.toLowerCase()]) {
+          const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+          let coindDebugLogLocation;
+
+          if (_chain === 'CHIPS') {
+            coindDebugLogLocation = `${chipsDir}/debug.log`;
+          } else {
+            coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
+          }
+
+          shepherd.readDebugLog(coindDebugLogLocation, 1)
+          .then((result) => {
+            const _obj = {
+              'msg': 'success',
+              'result': result,
+            };
+
+            // shepherd.log('bitcoinrpc debug ====>');
+            // console.log(result);
+
+            res.end(JSON.stringify(_obj));
+          }, (result) => {
+            const _obj = {
+              error: result,
+              result: 'error',
+            };
+
+            res.end(JSON.stringify(_obj));
+          });
+        } else {
+          res.end({
+            error: 'bitcoinrpc debug error',
+            result: 'error',
+          });
+          // console.log('bitcoinrpc debug error');
+        }
+      } else {
+        if (_chain === 'CHIPS' &&
+            _cmd === 'debug') {
+          _cmd = 'getblockchaininfo';
+        }
+
+        let _body = {
+          'agent': 'bitcoinrpc',
+          'method': _cmd,
+        };
+
+        if (req.body.payload.params) {
+          _body = {
+            'agent': 'bitcoinrpc',
+            'method': _cmd,
+            'params': req.body.payload.params === ' ' ? [''] : req.body.payload.params,
+          };
+        }
+
+        if (req.body.payload.chain) {
+          const options = {
+            url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
+            method: 'POST',
+            auth: {
+              'user': rpcConf[req.body.payload.chain].user,
+              'pass': rpcConf[req.body.payload.chain].pass
+            },
+            body: JSON.stringify(_body)
+          };
+
+          // send back body on both success and error
+          // this bit replicates iguana core's behaviour
+          request(options, (error, response, body) => {
+            if (response &&
+                response.statusCode &&
+                response.statusCode === 200) {
+              res.end(body);
+            } else {
+              res.end(body);
+            }
+          });
+        }
+      }
     } else {
+      let _coindCliBin = komodocliBin;
+
+      if (shepherd.nativeCoindList &&
+          _chain &&
+          shepherd.nativeCoindList[_chain.toLowerCase()]) {
+        _coindCliBin = `${coindRootDir}/${_chain.toLowerCase()}/${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}-cli`;
+      }
+
       let _arg = (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + _params;
+
+      if (shepherd.appConfig.dataDir.length) {
+        _arg = `${_arg} -datadir=${shepherd.appConfig.dataDir  + (_chain ? '/' + key : '')}`;
+      }
+
       _arg = _arg.trim().split(' ');
-      execFile(komodocliBin, _arg, function(error, stdout, stderr) {
+      execFile(_coindCliBin, _arg, (error, stdout, stderr) => {
         shepherd.log(`stdout: ${stdout}`);
         shepherd.log(`stderr: ${stderr}`);
 
@@ -1770,7 +4124,7 @@ shepherd.post('/cli', function(req, res, next) {
  *  type: POST
  *  params: payload
  */
-shepherd.post('/appconf', function(req, res, next) {
+shepherd.post('/appconf', (req, res, next) => {
   if (!req.body.payload) {
     const errorObj = {
       msg: 'error',
@@ -1794,7 +4148,7 @@ shepherd.post('/appconf', function(req, res, next) {
  *  type: POST
  *  params: none
  */
-shepherd.post('/appconf/reset', function(req, res, next) {
+shepherd.post('/appconf/reset', (req, res, next) => {
   shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
 
   const successObj = {
@@ -1805,130 +4159,24 @@ shepherd.post('/appconf/reset', function(req, res, next) {
   res.end(JSON.stringify(successObj));
 });
 
-shepherd.saveLocalAppConf = function(appSettings) {
-  let appConfFileName = `${iguanaDir}/config.json`;
-
-  _fs.access(iguanaDir, fs.constants.R_OK, function(err) {
-    if (!err) {
-
-      const FixFilePermissions = function() {
-        return new Promise(function(resolve, reject) {
-          const result = 'config.json file permissions updated to Read/Write';
-
-          fsnode.chmodSync(appConfFileName, '0666');
-
-          setTimeout(function() {
-            shepherd.log(result);
-            shepherd.writeLog(result);
-            resolve(result);
-          }, 1000);
-        });
-      }
-
-      const FsWrite = function() {
-        return new Promise(function(resolve, reject) {
-          const result = 'config.json write file is done';
-
-          fs.writeFile(appConfFileName,
-                      JSON.stringify(appSettings)
-                      .replace(/,/g, ',\n') // format json in human readable form
-                      .replace(/:/g, ': ')
-                      .replace(/{/g, '{\n')
-                      .replace(/}/g, '\n}'), 'utf8', function(err) {
-            if (err)
-              return shepherd.log(err);
-          });
-
-          fsnode.chmodSync(appConfFileName, '0666');
-          setTimeout(function() {
-            shepherd.log(result);
-            shepherd.log(`app conf.json file is created successfully at: ${iguanaConfsDir}`);
-            shepherd.writeLog(`app conf.json file is created successfully at: ${iguanaConfsDir}`);
-            resolve(result);
-          }, 2000);
-        });
-      }
-
-      FsWrite()
-      .then(FixFilePermissions());
-    }
-  });
-}
-
-shepherd.loadLocalConfig = function() {
-  if (fs.existsSync(`${iguanaDir}/config.json`)) {
-    let localAppConfig = fs.readFileSync(`${iguanaDir}/config.json`, 'utf8');
-
-    shepherd.log('app config set from local file');
-    shepherd.writeLog('app config set from local file');
-
-    // find diff between local and hardcoded configs
-    // append diff to local config
-    const compareJSON = function(obj1, obj2) {
-      let result = {};
-
-      for (let i in obj1) {
-        if (!obj2.hasOwnProperty(i)) {
-          result[i] = obj1[i];
-        }
-      }
-
-      return result;
-    };
-
-    if (localAppConfig) {
-      const compareConfigs = compareJSON(shepherd.appConfig, JSON.parse(localAppConfig));
-
-      if (Object.keys(compareConfigs).length) {
-        const newConfig = Object.assign(JSON.parse(localAppConfig), compareConfigs);
-
-        shepherd.log('config diff is found, updating local config');
-        shepherd.log('config diff:');
-        shepherd.log(compareConfigs);
-        shepherd.writeLog('aconfig diff is found, updating local config');
-        shepherd.writeLog('config diff:');
-        shepherd.writeLog(compareConfigs);
-
-        shepherd.saveLocalAppConf(newConfig);
-        return newConfig;
-      } else {
-        return JSON.parse(localAppConfig);
-      }
-    } else {
-      return shepherd.appConfig;
-    }
-  } else {
-    shepherd.log('local config file is not found!');
-    shepherd.writeLog('local config file is not found!');
-    shepherd.saveLocalAppConf(shepherd.appConfig);
-
-    return shepherd.appConfig;
-  }
-};
-
-shepherd.appConfig = shepherd.loadLocalConfig();
-
-shepherd.log(`iguana dir: ${iguanaDir}`);
-shepherd.log(`iguana bin: ${iguanaBin}`);
+shepherd.log(`agama dir: ${agamaDir}`);
 shepherd.log('--------------------------')
-shepherd.log(`iguana dir: ${komododBin}`);
-shepherd.log(`iguana bin: ${komodoDir}`);
-shepherd.writeLog(`iguana dir: ${iguanaDir}`);
-shepherd.writeLog(`iguana bin: ${iguanaBin}`);
-shepherd.writeLog(`iguana dir: ${komododBin}`);
-shepherd.writeLog(`iguana bin: ${komodoDir}`);
+shepherd.log(`komodo dir: ${komododBin}`);
+shepherd.log(`komodo bin: ${komodoDir}`);
+shepherd.writeLog(`agama dir: ${agamaDir}`);
+shepherd.writeLog(`komodo dir: ${komododBin}`);
+shepherd.writeLog(`komodo bin: ${komodoDir}`);
 
-// END IGUANA FILES AND CONFIG SETTINGS
 // default route
-shepherd.get('/', function(req, res, next) {
-  res.send('Iguana app server');
+shepherd.get('/', (req, res, next) => {
+  res.send('Agama app server');
 });
 
 /*
  *  type: GET
  *
  */
-shepherd.get('/appconf', function(req, res, next) {
+shepherd.get('/appconf', (req, res, next) => {
   const obj = shepherd.loadLocalConfig();
   res.send(obj);
 });
@@ -1937,7 +4185,7 @@ shepherd.get('/appconf', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/sysinfo', function(req, res, next) {
+shepherd.get('/sysinfo', (req, res, next) => {
   const obj = shepherd.SystemInfo();
   res.send(obj);
 });
@@ -1946,388 +4194,84 @@ shepherd.get('/sysinfo', function(req, res, next) {
  *  type: GET
  *
  */
-shepherd.get('/appinfo', function(req, res, next) {
+shepherd.get('/appinfo', (req, res, next) => {
   const obj = shepherd.appInfo();
   res.send(obj);
 });
 
-shepherd.dumpCacheBeforeExit = function() {
-  cache.dumpCacheBeforeExit();
-}
-
-var cache = require('./cache');
-var mock = require('./mock');
-
 // expose sockets obj
-shepherd.setIO = function(io) {
+shepherd.setIO = (io) => {
   shepherd.io = io;
-  cache.setVar('io', io);
-  cache.setVar('shepherd', shepherd);
 };
 
-shepherd.setVar = function(_name, _body) {
+shepherd.setVar = (_name, _body) => {
   shepherd[_name] = _body;
 };
 
-cache.setVar('iguanaDir', iguanaDir);
-cache.setVar('appConfig', shepherd.appConfig);
-
-// fetch sync only forks info
-shepherd.getSyncOnlyForksInfo = function() {
-  async.forEachOf(iguanaInstanceRegistry, function(data, port) {
-    if (iguanaInstanceRegistry[port].mode.indexOf('/sync') > -1) {
-      syncOnlyIguanaInstanceInfo[port] = {};
-      request({
-        url: `http://localhost:${port}/api/bitcoinrpc/getinfo?userpass=tmpIgRPCUser@${shepherd.appSessionHash}`,
-        method: 'GET'
-      }, function(error, response, body) {
-        if (response &&
-            response.statusCode &&
-            response.statusCode === 200) {
-          // console.log(body);
-          try {
-            syncOnlyIguanaInstanceInfo[port].getinfo = JSON.parse(body);
-          } catch(e) {}
-        } else {
-          // TODO: error
-        }
-      });
-      request({
-        url: `http://localhost:${port}/api/SuperNET/activehandle?userpass=${shepherd.appSessionHash}`,
-        method: 'GET'
-      }, function(error, response, body) {
-        if (response &&
-            response.statusCode &&
-            response.statusCode === 200) {
-          // console.log(body);
-          try {
-            syncOnlyIguanaInstanceInfo[port].activehandle = JSON.parse(body);
-          } catch(e) {}
-        } else {
-          // TODO: error
-        }
-      });
-      syncOnlyIguanaInstanceInfo[port].registry = iguanaInstanceRegistry[port];
-    }
-  });
-}
-
 /*
  *  type: GET
  *
  */
-shepherd.get('/forks/info/start', function(req, res, next) {
-  const successObj = {
-    msg: 'success',
-    result: 'started',
-  };
-
-  res.end(JSON.stringify(successObj));
-  shepherd.getSyncOnlyForksInfo();
-});
-
-/*
- *  type: GET
- *
- */
-shepherd.get('/forks/info/show', function(req, res, next) {
-  const successObj = {
-    msg: 'success',
-    result: JSON.stringify(syncOnlyIguanaInstanceInfo),
-  };
-
-  res.end(JSON.stringify(successObj));
-});
-
-/*
- *  type: GET
- *
- */
-shepherd.get('/forks/restart', function(req, res, next) {
-  const _pmid = req.query.pmid;
-
-  pm2.connect(function(err) {
-    if (err) {
-      shepherd.error(err);
-    }
-
-    pm2.restart(_pmid, function(err, ret) {
-      if (err) {
-        shepherd.error(err);
-      }
-      pm2.disconnect();
-
-      const successObj = {
-        msg: 'success',
-        result: 'restarted',
-      };
-      shepherd.writeLog(`iguana fork pmid ${_pmid} restarted`);
-
-      res.end(JSON.stringify(successObj));
-    });
-  });
-});
-
-/*
- *  type: GET
- *
- */
-shepherd.get('/forks/stop', function(req, res, next) {
-  const _pmid = req.query.pmid;
-
-  pm2.connect(function(err) {
-    if (err) {
-      shepherd.error(err);
-    }
-
-    pm2.stop(_pmid, function(err, ret) {
-      if (err) {
-        shepherd.error(err);
-      }
-      pm2.disconnect();
-
-      const successObj = {
-        msg: 'success',
-        result: 'stopped',
-      };
-
-      shepherd.writeLog(`iguana fork pmid ${_pmid} stopped`);
-
-      res.end(JSON.stringify(successObj));
-    });
-  });
-});
-
-/*
- *  type: GET
- *
- */
-shepherd.get('/forks', function(req, res, next) {
-  const successObj = {
-    msg: 'success',
-    result: iguanaInstanceRegistry,
-  };
-
-  res.end(JSON.stringify(successObj));
-});
-
-/*
- *  type: POST
- *  params: name
- */
-shepherd.post('/forks', function(req, res, next) {
-  const mode = req.body.mode;
-  const coin = req.body.coin;
-  const port = shepherd.appConfig.iguanaCorePort;
-
-  portscanner.findAPortNotInUse(port, port + 100, '127.0.0.1', function(error, _port) {
-    pm2.connect(true, function(err) { //start up pm2 god
-      if (err) {
-        shepherd.error(err);
-        process.exit(2);
-      }
-
-      shepherd.log(`iguana core fork port ${_port}`);
-      shepherd.writeLog(`iguana core fork port ${_port}`);
-
-      pm2.start({
-        script: iguanaBin, // path to binary
-        name: `IGUANA ${_port} ${mode} / ${coin}`,
-        exec_mode : 'fork',
-        args: [`-port=${_port}`],
-        cwd: iguanaDir //set correct iguana directory
-      }, function(err, apps) {
-        if (apps &&
-            apps[0] &&
-            apps[0].process &&
-            apps[0].process.pid) {
-          iguanaInstanceRegistry[_port] = {
-            mode: mode,
-            coin: coin,
-            pid: apps[0].process && apps[0].process.pid,
-            pmid: apps[0].pm2_env.pm_id,
-          };
-          cache.setVar('iguanaInstances', iguanaInstanceRegistry);
-
-          const successObj = {
-            msg: 'success',
-            result: _port,
-          };
-
-          res.end(JSON.stringify(successObj));
-        } else {
-          const errorObj = {
-            msg: 'success',
-            error: 'iguana start error',
-          };
-
-          res.end(JSON.stringify(errorObj));
-        }
-
-        // get sync only forks info
-        if (syncOnlyInstanceInterval === -1) {
-          setTimeout(function() {
-            shepherd.getSyncOnlyForksInfo();
-          }, 5000);
-          setInterval(function() {
-            shepherd.getSyncOnlyForksInfo();
-          }, 20000);
-        }
-
-        pm2.disconnect(); // Disconnect from PM2
-        if (err) {
-          shepherd.writeLog(`iguana fork error: ${err}`);
-          shepherd.log(`iguana fork error: ${err}`);
-          // throw err;
-        }
-      });
-    });
-  });
-});
-
-/*
- *  type: GET
- *
- */
-shepherd.get('/InstantDEX/allcoins', function(req, res, next) {
-  // TODO: if only native return obj
-  //       else query main iguana instance and return combined response
-  // http://localhost:7778/api/InstantDEX/allcoins?userpass=tmpIgRPCUser@1234
+shepherd.get('/InstantDEX/allcoins', (req, res, next) => {
   let successObj;
   let nativeCoindList = [];
+  let electrumCoinsList = [];
+
+  for (let key in electrumCoins) {
+    if (key !== 'auth') {
+      electrumCoinsList.push(electrumCoins[key].abbr);
+    }
+  }
 
   for (let key in coindInstanceRegistry) {
     nativeCoindList.push(key === 'komodod' ? 'KMD' : key);
   }
 
-  if (Object.keys(iguanaInstanceRegistry).length) {
-    // call to iguana
-    request({
-      url: `http://localhost:${shepherd.appConfig.iguanaCorePort}/api/InstantDEX/allcoins?userpass=${req.query.userpass}`,
-      method: 'GET'
-    }, function(error, response, body) {
-      if (response &&
-          response.statusCode &&
-          response.statusCode === 200) {
-        const _body = JSON.parse(body);
-        _body.native = nativeCoindList;
-        shepherd.log(_body);
-      } else {
-        shepherd.log('main iguana instance is not ready yet');
-      }
+  successObj = {
+    native: nativeCoindList,
+    spv: electrumCoinsList,
+    total: Object.keys(electrumCoins).length - 1 + Object.keys(nativeCoindList).length,
+  };
 
-      res.send(body);
-    });
-  } else {
-    successObj = {
-      native: nativeCoindList,
-      basilisk: [],
-      full: [],
-    };
-
-    res.end(JSON.stringify(successObj));
-  }
+  res.end(JSON.stringify(successObj));
 });
 
 /*
  *  type: GET
  *
  */
-shepherd.get('/SuperNET/activehandle', function(req, res, next) { // not finished
-  // TODO: if only native return obj
-  //       else query main iguana instance and return combined response
-  // http://localhost:7778/api/SuperNET/activehandle?userpass=tmpIgRPCUser@1234
+shepherd.get('/auth/status', (req, res, next) => { // not finished
   let successObj;
+  let _status = false;
 
-  if (Object.keys(iguanaInstanceRegistry).length) {
-    // call to iguana
-    request({
-      url: `http://localhost:${shepherd.appConfig.iguanaCorePort}/api/SuperNET/activehandle?userpass=${req.query.userpass}`,
-      method: 'GET'
-    }, function(error, response, body) {
-      if (response &&
-          response.statusCode &&
-          response.statusCode === 200) {
-        shepherd.log(body);
-      } else {
-        shepherd.log('main iguana instance is not ready yet');
-      }
-
-      res.send(body);
-    });
-  } else {
-    successObj = {
-      pubkey: 'nativeonly',
-      result: 'success',
-      handle: '',
-      status: Object.keys(coindInstanceRegistry).length ? 'unlocked' : 'locked',
-      duration: 2507830,
-    };
-
-    res.end(JSON.stringify(successObj));
+  if (Object.keys(coindInstanceRegistry).length) {
+    if (Object.keys(electrumCoins).length > 1 && electrumCoins.auth) {
+      _status = true;
+    } else if (Object.keys(electrumCoins).length === 1 && !electrumCoins.auth) {
+      _status = true;
+    }
+  } else if (Object.keys(electrumCoins).length > 1 && electrumCoins.auth) {
+    _status = true;
+  } else if (Object.keys(electrumCoins).length === 1 && !Object.keys(coindInstanceRegistry).length) {
+    _status = true;
   }
-});
 
-/*
- *  type: GET
- *  params: pubkey
- */
-shepherd.get('/cache', function(req, res, next) {
-  cache.get(req, res, next);
-});
+  successObj = {
+    pubkey: 'nativeonly',
+    result: 'success',
+    handle: '',
+    status: _status ? 'unlocked' : 'locked',
+    duration: 2507830,
+  };
 
-/*
- *  type: GET
- *  params: filename
- */
-shepherd.get('/groom', function(req, res, next) {
-  cache.groomGet(req, res, next);
-})
-
-/*
- *  type: DELETE
- *  params: filename
- */
-shepherd.delete('/groom', function(req, res, next) {
-  cache.groomDelete(req, res, next);
-});
-
-/*
- *  type: POST
- *  params: filename, payload
- */
-shepherd.post('/groom', function(req, res, next) {
-  cache.groomPost(req, res, next);
-});
-
-/*
- *  type: GET
- *  params: userpass, pubkey, skip
- */
-shepherd.get('/cache-all', function(req, res, next) {
-  cache.all(req, res, next);
-});
-
-/*
- *  type: GET
- *  params: userpass, pubkey, coin, address, skip
- */
-shepherd.get('/cache-one', function(req, res, next) {
-  cache.one(req, res, next);
-});
-
-/*
- *  type: GET
- */
-shepherd.get('/mock', function(req, res, next) {
-  mock.get(req, res, next);
+  res.end(JSON.stringify(successObj));
 });
 
 /*
  *  type: GET
  *  params: herd, lastLines
  */
-shepherd.post('/debuglog', function(req, res) {
+shepherd.post('/debuglog', (req, res) => {
   let _herd = req.body.herdname;
   let _ac = req.body.ac;
   let _lastNLines = req.body.lastLines;
@@ -2346,25 +4290,27 @@ shepherd.post('/debuglog', function(req, res) {
     komodoDir = path.normalize(komodoDir);
   }
 
-  if (_herd === 'iguana') {
-    _location = iguanaDir;
-  } else if (_herd === 'komodo') {
+  if (_herd === 'komodo') {
     _location = komodoDir;
   }
 
   if (_ac) {
     _location = `${komodoDir}/${_ac}`;
+
+    if (_ac === 'CHIPS') {
+      _location = chipsDir;
+    }
   }
 
   shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
-  .then(function(result) {
+  .then((result) => {
     const _obj = {
       msg: 'success',
       result: result,
     };
 
     res.end(JSON.stringify(_obj));
-  }, function(result) {
+  }, (result) => {
     const _obj = {
       msg: 'error',
       result: result,
@@ -2378,23 +4324,23 @@ shepherd.post('/debuglog', function(req, res) {
  *  type: POST
  *  params: herd
  */
-shepherd.post('/herd', function(req, res) {
+shepherd.post('/herd', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
   if (req.body.options &&
       !shepherd.kmdMainPassiveMode) {
-    function testCoindPort(skipError) {
+    const testCoindPort = (skipError) => {
       if (!lockDownAddCoin) {
         const _port = assetChainPorts[req.body.options.ac_name];
 
-        portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+        portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'open') {
             if (!skipError) {
               shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
               shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-              cache.io.emit('service', {
+              shepherd.io.emit('service', {
                 komodod: {
                   error: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
                 },
@@ -2433,11 +4379,11 @@ shepherd.post('/herd', function(req, res) {
     if (req.body.herd === 'komodod') {
       // check if komodod instance is already running
       testCoindPort();
-      setTimeout(function() {
+      setTimeout(() => {
         testCoindPort(true);
       }, 10000);
     } else {
-      herder(req.body.herd, req.body.options);
+      herder(req.body.herd, req.body.options, req.body.coind);
 
       const obj = {
         msg: 'success',
@@ -2447,6 +4393,7 @@ shepherd.post('/herd', function(req, res) {
       res.end(JSON.stringify(obj));
     }
   } else {
+    // (?)
     herder(req.body.herd, req.body.options);
 
     const obj = {
@@ -2460,60 +4407,8 @@ shepherd.post('/herd', function(req, res) {
 
 /*
  *  type: POST
- *  params: herdname
  */
-shepherd.post('/herdlist', function(req, res) {
-  shepherd.log(req.body.herdname);
-
-  pm2.connect(true, function(err) {
-    if (err) {
-      shepherd.writeLog(`herdlist err: ${err}`);
-      shepherd.log(`herdlist err:: ${err}`);
-    }
-    pm2.describe(req.body.herdname, function(err, list) {
-      pm2.disconnect(); // disconnect after getting proc info list
-
-      if (err) {
-        shepherd.writeLog(`pm2.describe err: ${err}`);
-        shepherd.log(`pm2.describe err: ${err}`);
-      }
-
-      shepherd.log(list[0].pm2_env.status) // print status of IGUANA proc
-      shepherd.log(list[0].pid) // print pid of IGUANA proc
-      shepherd.writeLog(list[0].pm2_env.status);
-      shepherd.writeLog(list[0].pid);
-
-      const obj = {
-        herdname: req.body.herdname,
-        status: list[0].pm2_env.status,
-        pid: list[0].pid,
-      };
-
-      res.end(JSON.stringify(obj));
-     });
-  });
-});
-
-/*
- *  type: POST
- */
-shepherd.post('/slay', function(req, res) {
-  shepherd.log('======= req.body =======');
-  shepherd.log(req.body);
-
-  slayer(req.body.slay);
-  const obj = {
-    msg: 'success',
-    result: 'result',
-  };
-
-  res.end(JSON.stringify(obj));
-});
-
-/*
- *  type: POST
- */
-shepherd.post('/setconf', function(req, res) {
+shepherd.post('/setconf', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
@@ -2536,11 +4431,11 @@ shepherd.post('/setconf', function(req, res) {
 /*
  *  type: POST
  */
-shepherd.post('/getconf', function(req, res) {
+shepherd.post('/getconf', (req, res) => {
   shepherd.log('======= req.body =======');
   shepherd.log(req.body);
 
-  const confpath = getConf(req.body.chain);
+  const confpath = getConf(req.body.chain, req.body.coind);
 
   shepherd.log('got conf path is:');
   shepherd.log(confpath);
@@ -2558,8 +4453,9 @@ shepherd.post('/getconf', function(req, res) {
 /*
  *  type: GET
  *  params: coin, type
+ *  TODO: reorganize to work with coind
  */
-/*shepherd.get('/kick', function(req, res, next) {
+shepherd.get('/kick', (req, res, next) => {
   const _coin = req.query.coin;
   const _type = req.query.type;
 
@@ -2665,12 +4561,12 @@ shepherd.post('/getconf', function(req, res) {
       shepherd.log('deleting ' + currentKickItem.type + (currentKickItem.match ? ' ' + currentKickItem.match : '') + ' ' + iguanaDir + '/' + currentKickItem.name.replace('[coin]', _coin));
       if (currentKickItem.type === 'folder' ||
           currentKickItem.type === 'file') {
-        rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}`, function(err) {
+        /*rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}`, function(err) {
           if (err) {
             shepherd.writeLog(`kickstart err: ${err}`);
             shepherd.log(`kickstart err: ${err}`);
           }
-        });
+        });*/
       } else if (currentKickItem.type === 'pattern') {
         let dirItems = fs.readdirSync(`${iguanaDir}/currentKickItem.name.replace('[coin]', _coin)`);
 
@@ -2678,12 +4574,12 @@ shepherd.post('/getconf', function(req, res) {
             dirItems.length) {
           for (let j = 0; j < dirItems.length; j++) {
             if (dirItems[j].indexOf(currentKickItem.match) > -1) {
-              rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}/${dirItems[j]}`, function(err) {
+              /*rimraf(`${iguanaDir}/${currentKickItem.name.replace('[coin]', _coin)}/${dirItems[j]}`, function(err) {
                 if (err) {
                   shepherd.writeLog(`kickstart err: ${err}`);
                   shepherd.log(`kickstart err: ${err}`);
                 }
-              });
+              });*/
 
               shepherd.log(`deleting ${dirItems[j]}`);
             }
@@ -2701,19 +4597,19 @@ shepherd.post('/getconf', function(req, res) {
   }
 });*/
 
-shepherd.readDebugLog = function(fileLocation, lastNLines) {
+shepherd.readDebugLog = (fileLocation, lastNLines) => {
   return new Promise(
-    function(resolve, reject) {
+    (resolve, reject) => {
       if (lastNLines) {
         try {
-          _fs.access(fileLocation, fs.constants.R_OK, function(err) {
+          _fs.access(fileLocation, fs.constants.R_OK, (err) => {
             if (err) {
               shepherd.log(`error reading ${fileLocation}`);
               shepherd.writeLog(`error reading ${fileLocation}`);
               reject(`readDebugLog error: ${err}`);
             } else {
               shepherd.log(`reading ${fileLocation}`);
-              _fs.readFile(fileLocation, 'utf-8', function(err, data) {
+              _fs.readFile(fileLocation, 'utf-8', (err, data) => {
                 if (err) {
                   shepherd.writeLog(`readDebugLog err: ${err}`);
                   shepherd.log(`readDebugLog err: ${err}`);
@@ -2736,77 +4632,49 @@ shepherd.readDebugLog = function(fileLocation, lastNLines) {
   );
 };
 
-function herder(flock, data) {
+// TODO: json.stringify wrapper
+
+const herder = (flock, data, coind) => {
   if (data === undefined) {
     data = 'none';
     shepherd.log('it is undefined');
   }
 
-  if (flock === 'iguana') {
-    shepherd.log('iguana flock selected...');
-    shepherd.log(`selected data: ${data}`);
-    shepherd.writeLog('iguana flock selected...');
-    shepherd.writeLog(`selected data: ${data}`);
-
-    // COPY CONFS DIR WITH PEERS FILE TO IGUANA DIR, AND KEEP IT IN SYNC
-    fs.copy(iguanaConfsDirSrc, iguanaConfsDir, function(err) {
-      if (err)
-        return shepherd.error(err);
-
-      shepherd.log(`confs files copied successfully at: ${iguanaConfsDir}`);
-      shepherd.writeLog(`confs files copied successfully at: ${iguanaConfsDir}`);
-    });
-
-    pm2.connect(true,function(err) { //start up pm2 god
-      if (err) {
-        shepherd.error(err);
-        process.exit(2);
-      }
-
-      shepherd.log(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-      shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-
-      pm2.start({
-        script: iguanaBin, // path to binary
-        name: 'IGUANA',
-        exec_mode : 'fork',
-        args: [`-port=${shepherd.appConfig.iguanaCorePort}`],
-        cwd: iguanaDir // set correct iguana directory
-      }, function(err, apps) {
-        if (apps[0] &&
-            apps[0].process &&
-            apps[0].process.pid) {
-          iguanaInstanceRegistry[shepherd.appConfig.iguanaCorePort] = {
-            mode: 'main',
-            coin: 'none',
-            pid: apps[0].process.pid,
-            pmid: apps[0].pm2_env.pm_id,
-          };
-          shepherd.writeLog(`iguana core started at port ${shepherd.appConfig.iguanaCorePort} pid ${apps[0].process.pid}`);
-        } else {
-          shepherd.writeLog(`unable to start iguana core at port ${shepherd.appConfig.iguanaCorePort}`);
-          shepherd.log(`unable to start iguana core at port ${shepherd.appConfig.iguanaCorePort}`);
-        }
-
-        pm2.disconnect(); // Disconnect from PM2
-        if (err) {
-          shepherd.writeLog(`iguana core port ${shepherd.appConfig.iguanaCorePort}`);
-          shepherd.log(`iguana fork error: ${err}`);
-          // throw err;
-        }
-      });
-    });
-  }
+  shepherd.log(`herder flock: ${flock} coind: ${coind}`);
+  shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
 
   // TODO: notify gui that reindex/rescan param is used to reflect on the screen
   //       asset chain debug.log unlink
   if (flock === 'komodod') {
-    let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? komodoDir + '/' + data.ac_name : komodoDir) + '/debug.log';
+    let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? `${komodoDir}/${data.ac_name}` : komodoDir) + '/debug.log';
 
     shepherd.log('komodod flock selected...');
-    shepherd.log('selected data: ' + JSON.stringify(data, null, '\t'));
+    shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
     shepherd.writeLog('komodod flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
+
+    // datadir case, check if komodo/chain folder exists
+    if (shepherd.appConfig.dataDir.length &&
+        data.ac_name !== 'komodod') {
+      const _dir = data.ac_name !== 'komodod' ? `${komodoDir}/${data.ac_name}` : komodoDir;
+
+      try {
+         _fs.accessSync(_dir, fs.R_OK | fs.W_OK);
+
+        shepherd.log(`komodod datadir ${_dir} exists`);
+      } catch (e) {
+        shepherd.log(`komodod datadir ${_dir} access err: ${e}`);
+        shepherd.log(`attempting to create komodod datadir ${_dir}`);
+
+        fs.mkdirSync(_dir);
+
+        if (fs.existsSync(_dir)) {
+          shepherd.log(`created komodod datadir folder at ${_dir}`);
+        } else {
+          shepherd.log(`unable to create komodod datadir folder at ${_dir}`);
+        }
+      }
+    }
 
     // truncate debug.log
     if (!shepherd.kmdMainPassiveMode) {
@@ -2825,7 +4693,7 @@ function herder(flock, data) {
             shepherd.log('cant unlink debug.log');
           }
         }
-      } catch(e) {
+      } catch (e) {
         shepherd.log(`komodod debug.log access err: ${e}`);
         shepherd.writeLog(`komodod debug.log access err: ${e}`);
       }
@@ -2836,7 +4704,7 @@ function herder(flock, data) {
 
     try {
       // check if komodod instance is already running
-      portscanner.checkPortStatus(_port, '127.0.0.1', function(error, status) {
+      portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
         // Status is 'open' if currently in use or 'closed' if available
         if (status === 'closed') {
           // start komodod via exec
@@ -2858,7 +4726,7 @@ function herder(flock, data) {
           }
 
           if (shepherd.appConfig.dataDir.length) {
-            _customParam = _customParam + ' -datadir=' + shepherd.appConfig.dataDir + '/' + data.ac_name;
+            _customParam = _customParam + ' -datadir=' + shepherd.appConfig.dataDir + (data.ac_name !== 'komodod' ? '/' + data.ac_name : '');
           }
 
           shepherd.log(`exec ${komododBin} ${data.ac_options.join(' ')}${_customParam}`);
@@ -2874,7 +4742,7 @@ function herder(flock, data) {
             _arg = _arg.trim().split(' ');
             execFile(`${komododBin}`, _arg, {
               maxBuffer: 1024 * 1000000 // 1000 mb
-            }, function(error, stdout, stderr) {
+            }, (error, stdout, stderr) => {
               shepherd.writeLog(`stdout: ${stdout}`);
               shepherd.writeLog(`stderr: ${stderr}`);
 
@@ -2883,7 +4751,7 @@ function herder(flock, data) {
                 shepherd.writeLog(`exec error: ${error}`);
 
                 if (error.toString().indexOf('using -reindex') > -1) {
-                  cache.io.emit('service', {
+                  shepherd.io.emit('service', {
                     komodod: {
                       error: 'run -reindex',
                     },
@@ -2906,7 +4774,121 @@ function herder(flock, data) {
     }
   }
 
-  if (flock === 'zcashd') {
+  // TODO: refactor
+  if (flock === 'chipsd') {
+    let kmdDebugLogLocation = chipsDir + '/debug.log';
+
+    shepherd.log('chipsd flock selected...');
+    shepherd.log('selected data: ' + JSON.stringify(data, null, '\t'));
+    shepherd.writeLog('chipsd flock selected...');
+    shepherd.writeLog(`selected data: ${data}`);
+
+    // truncate debug.log
+    try {
+      const _confFileAccess = _fs.accessSync(kmdDebugLogLocation, fs.R_OK | fs.W_OK);
+
+      if (_confFileAccess) {
+        shepherd.log(`error accessing ${kmdDebugLogLocation}`);
+        shepherd.writeLog(`error accessing ${kmdDebugLogLocation}`);
+      } else {
+        try {
+          fs.unlinkSync(kmdDebugLogLocation);
+          shepherd.log(`truncate ${kmdDebugLogLocation}`);
+          shepherd.writeLog(`truncate ${kmdDebugLogLocation}`);
+        } catch (e) {
+          shepherd.log('cant unlink debug.log');
+        }
+      }
+    } catch(e) {
+      shepherd.log(`chipsd debug.log access err: ${e}`);
+      shepherd.writeLog(`chipsd debug.log access err: ${e}`);
+    }
+
+    // get komodod instance port
+    const _port = assetChainPorts.chipsd;
+
+    try {
+      // check if komodod instance is already running
+      portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+        // Status is 'open' if currently in use or 'closed' if available
+        if (status === 'closed') {
+          // start komodod via exec
+          const _customParamDict = {
+            silent: '&',
+            reindex: '-reindex',
+            change: '-pubkey=',
+            rescan: '-rescan',
+          };
+          let _customParam = '';
+
+          if (data.ac_custom_param === 'silent' ||
+              data.ac_custom_param === 'reindex' ||
+              data.ac_custom_param === 'rescan') {
+            _customParam = ` ${_customParamDict[data.ac_custom_param]}`;
+          } else if (data.ac_custom_param === 'change' && data.ac_custom_param_value) {
+            _customParam = ` ${_customParamDict[data.ac_custom_param]}${data.ac_custom_param_value}`;
+          }
+
+          shepherd.log(`exec ${chipsBin} ${_customParam}`);
+          shepherd.writeLog(`exec ${chipsBin} ${_customParam}`);
+
+          shepherd.log(`daemon param ${data.ac_custom_param}`);
+
+          coindInstanceRegistry['CHIPS'] = true;
+          let _arg = `${_customParam}`;
+          _arg = _arg.trim().split(' ');
+
+          if (_arg &&
+              _arg.length > 1) {
+            execFile(`${chipsBin}`, _arg, {
+              maxBuffer: 1024 * 1000000 // 1000 mb
+            }, (error, stdout, stderr) => {
+              shepherd.writeLog(`stdout: ${stdout}`);
+              shepherd.writeLog(`stderr: ${stderr}`);
+
+              if (error !== null) {
+                shepherd.log(`exec error: ${error}`);
+                shepherd.writeLog(`exec error: ${error}`);
+
+                if (error.toString().indexOf('using -reindex') > -1) {
+                  shepherd.io.emit('service', {
+                    komodod: {
+                      error: 'run -reindex',
+                    },
+                  });
+                }
+              }
+            });
+          } else {
+            execFile(`${chipsBin}`, {
+              maxBuffer: 1024 * 1000000 // 1000 mb
+            }, (error, stdout, stderr) => {
+              shepherd.writeLog(`stdout: ${stdout}`);
+              shepherd.writeLog(`stderr: ${stderr}`);
+
+              if (error !== null) {
+                shepherd.log(`exec error: ${error}`);
+                shepherd.writeLog(`exec error: ${error}`);
+
+                if (error.toString().indexOf('using -reindex') > -1) {
+                  shepherd.io.emit('service', {
+                    komodod: {
+                      error: 'run -reindex',
+                    },
+                  });
+                }
+              }
+            });
+          }
+        }
+      });
+    } catch(e) {
+      shepherd.log(`failed to start chipsd err: ${e}`);
+      shepherd.writeLog(`failed to start chipsd err: ${e}`);
+    }
+  }
+
+  if (flock === 'zcashd') { // TODO: fix(?)
     let kmdDebugLogLocation = `${zcashDir}/debug.log`;
 
     shepherd.log('zcashd flock selected...');
@@ -2914,7 +4896,7 @@ function herder(flock, data) {
     shepherd.writeLog('zcashd flock selected...');
     shepherd.writeLog(`selected data: ${data}`);
 
-    pm2.connect(true, function(err) { // start up pm2 god
+    /*pm2.connect(true, function(err) { // start up pm2 god
       if (err) {
         shepherd.error(err);
         process.exit(2);
@@ -2936,85 +4918,114 @@ function herder(flock, data) {
         }
         // throw err;
       });
-    });
+    });*/
+  }
+
+  if (flock === 'coind') {
+     const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+     let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}/debug.log`;
+
+     shepherd.log(`coind ${coind} flock selected...`);
+     shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
+     shepherd.writeLog(`coind ${coind} flock selected...`);
+     shepherd.writeLog(`selected data: ${data}`);
+
+     // truncate debug.log
+     try {
+       _fs.access(coindDebugLogLocation, fs.constants.R_OK, (err) => {
+         if (err) {
+           shepherd.log(`error accessing ${coindDebugLogLocation}`);
+           shepherd.writeLog(`error accessing ${coindDebugLogLocation}`);
+         } else {
+           shepherd.log(`truncate ${coindDebugLogLocation}`);
+           shepherd.writeLog(`truncate ${coindDebugLogLocation}`);
+           fs.unlink(coindDebugLogLocation);
+         }
+       });
+     } catch(e) {
+       shepherd.log(`coind ${coind} debug.log access err: ${e}`);
+       shepherd.writeLog(`coind ${coind} debug.log access err: ${e}`);
+     }
+
+     // get komodod instance port
+     const _port = shepherd.nativeCoindList[coind.toLowerCase()].port;
+     const coindBin = `${coindRootDir}/${coind.toLowerCase()}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}d`;
+
+     try {
+       // check if coind instance is already running
+       portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+         // Status is 'open' if currently in use or 'closed' if available
+         if (status === 'closed') {
+           shepherd.log(`exec ${coindBin} ${data.ac_options.join(' ')}`);
+           shepherd.writeLog(`exec ${coindBin} ${data.ac_options.join(' ')}`);
+
+           coindInstanceRegistry[coind] = true;
+            let _arg = `${data.ac_options.join(' ')}`;
+            _arg = _arg.trim().split(' ');
+            execFile(`${coindBin}`, _arg, {
+              maxBuffer: 1024 * 1000000 // 1000 mb
+            }, (error, stdout, stderr) => {
+             shepherd.writeLog(`stdout: ${stdout}`);
+             shepherd.writeLog(`stderr: ${stderr}`);
+
+             if (error !== null) {
+               shepherd.log(`exec error: ${error}`);
+               shepherd.writeLog(`exec error: ${error}`);
+             }
+           });
+         } else {
+           shepherd.log(`port ${_port} (${coind}) is already in use`);
+           shepherd.writeLog(`port ${_port} (${coind}) is already in use`);
+         }
+       });
+     } catch(e) {
+       shepherd.log(`failed to start ${coind} err: ${e}`);
+       shepherd.writeLog(`failed to start ${coind} err: ${e}`);
+     }
   }
 }
 
-function slayer(flock) {
-  shepherd.log(flock);
-
-  pm2.delete(flock, function(err, ret) {
-    pm2.disconnect();
-    shepherd.writeLog(`deleting flock ${flock}`);
-    shepherd.writeLog(ret);
-
-    shepherd.log(ret);
-  });
-}
-
-shepherd.setConfKMD = function() {
-  let komodoDir;
-  let zcashDir;
-
-  if (os.platform() === 'darwin') {
-    komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`;
-    ZcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
-  }
-
-  if (os.platform() === 'linux') {
-    komodoDir = `${process.env.HOME}/.komodo`;
-    ZcashDir = `${process.env.HOME}/.zcash`;
-  }
-
-  if (os.platform() === 'win32') {
-    komodoDir = `${process.env.APPDATA}/Komodo`;
-    ZcashDir = `${process.env.APPDATA}/Zcash`;
-  }
-
+shepherd.setConfKMD = (isChips) => {
   // check if kmd conf exists
-  _fs.access(`${komodoDir}/komodo.conf`, fs.constants.R_OK, function(err) {
+  _fs.access(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`, fs.constants.R_OK, (err) => {
     if (err) {
-      shepherd.log('creating komodo conf');
-      shepherd.writeLog(`creating komodo conf in ${komodoDir}/komodo.conf`);
-      setConf('komodod');
+      shepherd.log(isChips ? 'creating chips conf' : 'creating komodo conf');
+      shepherd.writeLog(isChips ? `creating chips conf in ${chipsDir}/chips.conf` : `creating komodo conf in ${komodoDir}/komodo.conf`);
+      setConf(isChips ? 'chipsd' : 'komodod');
     } else {
-      const _komodoConfSize = fs.lstatSync(`${komodoDir}/komodo.conf`);
+      const _confSize = fs.lstatSync(isChips ? `${chipsDir}/chips.conf` : `${komodoDir}/komodo.conf`);
 
-      if (_komodoConfSize.size === 0) {
-        shepherd.log('err: komodo conf file is empty, creating komodo conf');
-        shepherd.writeLog(`creating komodo conf in ${komodoDir}/komodo.conf`);
-        setConf('komodod');
+      if (_confSize.size === 0) {
+        shepherd.log(isChips ? 'err: chips conf file is empty, creating chips conf' : 'err: komodo conf file is empty, creating komodo conf');
+        shepherd.writeLog(isChips ? `creating chips conf in ${chipsDir}/chips.conf` : `creating komodo conf in ${komodoDir}/komodo.conf`);
+        setConf(isChips ? 'chipsd' : 'komodod');
       } else {
-        shepherd.writeLog('komodo conf exists');
-        shepherd.log('komodo conf exists');
+        shepherd.writeLog(isChips ? 'chips conf exists' : 'komodo conf exists');
+        shepherd.log(isChips ? 'chips conf exists' : 'komodo conf exists');
       }
     }
   });
 }
 
-function setConf(flock) {
-  let komodoDir;
-  let zcashDir;
+const setConf = (flock, coind) => {
+  let nativeCoindDir;
+  let DaemonConfPath;
 
   shepherd.log(flock);
   shepherd.writeLog(`setconf ${flock}`);
 
   if (os.platform() === 'darwin') {
-    komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`;
-    ZcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
+    nativeCoindDir = coind ? `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 
   if (os.platform() === 'linux') {
-    komodoDir = `${process.env.HOME}/.komodo`;
-    ZcashDir = `${process.env.HOME}/.zcash`;
+    nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
   }
 
   if (os.platform() === 'win32') {
-    komodoDir = `${process.env.APPDATA}/Komodo`;
-    ZcashDir = `${process.env.APPDATA}/Zcash`;
+    nativeCoindDir = coind ?  `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
   }
 
-  let DaemonConfPath;
   switch (flock) {
     case 'komodod':
       DaemonConfPath = `${komodoDir}/komodo.conf`;
@@ -3030,6 +5041,20 @@ function setConf(flock) {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
       break;
+    case 'chipsd':
+      DaemonConfPath = `${chipsDir}/chips.conf`;
+
+      if (os.platform() === 'win32') {
+        DaemonConfPath = path.normalize(DaemonConfPath);
+      }
+      break;
+    case 'coind':
+       DaemonConfPath = `${nativeCoindDir}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}.conf`;
+
+       if (os.platform() === 'win32') {
+         DaemonConfPath = path.normalize(DaemonConfPath);
+       }
+       break;
     default:
       DaemonConfPath = `${komodoDir}/${flock}/${flock}.conf`;
 
@@ -3040,10 +5065,10 @@ function setConf(flock) {
 
   shepherd.log(DaemonConfPath);
   shepherd.writeLog(`setconf ${DaemonConfPath}`);
-
-  const CheckFileExists = function() {
-    return new Promise(function(resolve, reject) {
-      const result = 'Check Conf file exists is done'
+  
+  const CheckFileExists = () => {
+    return new Promise((resolve, reject) => {
+      const result = 'Check Conf file exists is done';
 
       const confFileExist = fs.ensureFileSync(DaemonConfPath);
       if (confFileExist) {
@@ -3058,8 +5083,8 @@ function setConf(flock) {
     });
   }
 
-  const FixFilePermissions = function() {
-    return new Promise(function(resolve, reject) {
+  const FixFilePermissions = () => {
+    return new Promise((resolve, reject) => {
       const result = 'Conf file permissions updated to Read/Write';
 
       fsnode.chmodSync(DaemonConfPath, '0666');
@@ -3070,11 +5095,11 @@ function setConf(flock) {
     });
   }
 
-  const RemoveLines = function() {
-    return new Promise(function(resolve, reject) {
+  const RemoveLines = () => {
+    return new Promise((resolve, reject) => {
       const result = 'RemoveLines is done';
 
-      fs.readFile(DaemonConfPath, 'utf8', function(err, data) {
+      fs.readFile(DaemonConfPath, 'utf8', (err, data) => {
         if (err) {
           shepherd.writeLog(`setconf error ${err}`);
           return shepherd.log(err);
@@ -3082,7 +5107,7 @@ function setConf(flock) {
 
         const rmlines = data.replace(/(?:(?:\r\n|\r|\n)\s*){2}/gm, '\n');
 
-        fs.writeFile(DaemonConfPath, rmlines, 'utf8', function(err) {
+        fs.writeFile(DaemonConfPath, rmlines, 'utf8', (err) => {
           if (err)
             return shepherd.log(err);
 
@@ -3095,13 +5120,13 @@ function setConf(flock) {
     });
   }
 
-  const CheckConf = function() {
-    return new Promise(function(resolve, reject) {
+  const CheckConf = () => {
+    return new Promise((resolve, reject) => {
       const result = 'CheckConf is done';
 
-      setconf.status(DaemonConfPath, function(err, status) {
-        const rpcuser = function() {
-          return new Promise(function(resolve, reject) {
+      setconf.status(DaemonConfPath, (err, status) => {
+        const rpcuser = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking rpcuser...';
 
             if (status[0].hasOwnProperty('rpcuser')) {
@@ -3128,15 +5153,15 @@ function setConf(flock) {
           });
         }
 
-        const rpcpass = function() {
-          return new Promise(function(resolve, reject) {
+        const rpcpass = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking rpcpassword...';
 
             if (status[0].hasOwnProperty('rpcpassword')) {
               shepherd.log('rpcpassword: OK');
               shepherd.writeLog('rpcpassword: OK');
             } else {
-              var randomstring = md5((Math.random() * Math.random() * 999).toString());
+              const randomstring = md5((Math.random() * Math.random() * 999).toString());
 
               shepherd.log('rpcpassword: NOT FOUND');
               shepherd.writeLog('rpcpassword: NOT FOUND');
@@ -3156,8 +5181,8 @@ function setConf(flock) {
           });
         }
 
-        const rpcbind = function() {
-          return new Promise(function(resolve, reject) {
+        const rpcbind = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking rpcbind...';
 
             if (status[0].hasOwnProperty('rpcbind')) {
@@ -3182,8 +5207,8 @@ function setConf(flock) {
           });
         }
 
-        const server = function() {
-          return new Promise(function(resolve, reject) {
+        const server = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking server...';
 
             if (status[0].hasOwnProperty('server')) {
@@ -3208,31 +5233,52 @@ function setConf(flock) {
           });
         }
 
-        const addnode = function() {
-          return new Promise(function(resolve, reject) {
+        const addnode = () => {
+          return new Promise((resolve, reject) => {
             const result = 'checking addnode...';
 
-            if (status[0].hasOwnProperty('addnode')) {
-              shepherd.log('addnode: OK');
-              shepherd.writeLog('addnode: OK');
-            } else {
-              shepherd.log('addnode: NOT FOUND')
-              fs.appendFile(DaemonConfPath,
-                            '\naddnode=78.47.196.146' +
-                            '\naddnode=5.9.102.210' +
-                            '\naddnode=178.63.69.164' +
-                            '\naddnode=88.198.65.74' +
-                            '\naddnode=5.9.122.241' +
-                            '\naddnode=144.76.94.3',
-                            (err) => {
-                if (err) {
-                  shepherd.writeLog(`append daemon conf err: ${err}`);
-                  shepherd.log(`append daemon conf err: ${err}`);
+            if (flock === 'chipsd' ||
+                flock === 'komodod') {
+              if (status[0].hasOwnProperty('addnode')) {
+                shepherd.log('addnode: OK');
+                shepherd.writeLog('addnode: OK');
+              } else {
+                let nodesList;
+
+                if (flock === 'chipsd') {
+                  nodesList = '\naddnode=95.110.191.193' +
+                  '\naddnode=144.76.167.66' +
+                  '\naddnode=158.69.248.93' +
+                  '\naddnode=149.202.49.218' +
+                  '\naddnode=95.213.205.222' +
+                  '\naddnode=5.9.253.198' +
+                  '\naddnode=164.132.224.253' +
+                  '\naddnode=163.172.4.66' +
+                  '\naddnode=217.182.194.216' +
+                  '\naddnode=94.130.96.114' +
+                  '\naddnode=5.9.253.195';
+                } else if (flock === 'komodod') {
+                  nodesList = '\naddnode=78.47.196.146' +
+                  '\naddnode=5.9.102.210' +
+                  '\naddnode=178.63.69.164' +
+                  '\naddnode=88.198.65.74' +
+                  '\naddnode=5.9.122.241' +
+                  '\naddnode=144.76.94.3';
                 }
-                // throw err;
-                shepherd.log('addnode: ADDED');
-                shepherd.writeLog('addnode: ADDED');
-              });
+
+                shepherd.log('addnode: NOT FOUND');
+                fs.appendFile(DaemonConfPath, nodesList, (err) => {
+                  if (err) {
+                    shepherd.writeLog(`append daemon conf err: ${err}`);
+                    shepherd.log(`append daemon conf err: ${err}`);
+                  }
+                  // throw err;
+                  shepherd.log('addnode: ADDED');
+                  shepherd.writeLog('addnode: ADDED');
+                });
+              }
+            } else {
+              result = 'skip addnode';
             }
 
             resolve(result);
@@ -3240,7 +5286,7 @@ function setConf(flock) {
         }
 
         rpcuser()
-        .then(function(result) {
+        .then((result) => {
           return rpcpass();
         })
         .then(server)
@@ -3256,34 +5302,87 @@ function setConf(flock) {
   }
 
   CheckFileExists()
-  .then(function(result) {
+  .then((result) => {
     return FixFilePermissions();
   })
   .then(RemoveLines)
   .then(CheckConf);
 }
 
-function getConf(flock) {
-  let komodoDir = '';
-  let ZcashDir = '';
+shepherd.getMaxconKMDConf = () => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', (err, data) => {
+      if (err) {
+        shepherd.log(`kmd conf maxconnections param read failed`);
+        resolve('unset');
+      } else {
+        const _maxcon = data.match(/maxconnections=\s*(.*)/);
+
+        if (!_maxcon) {
+          shepherd.log(`kmd conf maxconnections param is unset`);
+          resolve(false);
+        } else {
+          shepherd.log(`kmd conf maxconnections param is already set to ${_maxcon[1]}`);
+          resolve(_maxcon[1]);
+        }
+      }
+    });
+  });
+}
+
+shepherd.setMaxconKMDConf = (limit) => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(`${komodoDir}/komodo.conf`, 'utf8', (err, data) => {
+      const _maxconVal = limit ? 1 : 10;
+
+      if (err) {
+        shepherd.log(`error reading ${komodoDir}/komodo.conf`);
+        resolve(false);
+      } else {
+        if (data.indexOf('maxconnections=') > -1) {
+          const _maxcon = data.match(/maxconnections=\s*(.*)/);
+
+          data = data.replace(`maxconnections=${_maxcon[1]}`, `maxconnections=${_maxconVal}`);
+        } else {
+          data = `${data}\nmaxconnections=${_maxconVal}\n`;
+        }
+
+        fs.writeFile(`${komodoDir}/komodo.conf`, data, (err) => {
+          if (err) {
+            shepherd.log(`error writing ${komodoDir}/komodo.conf maxconnections=${_maxconVal}`);
+            resolve(false);
+          } else {
+            shepherd.log(`kmd conf maxconnections is set to ${_maxconVal}`);
+            resolve(true);
+          }
+        });
+      }
+    });
+  });
+}
+
+const getConf = (flock, coind) => {
   let DaemonConfPath = '';
+  let nativeCoindDir;
+
+  if (flock === 'CHIPS') {
+    flock = 'chipsd';
+  }
 
   shepherd.log(flock);
+  shepherd.log(`getconf coind ${coind}`);
   shepherd.writeLog(`getconf flock: ${flock}`);
 
-  if (os.platform() === 'darwin') {
-    komodoDir = `${process.env.HOME}/Library/Application Support/Komodo`;
-    ZcashDir = `${process.env.HOME}/Library/Application Support/Zcash`;
-  }
-
-  if (os.platform() === 'linux') {
-    komodoDir = `${process.env.HOME}/.komodo`;
-    ZcashDir = `${process.env.HOME}/.zcash`;
-  }
-
-  if (os.platform() === 'win32') {
-    komodoDir = `${process.env.APPDATA}/Komodo`;
-    ZcashDir = `${process.env.APPDATA}/Zcash`;
+  switch (os.platform()) {
+    case 'darwin':
+      nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
+      break;
+    case 'linux':
+      nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
+      break;
+    case 'win32':
+      nativeCoindDir = coind ? `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+      break;
   }
 
   switch (flock) {
@@ -3300,6 +5399,15 @@ function getConf(flock) {
         DaemonConfPath = path.normalize(DaemonConfPath);
       }
       break;
+    case 'chipsd':
+      DaemonConfPath = chipsDir;
+      if (os.platform() === 'win32') {
+        DaemonConfPath = path.normalize(DaemonConfPath);
+      }
+      break;
+    case 'coind':
+      DaemonConfPath = os.platform() === 'win32' ? path.normalize(`${coindRootDir}/${coind.toLowerCase()}`) : `${coindRootDir}/${coind.toLowerCase()}`;
+      break;
     default:
       DaemonConfPath = `${komodoDir}/${flock}`;
       if (os.platform() === 'win32') {
@@ -3308,11 +5416,12 @@ function getConf(flock) {
   }
 
   shepherd.writeLog(`getconf path: ${DaemonConfPath}`);
-  shepherd.log(DaemonConfPath);
+  shepherd.log(`daemon path: ${DaemonConfPath}`);
+
   return DaemonConfPath;
 }
 
-function formatBytes(bytes, decimals) {
+const formatBytes = (bytes, decimals) => {
   if (bytes === 0)
     return '0 Bytes';
 
@@ -3334,7 +5443,7 @@ function formatBytes(bytes, decimals) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
-shepherd.SystemInfo = function() {
+shepherd.SystemInfo = () => {
   const os_data = {
     'totalmem_bytes': os.totalmem(),
     'totalmem_readable': formatBytes(os.totalmem()),
@@ -3343,29 +5452,28 @@ shepherd.SystemInfo = function() {
     'cpu_cores': os.cpus().length,
     'platform': os.platform(),
     'os_release': os.release(),
-    'os_type': os.type()
+    'os_type': os.type(),
   };
 
   return os_data;
 }
 
-shepherd.appInfo = function() {
+shepherd.appInfo = () => {
   const sysInfo = shepherd.SystemInfo();
   const releaseInfo = shepherd.appBasicInfo;
   const dirs = {
-    iguanaDir,
-    iguanaBin,
+    agamaDir,
     komodoDir,
     komododBin,
-    configLocation: `${iguanaDir}/config.json`,
-    cacheLocation: `${iguanaDir}/shepherd`,
+    configLocation: `${agamaDir}/config.json`,
+    cacheLocation: `${agamaDir}/shepherd`,
   };
 
   return {
     sysInfo,
     releaseInfo,
     dirs,
-    appSession: shepherd.appSessionHash
+    appSession: shepherd.appSessionHash,
   };
 }
 
