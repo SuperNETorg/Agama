@@ -52,10 +52,12 @@ shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete d
 
 shepherd.appConfig = shepherd._appConfig.config;
 
+// core
 shepherd = require('./shepherd/paths.js')(shepherd);
 
 shepherd.pathsAgama();
 
+// core
 shepherd = require('./shepherd/log.js')(shepherd);
 shepherd = require('./shepherd/config.js')(shepherd);
 
@@ -84,6 +86,7 @@ shepherd = require('./shepherd/electrum/estimate.js')(shepherd);
 // dex
 shepherd = require('./shepherd/dex/coind.js')(shepherd);
 
+// core
 shepherd = require('./shepherd/addCoinShortcuts.js')(shepherd);
 shepherd = require('./shepherd/dashboardUpdate.js')(shepherd);
 shepherd = require('./shepherd/binsTestUtil.js')(shepherd);
