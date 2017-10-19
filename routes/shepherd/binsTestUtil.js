@@ -214,7 +214,7 @@ module.exports = (shepherd) => {
   // komodod datadir location test
   shepherd.testLocation = (path) => {
     return new shepherd.Promise((resolve, reject) => {
-      if (shepherd.path.indexOf(' ') > -1) {
+      if (path.indexOf(' ') > -1) {
         shepherd.log(`error testing path ${path}`);
         resolve(-1);
       } else {
