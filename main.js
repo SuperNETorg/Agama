@@ -30,6 +30,9 @@ if (osPlatform === 'linux') {
 // GUI APP settings and starting gui on address http://120.0.0.1:17777
 var shepherd = require('./routes/shepherd');
 var guiapp = express();
+
+shepherd.createAgamaDirs();
+
 var appConfig = shepherd.loadLocalConfig(); // load app config
 
 const nativeCoindList = shepherd.scanNativeCoindBins();
@@ -52,7 +55,6 @@ const appBasicInfo = {
 app.setName(appBasicInfo.name);
 app.setVersion(appBasicInfo.version);
 
-shepherd.binFixRights();
 shepherd.createAgamaDirs();
 
 const appSessionHash = md5(Date.now().toString());
@@ -281,7 +283,7 @@ function createAppCloseWindow() {
 	// initialise window
 	appCloseWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
 		width: 500,
-		height: 355,
+		height: 320,
 		frame: false,
 		icon: agamaIcon,
 		show: false,
