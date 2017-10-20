@@ -107,8 +107,8 @@ module.exports = (shepherd) => {
                               inputs: txInputs,
                               outputs: decodedTx.outputs,
                               height: transaction.height,
-                              timestamp: blockInfo.timestamp,
-                              confirmations: currentHeight - transaction.height,
+                              timestamp: Number(transaction.height) === 0 ? Math.floor(Date.now() / 1000) : blockInfo.timestamp,
+                              confirmations: Number(transaction.height) === 0 ? 0 : currentHeight - transaction.height,
                             };
 
                             const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
@@ -149,8 +149,8 @@ module.exports = (shepherd) => {
                             inputs: 'cant parse',
                             outputs: 'cant parse',
                             height: transaction.height,
-                            timestamp: blockInfo.timestamp,
-                            confirmations: currentHeight - transaction.height,
+                            timestamp: Number(transaction.height) === 0 ? Math.floor(Date.now() / 1000) : blockInfo.timestamp,
+                            confirmations: Number(transaction.height) === 0 ? 0 : currentHeight - transaction.height,
                           };
 
                           const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
@@ -166,7 +166,7 @@ module.exports = (shepherd) => {
                         outputs: 'cant parse',
                         height: transaction.height,
                         timestamp: 'cant get block info',
-                        confirmations: currentHeight - transaction.height,
+                        confirmations: Number(transaction.height) === 0 ? 0 : currentHeight - transaction.height,
                       };
                       const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
                       _rawtx.push(formattedTx);
