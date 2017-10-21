@@ -19,7 +19,8 @@ module.exports = (shepherd) => {
 
       const execCliStop = () => {
         let _arg = [];
-        if (chain && !shepherd.nativeCoindList[key.toLowerCase()] && key !== 'CHIPS') {
+        if (chain &&
+            !shepherd.nativeCoindList[key.toLowerCase()] && key !== 'CHIPS') {
           _arg.push(`-ac_name=${chain}`);
 
           if (shepherd.appConfig.dataDir.length) {
@@ -59,15 +60,9 @@ module.exports = (shepherd) => {
             shepherd.log(`exec error: ${error}`);
           }
 
-          if (key === 'CHIPS') {
-            setTimeout(() => {
-              shepherd.killRogueProcess('chips-cli');
-            }, 100);
-          } else {
-            setTimeout(() => {
-              shepherd.killRogueProcess('komodo-cli');
-            }, 100);
-          }
+          setTimeout(() => {
+            shepherd.killRogueProcess(key === 'CHIPS' ? 'chips-cli' : 'komodo-cli');
+          }, 100);
         });
       }
 

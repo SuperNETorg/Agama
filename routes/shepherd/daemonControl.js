@@ -11,16 +11,18 @@ module.exports = (shepherd) => {
     shepherd.log(`getconf coind ${coind}`);
     shepherd.writeLog(`getconf flock: ${flock}`);
 
-    switch (shepherd.os.platform()) {
-      case 'darwin':
-        nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
-        break;
-      case 'linux':
-        nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
-        break;
-      case 'win32':
-        nativeCoindDir = coind ? `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
-        break;
+    if (coind) {
+      switch (shepherd.os.platform()) {
+        case 'darwin':
+          nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
+          break;
+        case 'linux':
+          nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
+          break;
+        case 'win32':
+          nativeCoindDir = coind ? `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+          break;
+      }
     }
 
     switch (flock) {
