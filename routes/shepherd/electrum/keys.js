@@ -45,13 +45,13 @@ module.exports = (shepherd) => {
     res.end(JSON.stringify(successObj));
   });
 
-  shepherd.get('/electrum/keys', (req, res, next) => {
+  shepherd.post('/electrum/keys', (req, res, next) => {
     let _matchingKeyPairs = 0;
     let _electrumKeys = {};
 
     for (let key in shepherd.electrumServers) {
       const _abbr = shepherd.electrumServers[key].abbr;
-      const { priv, pub } = shepherd.seedToWif(req.query.seed, shepherd.findNetworkObj(_abbr), req.query.iguana);
+      const { priv, pub } = shepherd.seedToWif(req.body.seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
 
       if (shepherd.electrumKeys[_abbr].pub === pub &&
           shepherd.electrumKeys[_abbr].priv === priv) {
@@ -59,7 +59,7 @@ module.exports = (shepherd) => {
       }
     }
 
-    if (req.query.active) {
+    if (req.body.active) {
       _electrumKeys = JSON.parse(JSON.stringify(shepherd.electrumKeys));
 
       for (let key in _electrumKeys) {
