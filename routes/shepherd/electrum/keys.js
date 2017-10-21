@@ -23,8 +23,8 @@ module.exports = (shepherd) => {
 
     key.compressed = true;
 
-    shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
-    shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);
+    // shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
+    // shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);
 
     return {
       priv: key.privateWif,
@@ -71,7 +71,7 @@ module.exports = (shepherd) => {
       _electrumKeys = shepherd.electrumKeys;
     }
 
-    shepherd.log(JSON.stringify(_electrumKeys, null, '\t'), true);
+    // shepherd.log(JSON.stringify(_electrumKeys, null, '\t'), true);
 
     const successObj = {
       msg: 'success',
