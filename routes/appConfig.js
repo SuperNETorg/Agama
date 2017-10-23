@@ -14,6 +14,7 @@ const appConfig = {
     dex: {
       walletUnlockTimeout: 3600,
     },
+    cliStopTimeout: 1000,
   },
   schema: {
     host: {
@@ -90,6 +91,11 @@ const appConfig = {
         displayName: 'walletUnlockTimeout',
         type: 'number',
       },
+    },
+    cliStopTimeout: {
+      display: true,
+      displayName: 'CLI stop timeout',
+      type: 'number',
     },
   },
 };
