@@ -429,7 +429,7 @@ function createWindow(status) {
 					shepherd.log('Closing Main Window...');
 					shepherd.writeLog('exiting app...');
 
-					shepherd.quitKomodod(1000);
+					shepherd.quitKomodod(appConfig.cliStopTimeout);
 
 					const result = 'Closing daemons: done';
 
@@ -480,7 +480,7 @@ function createWindow(status) {
 				closeApp();
 			} else {
 				createAppCloseWindow();
-				shepherd.quitKomodod(1000);
+				shepherd.quitKomodod(appConfig.cliStopTimeout);
 				_appClosingInterval = setInterval(function() {
 					if (!Object.keys(shepherd.coindInstanceRegistry).length) {
 						closeApp();

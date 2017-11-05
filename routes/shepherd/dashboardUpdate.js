@@ -261,6 +261,7 @@ module.exports = (shepherd) => {
 
     shepherd.Promise.all(_promiseStack.map((_call, index) => {
       let _params;
+
       if (_call === 'listtransactions') {
         _params = [
           '',
