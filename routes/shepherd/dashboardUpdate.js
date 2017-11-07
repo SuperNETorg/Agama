@@ -264,7 +264,7 @@ module.exports = (shepherd) => {
 
       if (_call === 'listtransactions') {
         _params = [
-          '',
+          '*',
           300,
           0
         ];
