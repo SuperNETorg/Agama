@@ -15,6 +15,9 @@ const appConfig = {
       walletUnlockTimeout: 3600,
     },
     cliStopTimeout: 1000,
+    disableKomododDownModal: false,
+    failedRPCAttemptsThreshold: 10,
+    stopNativeDaemonsOnQuit: true,
   },
   schema: {
     host: {
@@ -95,6 +98,19 @@ const appConfig = {
     cliStopTimeout: {
       display: true,
       displayName: 'CLI stop timeout',
+      info: 'Timeout between consequent CLI stop commands',
+      type: 'number',
+    },
+    stopNativeDaemonsOnQuit: {
+      display: true,
+      displayName: 'Stop native daemons on app quit',
+      info: 'If set to false agama will run in detached coin daemon mode',
+      type: 'boolean',
+    },
+    failedRPCAttemptsThreshold: {
+      display: true,
+      displayName: 'Failed RPC connect attempts threshold',
+      info: 'Number of allowed consequent RPC connect failures before the app marks native coin daemon as not running properly',
       type: 'number',
     },
   },
