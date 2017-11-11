@@ -726,6 +726,7 @@ module.exports = (shepherd) => {
     .then(RemoveLines)
     .then(CheckConf);
   }
+
   /*
    *  type: POST
    *  params: herd

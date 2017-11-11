@@ -77,5 +77,74 @@ module.exports = (shepherd) => {
     }
   }
 
+  shepherd.post('/coind/stop', (req, res) => {
+    const _chain = req.body.chain;
+    let _coindQuitCmd = shepherd.komodocliBin;
+    let _arg = [];
+
+    if (_chain) {
+      _arg.push(`-ac_name=${_chain}`);
+
+      if (shepherd.appConfig.dataDir.length) {
+        _arg.push(`-datadir=${shepherd.appConfig.dataDir + (_chain ? '/' + _chain : '')}`);
+      }
+    } else if (!_chain && shepherd.appConfig.dataDir.length) {
+      _arg.push(`-datadir=${shepherd.appConfig.dataDir}`);
+    }
+
+    console.log(JSON.stringify(shepherd.coindInstanceRegistry, null, '\t'));
+
+    _arg.push('stop');
+    shepherd.execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
+      shepherd.log(`stdout: ${stdout}`);
+      shepherd.log(`stderr: ${stderr}`);
+
+      if (stdout.indexOf('EOF reached') > -1 ||
+          stderr.indexOf('EOF reached') > -1 ||
+          (error && error.toString().indexOf('Command failed') > -1 && !stderr) || // win "special snowflake" case
+          stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
+          stderr.indexOf('connect to server: unknown (code -1)') > -1) {
+        delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+        const obj = {
+          msg: 'success',
+          result: 'result',
+        };
+
+        res.end(JSON.stringify(obj));
+      } else {
+        if (stdout.indexOf('Komodo server stopping') > -1) {
+          delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+
+          const obj = {
+            msg: 'success',
+            result: 'result',
+          };
+
+          res.end(JSON.stringify(obj));
+        } else {
+          const obj = {
+            msg: 'error',
+            result: 'result',
+          };
+
+          res.end(JSON.stringify(obj));
+        }
+      }
+    });
+  });
+
+  shepherd.post('/coins/remove', (req, res) => {
+    const _chain = req.body.chain;
+
+    delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+
+    const obj = {
+      msg: 'success',
+      result: 'result',
+    };
+
+    res.end(JSON.stringify(obj));
+  });
+
   return shepherd;
 };

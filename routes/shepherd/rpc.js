@@ -74,8 +74,8 @@ module.exports = (shepherd) => {
     } else {
       const _mode = req.body.payload.mode === 'passthru' ? 'passthru' : 'default';
       const _chain = req.body.payload.chain === 'KMD' ? null : req.body.payload.chain;
-      let _cmd = req.body.payload.cmd;
       const _params = req.body.payload.params ? ` ${req.body.payload.params}` : '';
+      let _cmd = req.body.payload.cmd;
 
       if (!shepherd.rpcConf[_chain]) {
         shepherd.getConf(req.body.payload.chain === 'KMD' || !req.body.payload.chain && shepherd.kmdMainPassiveMode ? 'komodod' : req.body.payload.chain);

@@ -476,7 +476,8 @@ function createWindow(status) {
 
 			let _appClosingInterval;
 
-			if (!Object.keys(shepherd.coindInstanceRegistry).length) {
+			if (!Object.keys(shepherd.coindInstanceRegistry).length ||
+					!appConfig.stopNativeDaemonsOnQuit) {
 				closeApp();
 			} else {
 				createAppCloseWindow();
