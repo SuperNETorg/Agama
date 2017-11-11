@@ -269,6 +269,7 @@ module.exports = (shepherd) => {
           0
         ];
       }
+
       return new shepherd.Promise((resolve, reject) => {
         _bitcoinRPC(
           _coin,

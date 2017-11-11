@@ -1,3 +1,5 @@
+const spawn = require('child_process').spawn;
+
 module.exports = (shepherd) => {
   const getConf = (flock, coind) => {
     let DaemonConfPath = '';
@@ -135,7 +137,8 @@ module.exports = (shepherd) => {
         // check if komodod instance is already running
         shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
-          if (status === 'closed') {
+          if (status === 'closed' ||
+              !shepherd.appConfig.stopNativeDaemonsOnQuit) {
             // start komodod via exec
             const _customParamDict = {
               silent: '&',
@@ -169,25 +172,33 @@ module.exports = (shepherd) => {
             if (!shepherd.kmdMainPassiveMode) {
               let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
               _arg = _arg.trim().split(' ');
-              shepherd.execFile(`${shepherd.komododBin}`, _arg, {
-                maxBuffer: 1024 * 1000000 // 1000 mb
-              }, (error, stdout, stderr) => {
-                shepherd.writeLog(`stdout: ${stdout}`);
-                shepherd.writeLog(`stderr: ${stderr}`);
 
-                if (error !== null) {
-                  shepherd.log(`exec error: ${error}`);
-                  shepherd.writeLog(`exec error: ${error}`);
+              if (!shepherd.appConfig.stopNativeDaemonsOnQuit) {
+                spawn(shepherd.komododBin, _arg, {
+                  stdio: 'ignore', // piping all stdio to /dev/null
+                  detached: true,
+                }).unref();
+              } else {
+                shepherd.execFile(`${shepherd.komododBin}`, _arg, {
+                  maxBuffer: 1024 * 1000000 // 1000 mb
+                }, (error, stdout, stderr) => {
+                  shepherd.writeLog(`stdout: ${stdout}`);
+                  shepherd.writeLog(`stderr: ${stderr}`);
 
-                  if (error.toString().indexOf('using -reindex') > -1) {
-                    shepherd.io.emit('service', {
-                      komodod: {
-                        error: 'run -reindex',
-                      },
-                    });
+                  if (error !== null) {
+                    shepherd.log(`exec error: ${error}`);
+                    shepherd.writeLog(`exec error: ${error}`);
+
+                    if (error.toString().indexOf('using -reindex') > -1) {
+                      shepherd.io.emit('service', {
+                        komodod: {
+                          error: 'run -reindex',
+                        },
+                      });
+                    }
                   }
-                }
-              });
+                });
+              }
             }
           } else {
             if (shepherd.kmdMainPassiveMode) {
@@ -715,6 +726,7 @@ module.exports = (shepherd) => {
     .then(RemoveLines)
     .then(CheckConf);
   }
+
   /*
    *  type: POST
    *  params: herd
@@ -731,7 +743,8 @@ module.exports = (shepherd) => {
 
           shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
             // Status is 'open' if currently in use or 'closed' if available
-            if (status === 'open') {
+            if (status === 'open' &&
+                shepherd.appConfig.stopNativeDaemonsOnQuit) {
               if (!skipError) {
                 shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
                 shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);

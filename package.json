@@ -38,6 +38,7 @@
     "fix-path": "^2.1.0",
     "fs-extra": "^1.0.0",
     "graceful-fs": "^4.1.11",
+    "js-sha256": "^0.7.1",
     "nodejs-aes256": "^1.0.1",
     "portscanner": "^2.1.1",
     "ps-node": "^0.1.5",

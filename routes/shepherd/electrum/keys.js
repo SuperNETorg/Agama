@@ -1,6 +1,15 @@
+const sha256 = require('js-sha256');
+
 module.exports = (shepherd) => {
-  shepherd.seedToWif = (seed, network, iguana) => {
-    const bytes = shepherd.sha256(seed, { asBytes: true });
+  shepherd.seedToWif = (seed, network, iguana, old) => {
+    let bytes;
+
+    if (old) {
+      bytes = shepherd.sha256(seed, { asBytes: true });
+    } else {
+      const hash = sha256.create().update(seed);
+      bytes = hash.array();
+    }
 
     if (iguana) {
       bytes[0] &= 248;
@@ -23,6 +32,8 @@ module.exports = (shepherd) => {
 
     key.compressed = true;
 
+    // shepherd.log(`seed: ${seed}`, true);
+    // shepherd.log(`network ${network}`, true);
     // shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
     // shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);
 
