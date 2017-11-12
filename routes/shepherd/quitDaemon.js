@@ -134,16 +134,32 @@ module.exports = (shepherd) => {
   });
 
   shepherd.post('/coins/remove', (req, res) => {
-    const _chain = req.body.chain;
+    if (req.body.mode === 'native') {
+      const _chain = req.body.chain;
 
-    delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+      delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
 
-    const obj = {
-      msg: 'success',
-      result: 'result',
-    };
+      const obj = {
+        msg: 'success',
+        result: 'result',
+      };
 
-    res.end(JSON.stringify(obj));
+      res.end(JSON.stringify(obj));
+    } else {
+      delete shepherd.electrumCoins[req.body.chain === 'komodo' ? 'KMD' : req.body.chain];
+
+      if (Object.keys(shepherd.electrumCoins).length - 1 === 0) {
+        shepherd.electrumCoins.auth = false;
+        shepherd.electrumKeys = {};
+      }
+
+      const obj = {
+        msg: 'success',
+        result: 'result',
+      };
+
+      res.end(JSON.stringify(obj));
+    }
   });
 
   return shepherd;
