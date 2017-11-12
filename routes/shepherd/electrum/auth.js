@@ -34,7 +34,7 @@ module.exports = (shepherd) => {
     res.end(JSON.stringify(successObj));
   });
 
-  shepherd.get('/electrum/dev/logout', (req, res, next) => {
+  shepherd.post('/electrum/lock', (req, res, next) => {
     shepherd.electrumCoins.auth = false;
     shepherd.electrumKeys = {};
 
@@ -44,6 +44,20 @@ module.exports = (shepherd) => {
     };
 
     res.end(JSON.stringify(successObj));
+  });
+
+  shepherd.post('/electrum/logout', (req, res, next) => {
+    shepherd.electrumCoins = {
+      auth: false,
+    };
+    shepherd.electrumKeys = {};
+
+    const obj = {
+      msg: 'success',
+      result: 'result',
+    };
+
+    res.end(JSON.stringify(obj));
   });
 
   return shepherd;
