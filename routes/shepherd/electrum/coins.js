@@ -26,17 +26,6 @@ module.exports = (shepherd) => {
     }
   }
 
-  shepherd.get('/electrum/coins/remove', (req, res, next) => {
-    delete shepherd.electrumCoins[req.query.coin];
-
-    const successObj = {
-      msg: 'success',
-      result,
-    };
-
-    res.end(JSON.stringify(successObj));
-  });
-
   shepherd.get('/electrum/coins/add', (req, res, next) => {
     const result = shepherd.addElectrumCoin(req.query.coin);
 
