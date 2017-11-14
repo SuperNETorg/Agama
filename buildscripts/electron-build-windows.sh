@@ -16,6 +16,9 @@ electron-packager . --platform=win32 \
   --buildVersion=$AGAMA_VERSION \
   --ignore=assets/bin/osx \
   --ignore=assets/bin/linux64 \
+  --ignore=react/node_modules \
+  --ignore=react/src \
+  --ignore=react/www \
   --overwrite \
   --version-string.CompanyName="SuperNET" \
   --version-string.FileDescription="Agama" \

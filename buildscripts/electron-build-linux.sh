@@ -15,4 +15,7 @@ electron-packager . --platform=linux --arch=x64 \
   --buildVersion=$AGAMA_VERSION \
   --ignore=assets/bin/win64 \
   --ignore=assets/bin/osx \
+  --ignore=react/node_modules \
+  --ignore=react/src \
+  --ignore=react/www \
   --overwrite
