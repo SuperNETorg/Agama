@@ -107,6 +107,7 @@ shepherd = require('./shepherd/appInfo.js')(shepherd);
 shepherd = require('./shepherd/daemonControl.js')(shepherd);
 shepherd = require('./shepherd/auth.js')(shepherd);
 shepherd = require('./shepherd/coins.js')(shepherd);
+shepherd = require('./shepherd/coindWalletKeys.js')(shepherd);
 
 shepherd.printDirs();
 
