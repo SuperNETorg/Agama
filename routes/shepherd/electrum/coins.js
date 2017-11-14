@@ -16,7 +16,7 @@ module.exports = (shepherd) => {
 
       return Math.floor(Math.random() * (max - min + 1)) + min; // the maximum is inclusive and the minimum is inclusive
     }
-    let randomServer = {};
+    let randomServer;
 
     // pick a random server to communicate with
     if (servers &&
@@ -26,8 +26,10 @@ module.exports = (shepherd) => {
       const _serverDetails = _randomServer.split(':');
 
       if (_serverDetails.length === 2) {
-        randomServer.ip = _serverDetails[0];
-        randomServer.port = _serverDetails[1];
+        randomServer = {
+          ip: _serverDetails[0],
+          port: _serverDetails[1],
+        };
       }
     }
 
@@ -37,15 +39,21 @@ module.exports = (shepherd) => {
           name: key,
           abbr: coin,
           server: {
-            ip: randomServer.ip, // shepherd.electrumServers[key].address,
-            port: randomServer.port, // shepherd.electrumServers[key].port,
+            ip: randomServer ? randomServer.ip : shepherd.electrumServers[key].address,
+            port: randomServer ? randomServer.port : shepherd.electrumServers[key].port,
           },
           serverList: shepherd.electrumServers[key].serverList ? shepherd.electrumServers[key].serverList : 'none',
           txfee: 'calculated' /*shepherd.electrumServers[key].txfee*/,
         };
 
         shepherd.log(`default ${coin} electrum server ${shepherd.electrumServers[key].address + ':' + shepherd.electrumServers[key].port}`, true);
-        shepherd.log(`random ${coin} electrum server ${randomServer.ip + ':' + randomServer.port}`, true);
+
+        if (randomServer) {
+          shepherd.log(`random ${coin} electrum server ${randomServer.ip + ':' + randomServer.port}`, true);
+        } else {
+          shepherd.log(`${coin} doesnt have any backup electrum servers`, true);
+        }
+
         return true;
       }
     }
