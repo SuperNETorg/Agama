@@ -82,40 +82,6 @@ module.exports = (shepherd) => {
       }
 
       if (_mode === 'default') {
-        /*let _body = {
-          agent: 'bitcoinrpc',
-          method: _cmd,
-        };
-
-        if (req.body.payload.params) {
-          _body = {
-            agent: 'bitcoinrpc',
-            method: _cmd,
-            params: req.body.payload.params === ' ' ? [''] : req.body.payload.params,
-          };
-        }
-
-        const options = {
-          url: `http://localhost:${rpcConf[req.body.payload.chain].port}`,
-          method: 'POST',
-          auth: {
-            user: rpcConf[req.body.payload.chain].user,
-            pass: rpcConf[req.body.payload.chain].pass,
-          },
-          body: JSON.stringify(_body)
-        };
-
-        // send back body on both success and error
-        // this bit replicates iguana core's behaviour
-        shepherd.request(options, function(error, response, body) {
-          if (response &&
-              response.statusCode &&
-              response.statusCode === 200) {
-            res.end(body);
-          } else {
-            res.end(body);
-          }
-        });*/
         if (_cmd === 'debug' &&
             _chain !== 'CHIPS') {
           if (shepherd.nativeCoindList[_chain.toLowerCase()]) {
@@ -192,7 +158,13 @@ module.exports = (shepherd) => {
                   response.statusCode === 200) {
                 res.end(body);
               } else {
-                res.end(body);
+                res.end(body ? body : JSON.stringify({
+                  result: 'error',
+                  error: {
+                    code: -777,
+                    message: `unable to call method ${_cmd} at port ${shepherd.rpcConf[req.body.payload.chain].port}`,
+                  },
+                }));
               }
             });
           }
