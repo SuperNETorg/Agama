@@ -1,4 +1,5 @@
 const spawn = require('child_process').spawn;
+const fs = require('fs-extra');
 
 module.exports = (shepherd) => {
   const getConf = (flock, coind) => {
@@ -173,14 +174,30 @@ module.exports = (shepherd) => {
               let _arg = `${coindACParam}${data.ac_options.join(' ')}${_customParam}`;
               _arg = _arg.trim().split(' ');
 
+              const _daemonName = data.ac_name !== 'komodod' ? data.ac_name : 'komodod';
+              const _daemonLogName = `${shepherd.agamaDir}/${_daemonName}.log`;
+
+              try {
+                fs.accessSync(_daemonLogName, shepherd.fs.R_OK | shepherd.fs.W_OK);
+                shepherd.log(`created ${_daemonLogName}`);
+                fs.unlinkSync(_daemonLogName);
+              } catch (e) {
+                shepherd.log(`error accessing ${_daemonLogName}, doesnt exist?`);
+              }
+
               if (!shepherd.appConfig.stopNativeDaemonsOnQuit) {
+                let spawnOut = fs.openSync(_daemonLogName, 'a');
+                let spawnErr = fs.openSync(_daemonLogName, 'a');
+
                 spawn(shepherd.komododBin, _arg, {
-                  stdio: 'ignore', // piping all stdio to /dev/null
+                  stdio: ['ignore', spawnOut, spawnErr],
                   detached: true,
                 }).unref();
               } else {
-                shepherd.execFile(`${shepherd.komododBin}`, _arg, {
-                  maxBuffer: 1024 * 1000000 // 1000 mb
+                let logStream = fs.createWriteStream(_daemonLogName, { flags: 'a' });
+
+                let _daemonChildProc = shepherd.execFile(`${shepherd.komododBin}`, _arg, {
+                  maxBuffer: 1024 * 1000000, // 1000 mb
                 }, (error, stdout, stderr) => {
                   shepherd.writeLog(`stdout: ${stdout}`);
                   shepherd.writeLog(`stderr: ${stderr}`);
@@ -198,6 +215,14 @@ module.exports = (shepherd) => {
                     }
                   }
                 });
+
+                _daemonChildProc.stdout.on('data', (data) => {
+                  // shepherd.log(`${_daemonName} stdout: \n${data}`);
+                }).pipe(logStream);
+
+                _daemonChildProc.stderr.on('data', (data) => {
+                  // shepherd.error(`${_daemonName} stderr:\n${data}`);
+                }).pipe(logStream);
               }
             }
           } else {

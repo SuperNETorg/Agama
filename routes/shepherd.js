@@ -31,6 +31,7 @@ shepherd.assetChainPorts = require('./ports.js');
 shepherd._appConfig = require('./appConfig.js');
 
 shepherd.coindInstanceRegistry = {};
+shepherd.coindStdout = {};
 shepherd.guiLog = {};
 shepherd.rpcConf = {};
 shepherd.appRuntimeLog = [];

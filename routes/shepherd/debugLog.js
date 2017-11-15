@@ -1,6 +1,6 @@
 module.exports = (shepherd) => {
   /*
-   *  type: GET
+   *  type: POST
    *  params: herd, lastLines
    */
   shepherd.post('/debuglog', (req, res) => {
@@ -52,6 +52,27 @@ module.exports = (shepherd) => {
     });
   });
 
+  shepherd.get('/coind/stdout', (req, res) => {
+    const _daemonName = req.query.chain !== 'komodod' ? req.query.chain : 'komodod';
+    const _daemonLogName = `${shepherd.agamaDir}/${_daemonName}.log`;
+
+    shepherd.readDebugLog(_daemonLogName, 'all')
+    .then((result) => {
+      const _obj = {
+        msg: 'success',
+        result: result,
+      };
+
+      res.end(JSON.stringify(_obj));
+    }, (result) => {
+      const _obj = {
+        msg: 'error',
+        result: result,
+      };
+
+      res.end(JSON.stringify(_obj));
+    });
+  });
 
   shepherd.readDebugLog = (fileLocation, lastNLines) => {
     return new shepherd.Promise(
@@ -72,7 +93,13 @@ module.exports = (shepherd) => {
                   }
 
                   const lines = data.trim().split('\n');
-                  const lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
+                  let lastLine;
+
+                  if (lastNLines === 'all') {
+                    lastLine = data.trim();
+                  } else {
+                    lastLine = lines.slice(lines.length - lastNLines, lines.length).join('\n');
+                  }
 
                   resolve(lastLine);
                 });

@@ -97,8 +97,8 @@ module.exports = (shepherd) => {
             shepherd.readDebugLog(coindDebugLogLocation, 1)
             .then((result) => {
               const _obj = {
-                'msg': 'success',
-                'result': result,
+                msg: 'success',
+                result: result,
               };
 
               // shepherd.log('bitcoinrpc debug ====>');
@@ -127,15 +127,15 @@ module.exports = (shepherd) => {
           }
 
           let _body = {
-            'agent': 'bitcoinrpc',
-            'method': _cmd,
+            agent: 'bitcoinrpc',
+            method: _cmd,
           };
 
           if (req.body.payload.params) {
             _body = {
-              'agent': 'bitcoinrpc',
-              'method': _cmd,
-              'params': req.body.payload.params === ' ' ? [''] : req.body.payload.params,
+              agent: 'bitcoinrpc',
+              method: _cmd,
+              params: req.body.payload.params === ' ' ? [''] : req.body.payload.params,
             };
           }
 
@@ -144,10 +144,10 @@ module.exports = (shepherd) => {
               url: `http://localhost:${shepherd.rpcConf[req.body.payload.chain].port}`,
               method: 'POST',
               auth: {
-                'user': shepherd.rpcConf[req.body.payload.chain].user,
-                'pass': shepherd.rpcConf[req.body.payload.chain].pass
+                user: shepherd.rpcConf[req.body.payload.chain].user,
+                pass: shepherd.rpcConf[req.body.payload.chain].pass,
               },
-              body: JSON.stringify(_body)
+              body: JSON.stringify(_body),
             };
 
             // send back body on both success and error
