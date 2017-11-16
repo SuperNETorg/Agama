@@ -8,18 +8,51 @@ module.exports = (shepherd) => {
   }
 
   shepherd.addElectrumCoin = (coin) => {
+    const servers = shepherd.electrumServers[coin === 'KMD' ? 'komodo' : coin.toLowerCase()].serverList;
+    // select random server
+    const getRandomIntInclusive = (min, max) => {
+      min = Math.ceil(min);
+      max = Math.floor(max);
+
+      return Math.floor(Math.random() * (max - min + 1)) + min; // the maximum is inclusive and the minimum is inclusive
+    }
+    let randomServer;
+
+    // pick a random server to communicate with
+    if (servers &&
+        servers.length > 0) {
+      const _randomServerId = getRandomIntInclusive(0, servers.length - 1);
+      const _randomServer = servers[_randomServerId];
+      const _serverDetails = _randomServer.split(':');
+
+      if (_serverDetails.length === 2) {
+        randomServer = {
+          ip: _serverDetails[0],
+          port: _serverDetails[1],
+        };
+      }
+    }
+
     for (let key in shepherd.electrumServers) {
       if (shepherd.electrumServers[key].abbr === coin) {
         shepherd.electrumCoins[coin] = {
           name: key,
           abbr: coin,
           server: {
-            ip: shepherd.electrumServers[key].address,
-            port: shepherd.electrumServers[key].port,
+            ip: randomServer ? randomServer.ip : shepherd.electrumServers[key].address,
+            port: randomServer ? randomServer.port : shepherd.electrumServers[key].port,
           },
           serverList: shepherd.electrumServers[key].serverList ? shepherd.electrumServers[key].serverList : 'none',
           txfee: 'calculated' /*shepherd.electrumServers[key].txfee*/,
         };
+
+        shepherd.log(`default ${coin} electrum server ${shepherd.electrumServers[key].address + ':' + shepherd.electrumServers[key].port}`, true);
+
+        if (randomServer) {
+          shepherd.log(`random ${coin} electrum server ${randomServer.ip + ':' + randomServer.port}`, true);
+        } else {
+          shepherd.log(`${coin} doesnt have any backup electrum servers`, true);
+        }
 
         return true;
       }

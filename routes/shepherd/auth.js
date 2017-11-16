@@ -8,7 +8,8 @@ module.exports = (shepherd) => {
     let _status = false;
 
     if (Object.keys(shepherd.coindInstanceRegistry).length) {
-      if (Object.keys(shepherd.electrumCoins).length > 1 && shepherd.electrumCoins.auth) {
+      if (Object.keys(shepherd.electrumCoins).length > 1 &&
+          shepherd.electrumCoins.auth) {
         _status = true;
       } else if (Object.keys(shepherd.electrumCoins).length === 1 && !shepherd.electrumCoins.auth) {
         _status = true;
@@ -20,11 +21,7 @@ module.exports = (shepherd) => {
     }
 
     successObj = {
-      pubkey: 'nativeonly',
-      result: 'success',
-      handle: '',
       status: _status ? 'unlocked' : 'locked',
-      duration: 2507830,
     };
 
     res.end(JSON.stringify(successObj));

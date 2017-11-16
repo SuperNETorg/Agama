@@ -15,7 +15,6 @@ const appConfig = {
       walletUnlockTimeout: 3600,
     },
     cliStopTimeout: 1000,
-    disableKomododDownModal: false,
     failedRPCAttemptsThreshold: 10,
     stopNativeDaemonsOnQuit: true,
   },

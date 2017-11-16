@@ -1,7 +1,7 @@
 {
   "name": "agama-app",
   "productName": "Agama",
-  "version": "0.2.23",
+  "version": "0.2.24",
   "description": "Agama Wallet Desktop App",
   "main": "main.js",
   "scripts": {
@@ -21,7 +21,7 @@
   "author": "SuperNET",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^1.4.1",
+    "electron": "^1.6.15",
     "electron-installer-debian": "^0.6.0",
     "electron-installer-redhat": "^0.5.0"
   },
@@ -45,6 +45,7 @@
     "remote-file-size": "^3.0.3",
     "request": "^2.80.0",
     "sha256": "^0.2.0",
-    "socket.io": "^1.7.3"
+    "socket.io": "^1.7.3",
+    "wif": "^2.0.6"
   }
 }

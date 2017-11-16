@@ -387,6 +387,7 @@ function createWindow(status) {
 		mainWindow.appSessionHash = appSessionHash;
 		mainWindow.assetChainPorts = require('./routes/ports.js');
 		mainWindow.zcashParamsExist = _zcashParamsExist;
+		mainWindow.zcashParamsExistPromise = shepherd.zcashParamsExistPromise;
 		mainWindow.agamaIcon = agamaIcon;
 		mainWindow.testLocation = shepherd.testLocation;
 		mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
