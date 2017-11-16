@@ -182,7 +182,7 @@ module.exports = (shepherd) => {
                 shepherd.log(`created ${_daemonLogName}`);
                 fs.unlinkSync(_daemonLogName);
               } catch (e) {
-                shepherd.log(`error accessing ${_daemonLogName}, doesnt exist?`);
+                shepherd.log(`error accessing ${_daemonLogName}, doesnt exist or another proc is already running`);
               }
 
               if (!shepherd.appConfig.stopNativeDaemonsOnQuit) {
