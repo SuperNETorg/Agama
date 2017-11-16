@@ -54,6 +54,13 @@ module.exports = (shepherd) => {
     return _checkList;
   }
 
+  shepherd.zcashParamsExistPromise = () => {
+    return new shepherd.Promise((resolve, reject) => {
+      const _verify = shepherd.zcashParamsExist();
+      resolve(_verify);
+    });
+  };
+
   /*
    *  Update bins
    *  type:
