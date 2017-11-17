@@ -137,7 +137,7 @@ module.exports = (shepherd) => {
     if (req.body.mode === 'native') {
       const _chain = req.body.chain;
 
-      delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+      delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodod'];
 
       const obj = {
         msg: 'success',
