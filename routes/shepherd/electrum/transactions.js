@@ -50,7 +50,7 @@ module.exports = (shepherd) => {
             if (json &&
                 json.length) {
               json = shepherd.sortTransactions(json);
-              json = json.slice(0, MAX_TX);
+              json = json.length > MAX_TX ? json.slice(0, MAX_TX) : json;
               let _rawtx = [];
 
               shepherd.log(json.length, true);
