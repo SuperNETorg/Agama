@@ -6,13 +6,13 @@ let electrumServers = {
   },*/
   revs: { // !estimatefee
     address: '173.212.225.176',
-    port: 50050,
+    port: 10003,
     proto: 'tcp',
     txfee: 10000,
     abbr: 'REVS',
     serverList: [
-      '173.212.225.176:50050',
-      '136.243.45.140:50050'
+      '173.212.225.176:10003',
+      '136.243.45.140:10003'
     ],
   },
   mnz: { // !estimatefee
@@ -44,13 +44,13 @@ let electrumServers = {
   },
   jumblr: { // !estimatefee
     address: '173.212.225.176',
-    port: 50051,
+    port: 10004,
     proto: 'tcp',
     txfee: 10000,
     abbr: 'JUMBLR',
     serverList: [
-      '173.212.225.176:50051',
-      '136.243.45.140:50051'
+      '173.212.225.176:10004',
+      '136.243.45.140:10004'
     ],
   },
   komodo: { // !estimatefee
