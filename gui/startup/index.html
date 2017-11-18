@@ -19,13 +19,33 @@
           onClick="quitApp()">
           <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-close.png">
         </div>
-        <img
-          src="../EasyDEX-GUI/assets/mainWindow/img/agama-icon.svg"
-          class="agama-logo"
-          alt="Agama Wallet"
-          width="80"
-          height="100" />
-        <div id="agamaModeStatus">Choose Agama mode</div>
+        <div class="intro">
+          <img
+            src="../EasyDEX-GUI/assets/mainWindow/img/agama-icon.svg"
+            class="agama-logo"
+            alt="Agama Wallet"
+            width="80"
+            height="100" />
+          <div id="agamaModeStatus">
+            Choose Agama mode
+            <div
+              onClick="toggleMainWindowHelp()"
+              class="settings-help pointer"
+              title="About Agama modes">
+              <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-question.png" />
+            </div>
+          </div>
+        </div>
+        <div class="agama-modes-help" style="display: none">
+          <img
+            onClick="toggleMainWindowHelp()"
+            class="close-btn"
+            src="../EasyDEX-GUI/assets/mainWindow/img/fa-close.png">
+          <strong>Be aware:</strong> Native mode requires to download the whole blockchain data to a local disk before you can start using it. This may take from <strong>several hours to a day</strong> depending on your connection and hardware. Please <u>try to keep Agama running</u> until the whole process is finished.
+          <br /><br />
+          If you need a quick and easy access to your funds try SPV mode which doesn't require any blockchain to be loaded locally. All data is requested on demand from Electrum servers.
+        </div>
+        <div class="mode-desc native">Full blockchain mode</div>
         <button
           id="nativeOnlyBtn"
           onClick="closeMainWindow(true)"
@@ -50,6 +70,7 @@
           </li>
         </ul>
 
+        <div class="mode-desc spv">Starts in seconds</div>
         <button
           id="spvBtn"
           onClick="startSPV('KMD')"
