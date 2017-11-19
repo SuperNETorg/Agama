@@ -115,18 +115,24 @@ module.exports = (shepherd) => {
 
               if (result[a]) {
                 for (let b = 0; b < result[a].length; b++) {
-                  let filteredArray;
-
-                  filteredArray = json.filter(res => res.address === result[a][b]).map(res => res.amount);
+                  const filteredArraySpends = json.filter(res => res.address === result[a][b]);
+                  const filteredArray = json.filter(res => res.address === result[a][b]).map(res => res.amount);
 
                   let sum = 0;
+                  let spendableSum = 0;
+
                   for (let i = 0; i < filteredArray.length; i++) {
                     sum += filteredArray[i];
+
+                    if (filteredArraySpends[i].spendable) {
+                      spendableSum += filteredArray[i];
+                    }
                   }
 
                   newAddressArray[a][b] = {
                     address: result[a][b],
                     amount: sum,
+                    spendable: spendableSum,
                     type: a === 0 ? 'public': 'private',
                   };
                 }
