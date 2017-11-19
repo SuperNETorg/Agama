@@ -120,12 +120,15 @@ module.exports = (shepherd) => {
 
                   let sum = 0;
                   let spendableSum = 0;
+                  let canspend = true;
 
                   for (let i = 0; i < filteredArray.length; i++) {
                     sum += filteredArray[i];
 
                     if (filteredArraySpends[i].spendable) {
                       spendableSum += filteredArray[i];
+                    } else {
+                      canspend = false;
                     }
                   }
 
@@ -133,6 +136,7 @@ module.exports = (shepherd) => {
                     address: result[a][b],
                     amount: sum,
                     spendable: spendableSum,
+                    canspend,
                     type: a === 0 ? 'public': 'private',
                   };
                 }
