@@ -1,17 +1,31 @@
+const fs = require('fs-extra');
+const path = require('path');
+
 module.exports = (shepherd) => {
   shepherd.readVersionFile = () => {
     // read app version
-    const rootLocation = shepherd.path.join(__dirname, '../../');
-    const localVersionFile = shepherd.fs.readFileSync(`${rootLocation}version`, 'utf8');
+    const rootLocation = path.join(__dirname, '../../');
+    const localVersionFile = fs.readFileSync(`${rootLocation}version`, 'utf8');
 
     return localVersionFile;
   }
 
   shepherd.createAgamaDirs = () => {
-    if (!shepherd.fs.existsSync(shepherd.agamaDir)) {
-      shepherd.fs.mkdirSync(shepherd.agamaDir);
+    const rootLocation = path.join(__dirname, '../../');
 
-      if (shepherd.fs.existsSync(shepherd.agamaDir)) {
+    fs.readdir(rootLocation, (err, items) => {
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].substr(0, 3) === 'gen') {
+          console.log(items[i]);
+          fs.unlinkSync(rootLocation + items[i]);
+        }
+      }
+    });
+
+    if (!fs.existsSync(shepherd.agamaDir)) {
+      fs.mkdirSync(shepherd.agamaDir);
+
+      if (fs.existsSync(shepherd.agamaDir)) {
         shepherd.log(`created agama folder at ${shepherd.agamaDir}`);
         shepherd.writeLog(`created agama folder at ${shepherd.agamaDir}`);
       }
@@ -19,10 +33,10 @@ module.exports = (shepherd) => {
       shepherd.log('agama folder already exists');
     }
 
-    if (!shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd`)) {
-      shepherd.fs.mkdirSync(`${shepherd.agamaDir}/shepherd`);
+    if (!fs.existsSync(`${shepherd.agamaDir}/shepherd`)) {
+      fs.mkdirSync(`${shepherd.agamaDir}/shepherd`);
 
-      if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd`)) {
+      if (fs.existsSync(`${shepherd.agamaDir}/shepherd`)) {
         shepherd.log(`created shepherd folder at ${shepherd.agamaDir}/shepherd`);
         shepherd.writeLog(`create shepherd folder at ${shepherd.agamaDir}/shepherd`);
       }
@@ -30,10 +44,10 @@ module.exports = (shepherd) => {
       shepherd.log('agama/shepherd folder already exists');
     }
 
-    if (!shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
-      shepherd.fs.mkdirSync(`${shepherd.agamaDir}/shepherd/pin`);
+    if (!fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
+      fs.mkdirSync(`${shepherd.agamaDir}/shepherd/pin`);
 
-      if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
+      if (fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
         shepherd.log(`created pin folder at ${shepherd.agamaDir}/shepherd/pin`);
         shepherd.writeLog(`create pin folder at ${shepherd.agamaDir}/shepherd/pin`);
       }
@@ -41,8 +55,8 @@ module.exports = (shepherd) => {
       shepherd.log('shepherd/pin folder already exists');
     }
 
-    if (!shepherd.fs.existsSync(shepherd.zcashParamsDir)) {
-      shepherd.fs.mkdirSync(shepherd.zcashParamsDir);
+    if (!fs.existsSync(shepherd.zcashParamsDir)) {
+      fs.mkdirSync(shepherd.zcashParamsDir);
     } else {
       shepherd.log('zcashparams folder already exists');
     }
