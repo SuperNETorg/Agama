@@ -38,6 +38,7 @@ module.exports = (shepherd) => {
           execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
             shepherd.log(`stdout: ${stdout}`);
             shepherd.log(`stderr: ${stderr}`);
+            shepherd.log(`send stop sig to ${key}`);
 
             if (stdout.indexOf('EOF reached') > -1 ||
                 stderr.indexOf('EOF reached') > -1 ||
@@ -99,14 +100,15 @@ module.exports = (shepherd) => {
     execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
       shepherd.log(`stdout: ${stdout}`);
       shepherd.log(`stderr: ${stderr}`);
-      shepherd.log(`send stop sig to ${_chain}`);
+      shepherd.log(`send stop sig to ${_chain ? _chain : 'komodo'}`);
 
       if (stdout.indexOf('EOF reached') > -1 ||
           stderr.indexOf('EOF reached') > -1 ||
           (error && error.toString().indexOf('Command failed') > -1 && !stderr) || // win "special snowflake" case
           stdout.indexOf('connect to server: unknown (code -1)') > -1 ||
           stderr.indexOf('connect to server: unknown (code -1)') > -1) {
-        delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+        delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodod'];
+
         const obj = {
           msg: 'success',
           result: 'result',
@@ -115,7 +117,7 @@ module.exports = (shepherd) => {
         res.end(JSON.stringify(obj));
       } else {
         if (stdout.indexOf('Komodo server stopping') > -1) {
-          delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodo'];
+          delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodod'];
 
           const obj = {
             msg: 'success',
