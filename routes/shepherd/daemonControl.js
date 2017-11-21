@@ -237,7 +237,16 @@ module.exports = (shepherd) => {
                 }).pipe(logStream);
 
                 _daemonChildProc.on('exit', (exitCode) => {
-                }).pipe(logStream);
+                  const _errMsg = exitCode === 0 ? `${_daemonName} exited with code ${exitCode}` : `${_daemonName} exited with code ${exitCode}, crashed?`;
+
+                  fs.appendFile(_daemonLogName, _errMsg, (err) => {
+                    if (err) {
+                      shepherd.writeLog(_errMsg);
+                      shepherd.log(_errMsg);
+                    }
+                    shepherd.log(_errMsg);
+                  });
+                });
               }
             }
           } else {
