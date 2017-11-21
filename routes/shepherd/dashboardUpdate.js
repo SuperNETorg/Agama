@@ -70,7 +70,7 @@ module.exports = (shepherd) => {
       .then(result => {
         if (result[0] &&
             result[0].length &&
-            result[0][0].address) {
+            result[0][0]) {
           const calcBalance = (result, json) => {
             if (json &&
                 json.length &&
