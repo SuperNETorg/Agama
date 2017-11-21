@@ -289,7 +289,7 @@ module.exports = (shepherd) => {
 
       try {
         // check if komodod instance is already running
-        shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+        portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
           // Status is 'open' if currently in use or 'closed' if available
           if (status === 'closed') {
             // start komodod via exec

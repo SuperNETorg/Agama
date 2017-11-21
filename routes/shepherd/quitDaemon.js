@@ -1,3 +1,6 @@
+const portscanner = require('portscanner');
+const execFile = require('child_process').execFile;
+
 module.exports = (shepherd) => {
   shepherd.quitKomodod = (timeout = 100) => {
     // if komodod is under heavy load it may not respond to cli stop the first time
@@ -32,7 +35,7 @@ module.exports = (shepherd) => {
           }
 
           _arg.push('stop');
-          shepherd.execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
+          execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
             shepherd.log(`stdout: ${stdout}`);
             shepherd.log(`stderr: ${stderr}`);
 
@@ -48,7 +51,7 @@ module.exports = (shepherd) => {
             // workaround for AGT-65
             const _port = shepherd.assetChainPorts[key];
             setTimeout(() => {
-              shepherd.portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+              portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
                 // Status is 'open' if currently in use or 'closed' if available
                 if (status === 'closed') {
                   delete shepherd.coindInstanceRegistry[key];
@@ -92,12 +95,11 @@ module.exports = (shepherd) => {
       _arg.push(`-datadir=${shepherd.appConfig.dataDir}`);
     }
 
-    console.log(JSON.stringify(shepherd.coindInstanceRegistry, null, '\t'));
-
     _arg.push('stop');
-    shepherd.execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
+    execFile(`${_coindQuitCmd}`, _arg, (error, stdout, stderr) => {
       shepherd.log(`stdout: ${stdout}`);
       shepherd.log(`stderr: ${stderr}`);
+      shepherd.log(`send stop sig to ${_chain}`);
 
       if (stdout.indexOf('EOF reached') > -1 ||
           stderr.indexOf('EOF reached') > -1 ||
@@ -134,9 +136,9 @@ module.exports = (shepherd) => {
   });
 
   shepherd.post('/coins/remove', (req, res) => {
-    if (req.body.mode === 'native') {
-      const _chain = req.body.chain;
+    const _chain = req.body.chain;
 
+    if (req.body.mode === 'native') {
       delete shepherd.coindInstanceRegistry[_chain ? _chain : 'komodod'];
 
       const obj = {
@@ -146,7 +148,7 @@ module.exports = (shepherd) => {
 
       res.end(JSON.stringify(obj));
     } else {
-      delete shepherd.electrumCoins[req.body.chain === 'komodo' ? 'KMD' : req.body.chain];
+      delete shepherd.electrumCoins[_chain === 'komodo' ? 'KMD' : _chain];
 
       if (Object.keys(shepherd.electrumCoins).length - 1 === 0) {
         shepherd.electrumCoins.auth = false;
