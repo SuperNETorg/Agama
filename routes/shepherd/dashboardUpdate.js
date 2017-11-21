@@ -1,3 +1,5 @@
+const Promise = require('bluebird');
+
 module.exports = (shepherd) => {
   /*
    *  Combined native dashboard update same as in gui
@@ -5,9 +7,9 @@ module.exports = (shepherd) => {
    *  params: coin
    */
   shepherd.post('/native/dashboard/update', (req, res, next) => {
+    const _coin = req.body.coin;
     let _returnObj;
     let _promiseStack;
-    const _coin = req.body.coin;
 
     if (_coin === 'CHIPS') {
       _returnObj = {
@@ -49,8 +51,8 @@ module.exports = (shepherd) => {
         type.pop();
       }
 
-      shepherd.Promise.all(type.map((_type, index) => {
-        return new shepherd.Promise((resolve, reject) => {
+      Promise.all(type.map((_type, index) => {
+        return new Promise((resolve, reject) => {
           _bitcoinRPC(
             coin,
             _type === 'public' ? 'getaddressesbyaccount' : 'z_listaddresses',
@@ -67,10 +69,13 @@ module.exports = (shepherd) => {
       }))
       .then(result => {
         if (result[0] &&
-            result[0].length) {
+            result[0].length &&
+            result[0][0].address) {
           const calcBalance = (result, json) => {
             if (json &&
-                json.length) {
+                json.length &&
+                json[0] &&
+                json[0].address) {
               const allAddrArray = json.map(res => res.address).filter((x, i, a) => a.indexOf(x) == i);
 
               for (let a = 0; a < allAddrArray.length; a++) {
@@ -115,18 +120,28 @@ module.exports = (shepherd) => {
 
               if (result[a]) {
                 for (let b = 0; b < result[a].length; b++) {
-                  let filteredArray;
-
-                  filteredArray = json.filter(res => res.address === result[a][b]).map(res => res.amount);
+                  const filteredArraySpends = json.filter(res => res.address === result[a][b]);
+                  const filteredArray = json.filter(res => res.address === result[a][b]).map(res => res.amount);
 
                   let sum = 0;
+                  let spendableSum = 0;
+                  let canspend = true;
+
                   for (let i = 0; i < filteredArray.length; i++) {
                     sum += filteredArray[i];
+
+                    if (filteredArraySpends[i].spendable) {
+                      spendableSum += filteredArray[i];
+                    } else {
+                      canspend = false;
+                    }
                   }
 
                   newAddressArray[a][b] = {
                     address: result[a][b],
                     amount: sum,
+                    spendable: spendableSum,
+                    canspend,
                     type: a === 0 ? 'public': 'private',
                   };
                 }
@@ -136,8 +151,8 @@ module.exports = (shepherd) => {
             // get zaddr balance
             if (result[1] &&
                 result[1].length) {
-              shepherd.Promise.all(result[1].map((_address, index) => {
-                return new shepherd.Promise((resolve, reject) => {
+              Promise.all(result[1].map((_address, index) => {
+                return new Promise((resolve, reject) => {
                   _bitcoinRPC(coin, 'z_getbalance', [_address])
                   .then((__json) => {
                     __json = JSON.parse(__json);
@@ -145,7 +160,7 @@ module.exports = (shepherd) => {
                         __json.error) {
                       resolve(0);
                     } else {
-                      resolve(__json.result)
+                      resolve(__json.result);
                       newAddressArray[1][index] = {
                         address: _address,
                         amount: __json.result,
@@ -219,7 +234,7 @@ module.exports = (shepherd) => {
     }
 
     const _bitcoinRPC = (coin, cmd, params) => {
-      return new shepherd.Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         let _payload;
 
         if (params) {
@@ -259,7 +274,7 @@ module.exports = (shepherd) => {
       });
     }
 
-    shepherd.Promise.all(_promiseStack.map((_call, index) => {
+    Promise.all(_promiseStack.map((_call, index) => {
       let _params;
 
       if (_call === 'listtransactions') {
@@ -270,7 +285,7 @@ module.exports = (shepherd) => {
         ];
       }
 
-      return new shepherd.Promise((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         _bitcoinRPC(
           _coin,
           _call,
