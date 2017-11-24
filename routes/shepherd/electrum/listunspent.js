@@ -60,7 +60,7 @@ module.exports = (shepherd) => {
                               amount: Number(_utxoItem.value) * 0.00000001,
                               amountSats: _utxoItem.value,
                               locktime: decodedTx.format.locktime,
-                              interest: interest,
+                              interest: Number(interest.toFixed(8)),
                               interestSats: Math.floor(interest * 100000000),
                               confirmations: Number(_utxoItem.height) === 0 ? 0 : currentHeight - _utxoItem.height,
                               spendable: true,
