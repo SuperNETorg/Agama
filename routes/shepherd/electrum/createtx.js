@@ -65,7 +65,7 @@ module.exports = (shepherd) => {
     const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
     const outputAddress = req.query.address;
     const changeAddress = req.query.change;
-    const value = Number(req.query.value);
+    let value = Number(req.query.value);
     const push = req.query.push;
     const fee = shepherd.electrumServers[network].txfee;
     let wif = req.query.wif;
@@ -207,7 +207,18 @@ module.exports = (shepherd) => {
             shepherd.log(`estimated fee overhead ${_feeOverhead}`, true);
             shepherd.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`, true);
 
-            _change = _change + (totalInterest - _feeOverhead);
+            if (_maxSpend === value) {
+              _change = totalInterest -_change - _feeOverhead;
+
+              if (outputAddress === changeAddress) {
+                value += _change;
+                _change = 0;
+                shepherd.log(`send to self ${outputAddress} = ${changeAddress}`, true);
+                shepherd.log(`send to self old val ${value}, new val ${value + _change}`, true);
+              }
+            } else {
+              _change = _change + (totalInterest - _feeOverhead);
+            }
           }
 
           if (!inputs &&
@@ -247,6 +258,8 @@ module.exports = (shepherd) => {
                 result: {
                   utxoSet: inputs,
                   change: _change,
+                  changeAdjusted: _change,
+                  totalInterest,
                   // wif,
                   fee,
                   value,
@@ -275,6 +288,8 @@ module.exports = (shepherd) => {
                     raw: {
                       utxoSet: inputs,
                       change: _change,
+                      changeAdjusted: _change,
+                      totalInterest,
                       fee,
                       value,
                       outputAddress,
@@ -297,6 +312,8 @@ module.exports = (shepherd) => {
                         raw: {
                           utxoSet: inputs,
                           change: _change,
+                          changeAdjusted: _change,
+                          totalInterest,
                           fee,
                           value,
                           outputAddress,
@@ -315,6 +332,8 @@ module.exports = (shepherd) => {
                         result: {
                           utxoSet: inputs,
                           change: _change,
+                          changeAdjusted: _change,
+                          totalInterest,
                           fee,
                           // wif,
                           value,
@@ -338,6 +357,8 @@ module.exports = (shepherd) => {
                         raw: {
                           utxoSet: inputs,
                           change: _change,
+                          changeAdjusted: _change,
+                          totalInterest,
                           fee,
                           value,
                           outputAddress,
@@ -357,6 +378,8 @@ module.exports = (shepherd) => {
                         raw: {
                           utxoSet: inputs,
                           change: _change,
+                          changeAdjusted: _change,
+                          totalInterest,
                           fee,
                           value,
                           outputAddress,
