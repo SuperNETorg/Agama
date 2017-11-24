@@ -137,9 +137,8 @@ module.exports = (shepherd) => {
         shepherd.log('coinselect calculated fee =>', true);
         shepherd.log(fee, true);
 
-        if (!inputs &&
-            !outputs) {
-          targets[0].value = targets[0].value - shepherd.electrumServers[network].txfee;
+        if (!outputs) {
+          targets[0].value = targets[0].value - fee;
           shepherd.log('second run', true);
           shepherd.log('coinselect adjusted targets =>', true);
           shepherd.log(targets, true);
@@ -149,11 +148,11 @@ module.exports = (shepherd) => {
           outputs = secondRun.outputs;
           fee = secondRun.fee;
 
-          shepherd.log('coinselect inputs =>', true);
+          shepherd.log('second run coinselect inputs =>', true);
           shepherd.log(inputs, true);
-          shepherd.log('coinselect outputs =>', true);
+          shepherd.log('second run coinselect outputs =>', true);
           shepherd.log(outputs, true);
-          shepherd.log('coinselect fee =>', true);
+          shepherd.log('second run coinselect fee =>', true);
           shepherd.log(fee, true);
         }
 
