@@ -1,25 +1,24 @@
 // main proc for Agama
 // this app spawns iguana in background in nontech-mode
 
-const electron = require('electron'),
-			app = electron.app,
-			BrowserWindow = electron.BrowserWindow,
-			path = require('path'),
-			url = require('url'),
-			os = require('os'),
-			md5 = require('./routes/md5'),
-			exec = require('child_process').exec,
-			{ Menu } = require('electron'),
-			portscanner = require('portscanner'),
-			osPlatform = os.platform(),
-			fixPath = require('fix-path');
+const electron = require('electron');
+const app = electron.app;
+const BrowserWindow = electron.BrowserWindow;
+const path = require('path');
+const url = require('url');
+const os = require('os');
+const md5 = require('./routes/md5');
+const exec = require('child_process').exec;
+const { Menu } = require('electron');
+const portscanner = require('portscanner');
+const osPlatform = os.platform();
+const fixPath = require('fix-path');
 
-var express = require('express'),
-		bodyParser = require('body-parser'),
-		fs = require('fs'),
-		fsnode = require('fs'),
-		fs = require('fs-extra'),
-		numCPUs = require('os').cpus().length;
+const express = require('express');
+const bodyParser = require('body-parser');
+const fsnode = require('fs');
+const fs = require('fs-extra');
+const numCPUs = require('os').cpus().length;
 
 Promise = require('bluebird');
 
@@ -114,9 +113,9 @@ process.once('loaded', () => {
 		process.setFdLimit(appConfig.maxDescriptors.darwin);
 		app.setAboutPanelOptions({
 			applicationName: app.getName(),
-			applicationVersion: `app.getVersion().replace('version=', '')}-beta`,
+			applicationVersion: `${app.getVersion().replace('version=', '')}-beta`,
 			copyright: 'Released under the MIT license',
-			credits: 'SuperNET Team'
+			credits: 'SuperNET Team',
 		})
 	}
 	if (osPlatform === 'linux') {
