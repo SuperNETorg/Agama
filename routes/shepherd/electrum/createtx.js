@@ -1,4 +1,45 @@
 module.exports = (shepherd) => {
+  // unsigned tx
+  shepherd.buildUnsignedTx = (sendTo, changeAddress, network, utxo, changeValue, spendValue) => {
+    let tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+
+    shepherd.log('buildSignedTx');
+    // console.log(`buildSignedTx priv key ${wif}`);
+    shepherd.log(`buildSignedTx pub key ${changeAddress}`, true);
+    // console.log('buildSignedTx std tx fee ' + shepherd.electrumServers[network].txfee);
+
+    for (let i = 0; i < utxo.length; i++) {
+      tx.addInput(utxo[i].txid, utxo[i].vout);
+    }
+
+    tx.addOutput(sendTo, Number(spendValue));
+
+    if (changeValue > 0) {
+      tx.addOutput(changeAddress, Number(changeValue));
+    }
+
+    if (network === 'komodo' ||
+        network === 'KMD') {
+      const _locktime = Math.floor(Date.now() / 1000) - 777;
+      tx.setLockTime(_locktime);
+      shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
+    }
+
+    shepherd.log('buildSignedTx unsigned tx data vin', true);
+    shepherd.log(tx.tx.ins, true);
+    shepherd.log('buildSignedTx unsigned tx data vout', true);
+    shepherd.log(tx.tx.outs, true);
+    shepherd.log('buildSignedTx unsigned tx data', true);
+    shepherd.log(tx, true);
+
+    const rawtx = tx.buildIncomplete().toHex();
+
+    shepherd.log('buildUnsignedTx tx hex', true);
+    shepherd.log(rawtx, true);
+
+    return rawtx;
+  }
+
   // single sig
   shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
     let key = shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
@@ -240,15 +281,28 @@ module.exports = (shepherd) => {
             shepherd.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`, true);
             shepherd.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`, true);
 
-            const _rawtx = shepherd.buildSignedTx(
-              outputAddress,
-              changeAddress,
-              wif,
-              network,
-              inputs,
-              _change,
-              value
-            );
+            let _rawtx;
+
+            if (req.query.unsigned) {
+              _rawtx = shepherd.buildUnsignedTx(
+                outputAddress,
+                changeAddress,
+                network,
+                inputs,
+                _change,
+                value
+              );
+            } else {
+              _rawtx = shepherd.buildSignedTx(
+                outputAddress,
+                changeAddress,
+                wif,
+                network,
+                inputs,
+                _change,
+                value
+              );
+            }
 
             if (!push ||
                 push === 'false') {
