@@ -476,6 +476,7 @@ function createWindow(status) {
 
 			let _appClosingInterval;
 
+			shepherd.killRogueProcess('marketmaker');
 			if (!Object.keys(shepherd.coindInstanceRegistry).length ||
 					!appConfig.stopNativeDaemonsOnQuit) {
 				closeApp();
