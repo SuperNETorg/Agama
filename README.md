@@ -1,26 +1,18 @@
-# Agama Desktop App
+# DabVault Desktop App
 Desktop App for SuperNET DAPPs
 
 #### For Developers
 You must have `node.js` and `npm` installed on your machine.
 
-Clone Agama Desktop App with EasyDEX-GUI submodule
+Clone DabVault Desktop App with DabVault-GUI submodule
 ```shell
-git clone --recursive https://github.com/SuperNETorg/Agama.git
-cd gui/EasyDEX-GUI/
-git checkout master
-git pull
-cd ../../
+git clone --recursive https://github.com/dabsolutions/DabVault.git
+cd gui/DabVault-GUI && git checkout master && cd ../../
 ```
 
-Install Agama App
-```shell
-cd Agama
+Install & Run Dabvault
+```
 npm install
-```
-
-Then start Agama App
-```shell
 npm start
 ```
 
@@ -61,7 +53,7 @@ In dev mode backend is configured to send/receive messages from/to http://127.0.
 Run binary_artifacts.sh from under agama folder you cloned previously. The script will fetch
 
 #### For end users
-The instructions to make production build of Agama App will be updated soon.
+The instructions to make production build of DabVault App will be updated soon.
 
 To build the production ready app, install `electron-packager` and `electron-prebuilt` packages from npm
 ```shell
@@ -107,4 +99,4 @@ change architecture build parameter to ```--arch=x64``` for 64 bit build
 ### Windows DLL issues
 On Windows it's noticed iguana.exe complains about `VCRUNTIME140D.DLL` and `ucrtbased.dll` file.
 
-Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running Agama App.
+Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running DabVault App.
