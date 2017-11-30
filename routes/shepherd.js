@@ -37,6 +37,17 @@ shepherd.rpcConf = {};
 shepherd.appRuntimeLog = [];
 shepherd.appRuntimeSPVLog = [];
 shepherd.lockDownAddCoin = false;
+shepherd.mmupass = null;
+shepherd.mmRatesInterval = null;
+shepherd.mmPublic = {
+  coins: [],
+  mmupass: null,
+  swaps: [],
+  bids: [],
+  asks: [],
+  isAuth: false,
+  rates: {},
+};
 
 // spv vars and libs
 shepherd.electrumCoins = {

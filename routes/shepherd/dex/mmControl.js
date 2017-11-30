@@ -4,24 +4,108 @@ const portscanner = require('portscanner');
 const exec = require('child_process').exec;
 const execFile = require('child_process').execFile;
 const path = require('path');
+const request = require('request');
+const Promise = require('bluebird');
+
+const RATES_UPDATE_INTERVAL = 60000;
 
 module.exports = (shepherd) => {
   shepherd.get('/mm/start', (req, res, next) => {
     shepherd.log('mm start is called');
 
     shepherd.startMarketMaker({ passphrase: req.query.passphrase });
+    shepherd.mmupass = null;
 
-    const successObj = {
-      msg: 'success',
-      result: 'started',
-    };
+    shepherd.mmupass = setInterval(() => {
+      const options = {
+        url: `http://localhost:7783`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ method: 'balance' }),
+      };
 
-    res.end(JSON.stringify(successObj));
+      // send back body on both success and error
+      // this bit replicates iguana core's behaviour
+      request(options, (error, response, body) => {
+        if (response &&
+            response.statusCode &&
+            response.statusCode === 200) {
+          const _parsedBody = JSON.parse(body);
+
+          if (_parsedBody.userpass) {
+            res.end(body);
+            clearInterval(shepherd.mmupass);
+            shepherd.mmupass = _parsedBody.userpass;
+            shepherd.mmPublic.mmupass = shepherd.mmupass;
+            shepherd.mmPublic.isAuth = true;
+            shepherd.mmPublic.coins = _parsedBody.coins;
+            shepherd.log(`mm start success`);
+            shepherd.log(`mm userpass ${_parsedBody.userpass}`);
+            shepherd.getRates();
+          }
+        } else {
+          shepherd.log(`mm start responded with error ${error}`);
+          /*res.end(body ? body : JSON.stringify({
+            result: 'error',
+            error: {
+              code: -777,
+              message: `unable to call method balance at port 7783`,
+            },
+          }));*/
+        }
+      });
+    }, 500);
   });
+
+  shepherd.getRates = () => {
+    function _getRates() {
+      const options = {
+        url: `https://min-api.cryptocompare.com/data/price?fsym=KMD&tsyms=BTC,USD`,
+        method: 'GET',
+      };
+
+      // send back body on both success and error
+      // this bit replicates iguana core's behaviour
+      request(options, (error, response, body) => {
+        if (response &&
+            response.statusCode &&
+            response.statusCode === 200) {
+          const _parsedBody = JSON.parse(body);
+          shepherd.log(`rates ${body}`);
+          shepherd.mmPublic.rates = _parsedBody;
+        } else {
+          shepherd.log(`mm unable to retrieve KMD/BTC,USD rate`);
+        }
+      });
+    }
+
+    _getRates();
+    shepherd.mmRatesInterval = setInterval(() => {
+      _getRates();
+    }, RATES_UPDATE_INTERVAL);
+  }
+
+  shepherd.getMMCacheData = () => {
+    return new Promise((resolve, reject) => {
+      resolve(shepherd.mmPublic);
+    });
+  }
 
   shepherd.get('/mm/stop', (req, res, next) => {
     shepherd.log('mm stop is called');
+    clearInterval(shepherd.mmRatesInterval);
     shepherd.killRogueProcess('marketmaker');
+    shepherd.mmPublic = {
+      coins: [],
+      mmupass: null,
+      swaps: [],
+      bids: [],
+      asks: [],
+      isAuth: false,
+      rates: {},
+    };
 
     const successObj = {
       msg: 'success',
@@ -34,15 +118,25 @@ module.exports = (shepherd) => {
   shepherd.get('/mm/restart', (req, res, next) => {
     shepherd.log('mm restart is called');
     shepherd.killRogueProcess('marketmaker');
-    setTimeout(() => {
-      shepherd.startMarketMaker({ passphrase: req.query.passphrase });
-    }, 1000);
-    const successObj = {
-      msg: 'success',
-      result: 'restarting',
+    shepherd.mmPublic = {
+      coins: {},
+      mmupass: null,
+      swaps: [],
+      bids: [],
+      asks: [],
+      isAuth: false,
     };
 
-    res.end(JSON.stringify(successObj));
+    setTimeout(() => {
+      shepherd.startMarketMaker({ passphrase: req.query.passphrase });
+
+      const successObj = {
+        msg: 'success',
+        result: 'restarting',
+      };
+
+      res.end(JSON.stringify(successObj));
+    }, 1000);
   });
 
   shepherd.startMarketMaker = (data) => {
