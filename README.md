@@ -7,7 +7,7 @@ You must have `node.js` and `npm` installed on your machine.
 Clone DabVault Desktop App with DabVault-GUI submodule
 ```shell
 git clone --recursive https://github.com/dabsolutions/DabVault.git
-cd gui/DabVault-GUI && git checkout master && cd ../../
+cd DabVault/gui/EasyDEX-GUI && git checkout master && cd ../../
 ```
 
 Install & Run Dabvault
