@@ -1,3 +1,3 @@
-[submodule "gui/EasyDEX-GUI"]
-	path = gui/EasyDEX-GUI
-	url = https://github.com/SuperNETorg/EasyDEX-GUI.git
+[submodule "gui/DabVault-GUI"]
+  path = gui/DabVault-GUI
+  url = https://github.com/dabsolutions/DabVault-GUI.git
