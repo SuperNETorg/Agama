@@ -11,7 +11,7 @@ const assetChainPorts = {
   'BET': '14250',
   'CRYPTO': '8516',
   'HODL': '14431',
-  'SHARK': '10114',
+  'MSHARK': '8846',
   'BOTS': '11964',
   'MGW': '12386',
   'COQUI': '14276',
