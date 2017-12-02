@@ -47,6 +47,9 @@ shepherd.mmPublic = {
   asks: [],
   isAuth: false,
   rates: {},
+  prices: [],
+  coinsHelper: [],
+  stats: [],
 };
 
 // spv vars and libs
@@ -98,6 +101,7 @@ shepherd = require('./shepherd/electrum/estimate.js')(shepherd);
 // dex
 shepherd = require('./shepherd/dex/coind.js')(shepherd);
 shepherd = require('./shepherd/dex/mmControl.js')(shepherd);
+shepherd = require('./shepherd/dex/mmRequest.js')(shepherd);
 
 // core
 shepherd = require('./shepherd/addCoinShortcuts.js')(shepherd);

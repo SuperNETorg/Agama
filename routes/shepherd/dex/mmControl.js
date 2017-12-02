@@ -43,6 +43,7 @@ module.exports = (shepherd) => {
             shepherd.mmPublic.coins = _parsedBody.coins;
             shepherd.log(`mm start success`);
             shepherd.log(`mm userpass ${_parsedBody.userpass}`);
+            shepherd.getCoinsHelper();
             shepherd.getRates();
           }
         } else {
@@ -58,6 +59,11 @@ module.exports = (shepherd) => {
       });
     }, 500);
   });
+
+  shepherd.getCoinsHelper = () => {
+    const defaultCoinsListFile = path.join(__dirname, '../dex/coins.json');
+    shepherd.mmPublic.coinsHelper = fs.readJsonSync(defaultCoinsListFile, { throws: false });
+  }
 
   shepherd.getRates = () => {
     function _getRates() {
