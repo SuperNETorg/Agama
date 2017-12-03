@@ -27,7 +27,7 @@
             width="80"
             height="100" />
           <div id="agamaModeStatus">
-            Choose Agama mode
+            <span id="agamaModeStatusText">Choose Agama mode</span>
             <div
               onClick="toggleMainWindowHelp()"
               class="settings-help pointer"
@@ -65,7 +65,7 @@
           <li onClick="closeMainWindow(null, true)">
             <a>Custom</a>
           </li>
-          <li onClick="startKMDPassive()">
+          <li id="kmdPassiveMode" onClick="startKMDPassive()">
             <a>KMD (passive)</a>
           </li>
         </ul>

@@ -1,10 +1,10 @@
 const sha256 = require('js-sha256');
 
 module.exports = (shepherd) => {
-  shepherd.seedToWif = (seed, network, iguana, old) => {
+  shepherd.seedToWif = (seed, network, iguana) => {
     let bytes;
 
-    if (old) {
+    if (process.argv.indexOf('spvold=true') > -1) {
       bytes = shepherd.sha256(seed, { asBytes: true });
     } else {
       const hash = sha256.create().update(seed);

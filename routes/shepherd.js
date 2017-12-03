@@ -37,6 +37,20 @@ shepherd.rpcConf = {};
 shepherd.appRuntimeLog = [];
 shepherd.appRuntimeSPVLog = [];
 shepherd.lockDownAddCoin = false;
+shepherd.mmupass = null;
+shepherd.mmRatesInterval = null;
+shepherd.mmPublic = {
+  coins: [],
+  mmupass: null,
+  swaps: [],
+  bids: [],
+  asks: [],
+  isAuth: false,
+  rates: {},
+  prices: [],
+  coinsHelper: [],
+  stats: [],
+};
 
 // spv vars and libs
 shepherd.electrumCoins = {
@@ -86,6 +100,8 @@ shepherd = require('./shepherd/electrum/estimate.js')(shepherd);
 
 // dex
 shepherd = require('./shepherd/dex/coind.js')(shepherd);
+shepherd = require('./shepherd/dex/mmControl.js')(shepherd);
+shepherd = require('./shepherd/dex/mmRequest.js')(shepherd);
 
 // core
 shepherd = require('./shepherd/addCoinShortcuts.js')(shepherd);

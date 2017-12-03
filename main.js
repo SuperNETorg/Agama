@@ -230,6 +230,7 @@ function createLoadingWindow() {
 	loadingWindow.createAppSettingsWindow = createAppSettingsWindow;
 	loadingWindow.startKMDNative = shepherd.startKMDNative;
 	loadingWindow.startSPV = shepherd.startSPV;
+	loadingWindow.arch = os.arch();
 
 	// load our index.html (i.e. easyDEX GUI)
 	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup`);
@@ -382,6 +383,7 @@ function createWindow(status) {
 		shepherd.writeLog('show edex gui');
 		mainWindow.appConfig = appConfig;
 		mainWindow.appConfigSchema = shepherd.appConfigSchema;
+		mainWindow.arch = os.arch();
 		mainWindow.appBasicInfo = appBasicInfo;
 		mainWindow.appSessionHash = appSessionHash;
 		mainWindow.assetChainPorts = require('./routes/ports.js');
@@ -393,10 +395,12 @@ function createWindow(status) {
 		mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
 		mainWindow.nativeCoindList = nativeCoindList;
 		mainWindow.zcashParamsDownloadLinks = shepherd.zcashParamsDownloadLinks;
-		mainWindow.isWindows = os.platform() === 'win32' ? true : false;
+		mainWindow.isWindows = os.platform() === 'win32' ? true : false; // obsolete(?)
 		mainWindow.appExit = appExit;
 		mainWindow.getMaxconKMDConf = shepherd.getMaxconKMDConf;
 		mainWindow.setMaxconKMDConf = shepherd.setMaxconKMDConf;
+		mainWindow.getMMCacheData = shepherd.getMMCacheData;
+		mainWindow.activeSection = 'wallets';
 
 		if (appConfig.dev) {
 			mainWindow.loadURL('http://127.0.0.1:3000');
@@ -476,6 +480,7 @@ function createWindow(status) {
 
 			let _appClosingInterval;
 
+			// shepherd.killRogueProcess('marketmaker');
 			if (!Object.keys(shepherd.coindInstanceRegistry).length ||
 					!appConfig.stopNativeDaemonsOnQuit) {
 				closeApp();
@@ -511,8 +516,9 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	shepherd.log('before-quit');
+	// shepherd.killRogueProcess('marketmaker');
 
-	if (!forceQuitApp &&
+	/*if (!forceQuitApp &&
 			mainWindow === null &&
 			loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced
 		// loading window is still open
@@ -523,7 +529,7 @@ app.on('before-quit', function(event) {
 		let code = `$('#loading_status_text').html('Preparing to shutdown the wallet.<br/>Please wait while all daemons are closed...')`;
 		loadingWindow.webContents.executeJavaScript(code);
 		event.preventDefault();
-	}
+	}*/
 });
 
 // Emitted when all windows have been closed and the application will quit.
