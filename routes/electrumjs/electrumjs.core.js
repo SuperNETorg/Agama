@@ -25,6 +25,7 @@ SOFTWARE.
 const tls = require('tls');
 const net = require('net');
 const EventEmitter = require('events').EventEmitter;
+const SOCKET_MAX_TIMEOUT = 10000;
 
 const makeRequest = function(method, params, id) {
   return JSON.stringify({
@@ -128,6 +129,12 @@ const getSocket = function(protocol, options) {
 const initSocket = function(self, protocol, options) {
   const conn = getSocket(protocol, options);
 
+  conn.setTimeout(SOCKET_MAX_TIMEOUT);
+  conn.on('timeout', () => {
+    console.log('socket timeout');
+    self.onError(new Error('socket timeout'));
+    self.onClose();
+  });
   conn.setEncoding('utf8');
   conn.setKeepAlive(true, 0);
   conn.setNoDelay(true);
