@@ -478,7 +478,7 @@ function createWindow(status) {
 
 			let _appClosingInterval;
 
-			shepherd.killRogueProcess('marketmaker');
+			// shepherd.killRogueProcess('marketmaker');
 			if (!Object.keys(shepherd.coindInstanceRegistry).length ||
 					!appConfig.stopNativeDaemonsOnQuit) {
 				closeApp();
@@ -514,7 +514,7 @@ app.on('window-all-closed', function() {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', function(event) {
 	shepherd.log('before-quit');
-	shepherd.killRogueProcess('marketmaker');
+	// shepherd.killRogueProcess('marketmaker');
 
 	/*if (!forceQuitApp &&
 			mainWindow === null &&
