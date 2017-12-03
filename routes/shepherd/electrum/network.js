@@ -14,6 +14,7 @@ module.exports = (shepherd) => {
         coin === 'COQUI' ||
         coin === 'HODL' ||
         coin === 'SHARK' ||
+        coin === 'MSHARK' ||
         coin === 'BOTS' ||
         coin === 'MGW' ||
         coin === 'MVP' ||
@@ -33,6 +34,7 @@ module.exports = (shepherd) => {
         coinUC === 'COQUI' ||
         coinUC === 'HODL' ||
         coinUC === 'SHARK' ||
+        coinUC === 'MSHARK' ||
         coinUC === 'BOTS' ||
         coinUC === 'MGW' ||
         coinUC === 'MVP' ||
