@@ -9,9 +9,11 @@ echo "Building EasyDEX-GUI"
 echo "Actual directory is: ${PWD}"
 
 echo "Checkout to redux branch."
-git checkout redux
-git pull origin redux
+git checkout electrum
+git pull origin electrum
 
+[ -d react ] && cd react || echo "!!! I can't find react"
+echo "Actual directory is: ${PWD}"
 echo "Installing nodejs modules."
 npm install 
 npm install webpack

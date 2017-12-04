@@ -3,29 +3,22 @@
 ### Created by mmaxian, 3/2017
 
 [ -z $AGAMA_VERSION ] && echo "AGAMA_VERSION variable is not set." && exit 0
+[ ! -d build ] && mkdir build
 
 echo
-echo =========================================
-echo Step: Removing old binaries
-rm -rvf artifacts.supernet.org
-echo
-echo Step: Cloning latest binaries for build
-wget --recursive --no-parent -q https://artifacts.supernet.org/latest/windows/
-find artifacts.supernet.org/latest/windows/ -exec ls -l {} \;
-cd ..
-echo =========================================
-echo
-
 echo "Build script for Iguana application for Windows x64 platform."
 echo "Preparing electron package $AGAMA_VERSION"
 
 electron-packager . --platform=win32 \
   --arch=ia32 \
   --icon=assets/icons/agama_app_icon.ico \
-  --out=build \
+  --out=build/ \
   --buildVersion=$AGAMA_VERSION \
-  --ignore=build/artifacts.supernet.org/latest/osx \
-  --ignore=build/artifacts.supernet.org/latest/linux \
+  --ignore=assets/bin/osx \
+  --ignore=assets/bin/linux64 \
+  --ignore=react/node_modules \
+  --ignore=react/src \
+  --ignore=react/www \
   --overwrite \
   --version-string.CompanyName="SuperNET" \
   --version-string.FileDescription="Agama" \
