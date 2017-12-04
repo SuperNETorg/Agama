@@ -98,14 +98,14 @@ module.exports = (shepherd) => {
     const seed = bip39.mnemonicToSeed(req.body.seed);
     const hdMaster = shepherd.bitcoinJS.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo); // seed from above
     const matchPattern = req.body.match;
-    const _defaultAddressDepth = 50;
-    const _defaultAccountCount = 20;
+    const _defaultAddressDepth = req.body.addressdepth;
+    const _defaultAccountCount = req.body.accounts;
     let _addresses = [];
     let _matchingKey;
 
     for (let i = 0; i < _defaultAccountCount; i++) {
-      for (let j = 0; j < 2; j++) {
-        for (let k = 0; k < 1; k++) {
+      for (let j = 0; j < 1; j++) {
+        for (let k = 0; k < _defaultAddressDepth; k++) {
           const _key = hdMaster.derivePath(`m/44'/141'/${i}'/${j}/${k}`);
 
           if (_key.keyPair.getAddress() === matchPattern) {
@@ -132,7 +132,7 @@ module.exports = (shepherd) => {
 
   // spv v2
   /*shepherd.get('/electrum/bip39/seed', (req, res, next) => {
-    const _seed = 'force mystery use shoot choice universe jaguar pattern aunt kiwi swarm tunnel wild pig cup cruise together neither else clean typical other farm recycle';
+    const _seed = '';
     // TODO
     const bip39 = require('bip39'); // npm i -S bip39
     const crypto = require('crypto');
