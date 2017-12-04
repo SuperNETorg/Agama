@@ -92,8 +92,47 @@ module.exports = (shepherd) => {
     res.end(JSON.stringify(successObj));
   });
 
+  shepherd.post('/electrum/seed/bip39/match', (req, res, next) => {
+    const bip39 = require('bip39'); // npm i -S bip39
+    const crypto = require('crypto');
+    const seed = bip39.mnemonicToSeed(req.body.seed);
+    const hdMaster = shepherd.bitcoinJS.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo); // seed from above
+    const matchPattern = req.body.match;
+    const _defaultAddressDepth = 50;
+    const _defaultAccountCount = 20;
+    let _addresses = [];
+    let _matchingKey;
+
+    for (let i = 0; i < _defaultAccountCount; i++) {
+      for (let j = 0; j < 2; j++) {
+        for (let k = 0; k < 1; k++) {
+          const _key = hdMaster.derivePath(`m/44'/141'/${i}'/${j}/${k}`);
+
+          if (_key.keyPair.getAddress() === matchPattern) {
+            _matchingKey = {
+              pub: _key.keyPair.getAddress(),
+              priv: _key.keyPair.toWIF(),
+            };
+          }
+          /*_addresses.push({
+            pub: _key.keyPair.getAddress(),
+            priv: _key.keyPair.toWIF(),
+          });*/
+        }
+      }
+    }
+
+    const successObj = {
+      msg: 'success',
+      result: _matchingKey ? _matchingKey : 'address is not found',
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
+
   // spv v2
   /*shepherd.get('/electrum/bip39/seed', (req, res, next) => {
+    const _seed = 'force mystery use shoot choice universe jaguar pattern aunt kiwi swarm tunnel wild pig cup cruise together neither else clean typical other farm recycle';
     // TODO
     const bip39 = require('bip39'); // npm i -S bip39
     const crypto = require('crypto');
@@ -106,7 +145,7 @@ module.exports = (shepherd) => {
 
     // what is accurately described as the wallet seed
     // var seed = bip39.mnemonicToSeed(mnemonic) // you'll use this in #3 below
-    const seed = bip39.mnemonicToSeed(req.query.seed);
+    const seed = bip39.mnemonicToSeed(_seed);
 
     console.log(seed);
 
@@ -122,7 +161,7 @@ module.exports = (shepherd) => {
     console.log(shepherd.bitcoinJS.networks.komodo);
     const hdMaster = shepherd.bitcoinJS.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo); // seed from above
 
-    const key1 = hdMaster.derivePath('m/0');
+    const key1 = hdMaster.derivePath("m/44'/141'/0'/0/0");
     const key2 = hdMaster.derivePath('m/1');
     console.log(hdMaster);
 
