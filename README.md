@@ -6,11 +6,20 @@ You must have `node.js` and `npm` installed on your machine.
 
 Clone Agama Desktop App with EasyDEX-GUI submodule
 ```shell
-git clone --recursive https://github.com/SuperNETorg/Agama.git
-cd gui/EasyDEX-GUI/
-git checkout master
-git pull
-cd ../../
+1) git clone https://github.com/supernetorg/agama --recursive --branch pkg_automation_electrum --single-branch
+with this command you git clone agama - but explicitly just the pkg_automation_electrum branch (therefore --single-branch) which we also use for the release packages.
+2) cd agama && cd gui/EasyDEX-GUI/
+3) git checkout electrum && git pull origin electrum
+4) npm install && npm install webpack
+5) ./binary_artifacts.sh
+6) npm start in projects' root folder
+7) cd gui/EasyDEX-GUI/react/src
+8) npm start
+8) toggle dev and debug options in settings
+9) restart the app
+10) sync komodod and/or asset chains
+
+You're ready to dev
 ```
 
 Install Agama App
@@ -25,34 +34,6 @@ npm start
 ```
 
 ### Important dev notes
-#### Use the following config.json for dev
-Place it in ./iguana folder.
-```
-{
-"edexGuiOnly": true,
-"iguanaGuiOnly": false,
-"manualIguanaStart": false,
-"skipBasiliskNetworkCheck": true,
-"minNotaries": 8,
-"host": "127.0.0.1",
-"agamaPort": 17777,
-"iguanaCorePort": 7778,
-"maxDescriptors": {
-"darwin": 90000,
-"linux": 1000000
-},
-"killIguanaOnStart": true,
-"dev": true,
-"v2": true,
-"useBasiliskInstance": true,
-"debug": true,
-"iguanaAppPort": 17777,
-"forks": {
-"basilisk": false,
-"all": false
-}
-}
-```
 
 #### Sockets.io
 In dev mode backend is configured to send/receive messages from/to http://127.0.0.1:3000 address. If you open it as http://localhost:3000 sockets server will reject any messages.
