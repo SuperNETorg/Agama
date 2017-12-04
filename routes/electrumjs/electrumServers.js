@@ -5,14 +5,14 @@ let electrumServers = {
     proto: 'tcp',
   },*/
   coqui: { // !estimatefee
-    address: '78.47.146.222',
+    address: 'electrum1.cipig.net',
     port: 10011,
     proto: 'tcp',
     txfee: 10000,
     abbr: 'COQUI',
     serverList: [
-      '94.130.173.120:10011',
-      '78.47.146.222:10011'
+      'electrum1.cipig.net:10011',
+      'electrum2.cipig.net:10011'
     ],
   },
   revs: { // !estimatefee
@@ -122,12 +122,12 @@ let electrumServers = {
     abbr: 'MNZ',
     serverList: [
       'electrum1.cipig.net:10002',
-      'electrum2.cipig.net:10002',
+      'electrum2.cipig.net:10002'/*,
       '18.216.195.109:10002',
       '52.41.58.116:10002',
       '52.67.48.29:10002',
       '13.124.87.194:10002',
-      '52.63.107.102:10002'
+      '52.63.107.102:10002'*/
     ],
   },
   wlc: { // !estimatefee
@@ -161,11 +161,6 @@ let electrumServers = {
     serverList: [
       'electrum1.cipig.net:10001',
       'electrum2.cipig.net:10001',
-      '18.216.195.109:10001',
-      '52.41.58.116:10001',
-      '52.67.48.29:10001',
-      '13.124.87.194:10001',
-      '52.63.107.102:10001'
     ],
   },
   dogecoin: { // !estimatefee
