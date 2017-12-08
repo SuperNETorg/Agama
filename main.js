@@ -93,9 +93,8 @@ shepherd.setConfKMD('CHIPS');
 
 guiapp.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:3000');
-	res.header('Access-Control-Allow-Headers', 'X-Requested-With');
+	res.header('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
 	res.header('Access-Control-Allow-Credentials', 'true');
-	res.header('Access-Control-Allow-Headers', 'Content-Type');
 	res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
 	next();
 });
@@ -407,6 +406,7 @@ function createWindow(status, hideLoadingWindow) {
 		mainWindow.getMMCacheData = shepherd.getMMCacheData;
 		mainWindow.activeSection = 'wallets';
 		mainWindow.argv = process.argv;
+		mainWindow.getAssetChainPorts = shepherd.getAssetChainPorts;
 
 		if (appConfig.dev) {
 			mainWindow.loadURL('http://127.0.0.1:3000');

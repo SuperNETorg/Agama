@@ -88,6 +88,28 @@ module.exports = (shepherd) => {
     if (flock === 'komodod') {
       let kmdDebugLogLocation = (data.ac_name !== 'komodod' ? `${shepherd.komodoDir}/${data.ac_name}` : shepherd.komodoDir) + '/debug.log';
 
+      // get custom coind port
+      const _coindConf = data.ac_name !== 'komodod' ? `${shepherd.komodoDir}/${data.ac_name}/${data.ac_name}.conf` : `${shepherd.komodoDir}/komodo.conf`;
+
+      try {
+        const _coindConfContents = fs.readFileSync(_coindConf, 'utf8');
+
+        if (_coindConfContents) {
+          const _coindCustomPort = _coindConfContents.match(/rpcport=\s*(.*)/);
+
+          if (_coindCustomPort[1]) {
+            shepherd.assetChainPorts[data.ac_name] = _coindCustomPort[1];
+            shepherd.log(`${data.ac_name} custom port ${_coindCustomPort[1]}`);
+          } else {
+            shepherd.log(`${data.ac_name} port ${shepherd.assetChainPorts[data.ac_name]}`);
+          }
+        } else {
+          shepherd.log(`${data.ac_name} port ${shepherd.assetChainPorts[data.ac_name]}`);
+        }
+      } catch (e) {
+        shepherd.log(`${data.ac_name} port ${shepherd.assetChainPorts[data.ac_name]}`);
+      }
+
       shepherd.log('komodod flock selected...');
       shepherd.log(`selected data: ${JSON.stringify(data, null, '\t')}`);
       shepherd.writeLog('komodod flock selected...');
@@ -902,6 +924,10 @@ module.exports = (shepherd) => {
         }
       }
     });
+  }
+
+  shepherd.getAssetChainPorts = () => {
+    return shepherd.assetChainPorts;
   }
 
   return shepherd;
