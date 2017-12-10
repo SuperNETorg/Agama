@@ -22,7 +22,7 @@ rm assets/artifacts.supernet.org/latest/osx/iguana
 #chmod +x assets/artifacts.supernet.org/latest/osx/komodo*
 
 mkdir assets/bin
-mkdir assets/bins/osx
+mkdir assets/bin/osx
 #mv assets/artifacts.supernet.org/latest/osx assets/bin/osx
 
 echo Moving komodo bins to assets/bin/osx
