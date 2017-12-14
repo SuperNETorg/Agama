@@ -1,3 +1,6 @@
+const fs = require('fs-extra');
+const aes256 = require('nodejs-aes256');
+
 module.exports = (shepherd) => {
   /*
    *  type: POST
@@ -7,7 +10,7 @@ module.exports = (shepherd) => {
     if (req.body.key &&
         req.body.string &&
         req.body.pubkey) {
-      const encryptedString = shepherd.aes256.encrypt(req.body.key, req.body.string);
+      const encryptedString = aes256.encrypt(req.body.key, req.body.string);
 
       // test pin security
       // - at least 1 char in upper case
@@ -18,7 +21,7 @@ module.exports = (shepherd) => {
       const _pin = req.body.key;
       const _pinTest = _pin.match('^(?=.*[A-Z])(?=.*[^<>{}\"/|;:.,~!?@#$%^=&*\\]\\\\()\\[_+]*$)(?=.*[0-9])(?=.*[a-z]).{8}$');
 
-      shepherd.fs.writeFile(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, (err) => {
+      fs.writeFile(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, encryptedString, (err) => {
         if (err) {
           shepherd.log('error writing pin file');
         }
@@ -56,8 +59,8 @@ module.exports = (shepherd) => {
   shepherd.post('/decryptkey', (req, res, next) => {
     if (req.body.key &&
         req.body.pubkey) {
-      if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
-        shepherd.fs.readFile(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', (err, data) => {
+      if (fs.existsSync(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`)) {
+        fs.readFile(`${shepherd.agamaDir}/shepherd/pin/${req.body.pubkey}.pin`, 'utf8', (err, data) => {
           if (err) {
             const errorObj = {
               msg: 'error',
@@ -66,7 +69,7 @@ module.exports = (shepherd) => {
 
             res.end(JSON.stringify(errorObj));
           } else {
-            const encryptedKey = shepherd.aes256.decrypt(req.body.key, data);
+            const encryptedKey = aes256.decrypt(req.body.key, data);
             // test if stored encrypted passphrase is decrypted correctly
             // if not then the key is wrong
             const _regexTest = encryptedKey.match(/^[0-9a-zA-Z ]+$/g);
@@ -106,8 +109,8 @@ module.exports = (shepherd) => {
   });
 
   shepherd.get('/getpinlist', (req, res, next) => {
-    if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
-      shepherd.fs.readdir(`${shepherd.agamaDir}/shepherd/pin`, (err, items) => {
+    if (fs.existsSync(`${shepherd.agamaDir}/shepherd/pin`)) {
+      fs.readdir(`${shepherd.agamaDir}/shepherd/pin`, (err, items) => {
         let _pins = [];
 
         for (let i = 0; i < items.length; i++) {

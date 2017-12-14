@@ -1,3 +1,6 @@
+const fs = require('fs-extra');
+const os = require('os');
+
 module.exports = (shepherd) => {
   shepherd.getConf = (chain) => {
     let _confLocation = chain === 'komodod' ? `${shepherd.komodoDir}/komodo.conf` : `${shepherd.komodoDir}/${chain}/${chain}.conf`;
@@ -6,15 +9,15 @@ module.exports = (shepherd) => {
     // any coind
     if (chain) {
       if (shepherd.nativeCoindList[chain.toLowerCase()]) {
-        const _osHome = shepherd.os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+        const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
         let coindDebugLogLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/debug.log`;
 
         _confLocation = `${_osHome}/.${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}/${shepherd.nativeCoindList[chain.toLowerCase()].bin.toLowerCase()}.conf`;
       }
 
-      if (shepherd.fs.existsSync(_confLocation)) {
+      if (fs.existsSync(_confLocation)) {
         let _port = shepherd.assetChainPorts[chain];
-        const _rpcConf = shepherd.fs.readFileSync(_confLocation, 'utf8');
+        const _rpcConf = fs.readFileSync(_confLocation, 'utf8');
 
         // any coind
         if (shepherd.nativeCoindList[chain.toLowerCase()]) {
@@ -85,7 +88,7 @@ module.exports = (shepherd) => {
         if (_cmd === 'debug' &&
             _chain !== 'CHIPS') {
           if (shepherd.nativeCoindList[_chain.toLowerCase()]) {
-            const _osHome = shepherd.os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
+            const _osHome = os.platform === 'win32' ? process.env.APPDATA : process.env.HOME;
             let coindDebugLogLocation;
 
             if (_chain === 'CHIPS') {

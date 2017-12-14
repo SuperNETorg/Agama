@@ -99,14 +99,23 @@ module.exports = (shepherd) => {
 
           if (_coindCustomPort[1]) {
             shepherd.assetChainPorts[data.ac_name] = _coindCustomPort[1];
+            shepherd.rpcConf[data.ac_name === 'komodod' ? 'KMD' : data.ac_name].port = _coindCustomPort[1];
             shepherd.log(`${data.ac_name} custom port ${_coindCustomPort[1]}`);
           } else {
+            shepherd.assetChainPorts[data.ac_name] = shepherd.assetChainPortsDefault[data.ac_name];
+            shepherd.rpcConf[data.ac_name === 'komodod' ? 'KMD' : data.ac_name].port = shepherd.assetChainPortsDefault[data.ac_name];
             shepherd.log(`${data.ac_name} port ${shepherd.assetChainPorts[data.ac_name]}`);
           }
         } else {
+          shepherd.assetChainPorts[data.ac_name] = shepherd.assetChainPortsDefault[data.ac_name];
+          shepherd.rpcConf[data.ac_name === 'komodod' ? 'KMD' : data.ac_name].port = shepherd.assetChainPortsDefault[data.ac_name];
           shepherd.log(`${data.ac_name} port ${shepherd.assetChainPorts[data.ac_name]}`);
         }
       } catch (e) {
+        if (shepherd.rpcConf[data.ac_name === 'komodod' ? 'KMD' : data.ac_name]) {
+          shepherd.rpcConf[data.ac_name === 'komodod' ? 'KMD' : data.ac_name].port = shepherd.assetChainPortsDefault[data.ac_name];
+        }
+        shepherd.assetChainPorts[data.ac_name] = shepherd.assetChainPortsDefault[data.ac_name];
         shepherd.log(`${data.ac_name} port ${shepherd.assetChainPorts[data.ac_name]}`);
       }
 
