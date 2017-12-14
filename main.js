@@ -146,6 +146,7 @@ guiapp.use('/shepherd', shepherd);
 
 const server = require('http').createServer(guiapp);
 const io = require('socket.io').listen(server);
+const _zcashParamsExist = shepherd.zcashParamsExist();
 let willQuitApp = false;
 let mainWindow;
 let loadingWindow;
@@ -153,7 +154,6 @@ let appCloseWindow;
 let appSettingsWindow;
 let closeAppAfterLoading = false;
 let forceQuitApp = false;
-const _zcashParamsExist = shepherd.zcashParamsExist();
 
 module.exports = guiapp;
 let agamaIcon;
@@ -278,7 +278,7 @@ if (process.argv.indexOf('dexonly') > -1) {
 	app.on('ready', createLoadingWindow);
 	setTimeout(() => {
 		createWindow('open', true);
-	}, 100);
+	}, 500);
 } else {
 	app.on('ready', createLoadingWindow);
 }
