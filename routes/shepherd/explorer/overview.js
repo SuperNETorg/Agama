@@ -69,7 +69,7 @@ module.exports = (shepherd) => {
             } else {
               resolve({
                 coin,
-                result: 'unable to get lasttx'
+                result: 'unable to get lasttx',
               });
             }
           });
