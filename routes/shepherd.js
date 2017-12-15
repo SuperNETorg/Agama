@@ -28,6 +28,7 @@ shepherd.setconf = require('../private/setconf.js');
 shepherd.nativeCoind = require('./nativeCoind.js');
 shepherd.nativeCoindList = {};
 shepherd.assetChainPorts = require('./ports.js');
+shepherd.assetChainPortsDefault = require('./ports.js');
 shepherd._appConfig = require('./appConfig.js');
 
 shepherd.coindInstanceRegistry = {};
@@ -127,6 +128,9 @@ shepherd = require('./shepherd/daemonControl.js')(shepherd);
 shepherd = require('./shepherd/auth.js')(shepherd);
 shepherd = require('./shepherd/coins.js')(shepherd);
 shepherd = require('./shepherd/coindWalletKeys.js')(shepherd);
+
+// explorer
+// shepherd = require('./shepherd/explorer/overview.js')(shepherd);
 
 shepherd.printDirs();
 

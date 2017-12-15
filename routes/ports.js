@@ -1,5 +1,6 @@
 const assetChainPorts = {
   'komodod': '7771',
+  'markermaker': '7783',
   'CHIPS': '57776',
   'SUPERNET': '11341',
   'REVS': '10196',
