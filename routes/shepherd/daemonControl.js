@@ -655,26 +655,28 @@ module.exports = (shepherd) => {
             });
           }
 
-          const rpcbind = () => {
+          const rpcport = () => {
             return new Promise((resolve, reject) => {
-              const result = 'checking rpcbind...';
+              const result = 'checking rpcport...';
 
-              if (status[0].hasOwnProperty('rpcbind')) {
-                shepherd.log('rpcbind: OK');
-                shepherd.writeLog('rpcbind: OK');
-              } else {
-                shepherd.log('rpcbind: NOT FOUND');
-                shepherd.writeLog('rpcbind: NOT FOUND');
+              if (flock === 'komodod') {
+                if (status[0].hasOwnProperty('rpcport')) {
+                  shepherd.log('rpcport: OK');
+                  shepherd.writeLog('rpcport: OK');
+                } else {
+                  shepherd.log('rpcport: NOT FOUND');
+                  shepherd.writeLog('rpcport: NOT FOUND');
 
-                fs.appendFile(DaemonConfPath, '\nrpcbind=127.0.0.1', (err) => {
-                  if (err) {
-                    shepherd.writeLog(`append daemon conf err: ${err}`);
-                    shepherd.log(`append daemon conf err: ${err}`);
-                  }
-                  // throw err;
-                  shepherd.log('rpcbind: ADDED');
-                  shepherd.writeLog('rpcbind: ADDED');
-                });
+                  fs.appendFile(DaemonConfPath, '\rpcport=7771', (err) => {
+                    if (err) {
+                      shepherd.writeLog(`append daemon conf err: ${err}`);
+                      shepherd.log(`append daemon conf err: ${err}`);
+                    }
+                    // throw err;
+                    shepherd.log('rpcport: ADDED');
+                    shepherd.writeLog('rpcport: ADDED');
+                  });
+                }
               }
 
               resolve(result);
@@ -764,7 +766,7 @@ module.exports = (shepherd) => {
             return rpcpass();
           })
           .then(server)
-          .then(rpcbind)
+          .then(rpcport)
           .then(addnode);
         });
 
