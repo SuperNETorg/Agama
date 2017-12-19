@@ -1,3 +1,5 @@
+const electrumServers = require('../electrumjs/electrumServers');
+
 module.exports = (shepherd) => {
   shepherd.startSPV = (coin) => {
     if (coin === 'KMD+REVS+JUMBLR') {
@@ -5,7 +7,13 @@ module.exports = (shepherd) => {
       shepherd.addElectrumCoin('REVS');
       shepherd.addElectrumCoin('JUMBLR');
     } else {
-      shepherd.addElectrumCoin(coin);
+      if (process.argv.indexOf('spvcoins=all/add-all') > -1) {
+        for (let key in electrumServers) {
+          shepherd.addElectrumCoin(electrumServers[key].abbr);
+        }
+      } else {
+        shepherd.addElectrumCoin(coin);
+      }
     }
   }
 

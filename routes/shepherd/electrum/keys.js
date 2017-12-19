@@ -1,4 +1,6 @@
 const sha256 = require('js-sha256');
+const bip39 = require('bip39');
+const crypto = require('crypto');
 
 module.exports = (shepherd) => {
   shepherd.seedToWif = (seed, network, iguana) => {
@@ -32,16 +34,33 @@ module.exports = (shepherd) => {
 
     key.compressed = true;
 
-    // shepherd.log(`seed: ${seed}`, true);
-    // shepherd.log(`network ${network}`, true);
-    // shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
-    // shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);
+    /*shepherd.log(`seed: ${seed}`, true);
+    shepherd.log(`network ${network}`, true);
+    shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
+    shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);*/
 
     return {
       priv: key.privateWif,
       pub: key.publicAddress,
     };
   }
+
+  shepherd.get('/electrum/wiftopub', (req, res, next) => {
+    let key = shepherd.bitcoinJS.ECPair.fromWIF(req.query.wif, shepherd.electrumJSNetworks[req.query.coin]);
+    keys = {
+      priv: key.toWIF(),
+      pub: key.getAddress(),
+    };
+
+    const successObj = {
+      msg: 'success',
+      result: {
+        keys,
+      },
+    };
+
+    res.end(JSON.stringify(successObj));
+  });
 
   shepherd.get('/electrum/seedtowif', (req, res, next) => {
     const keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
@@ -92,9 +111,19 @@ module.exports = (shepherd) => {
     res.end(JSON.stringify(successObj));
   });
 
+  shepherd.getSpvFees = () => {
+    let _fees = {};
+
+    for (let key in shepherd.electrumServers) {
+      if (shepherd.electrumServers[key].txfee) {
+        _fees[shepherd.electrumServers[key].abbr] = shepherd.electrumServers[key].txfee;
+      }
+    }
+
+    return _fees;
+  };
+
   shepherd.post('/electrum/seed/bip39/match', (req, res, next) => {
-    const bip39 = require('bip39'); // npm i -S bip39
-    const crypto = require('crypto');
     const seed = bip39.mnemonicToSeed(req.body.seed);
     const hdMaster = shepherd.bitcoinJS.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo); // seed from above
     const matchPattern = req.body.match;

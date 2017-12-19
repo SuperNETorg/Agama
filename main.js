@@ -56,6 +56,7 @@ app.setVersion(appBasicInfo.version);
 shepherd.createAgamaDirs();
 
 const appSessionHash = md5(Date.now().toString());
+const _spvFees = shepherd.getSpvFees();
 
 shepherd.writeLog(`app init ${appSessionHash}`);
 shepherd.writeLog(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
@@ -407,6 +408,7 @@ function createWindow(status, hideLoadingWindow) {
 		mainWindow.activeSection = 'wallets';
 		mainWindow.argv = process.argv;
 		mainWindow.getAssetChainPorts = shepherd.getAssetChainPorts;
+		mainWindow.spvFees = _spvFees;
 
 		if (appConfig.dev) {
 			mainWindow.loadURL('http://127.0.0.1:3000');
@@ -491,7 +493,9 @@ function createWindow(status, hideLoadingWindow) {
 
 			let _appClosingInterval;
 
-			// shepherd.killRogueProcess('marketmaker');
+			if (process.argv.indexOf('dexonly') > -1) {
+				shepherd.killRogueProcess('marketmaker');
+			}
 			if (!Object.keys(shepherd.coindInstanceRegistry).length ||
 					!appConfig.stopNativeDaemonsOnQuit) {
 				closeApp();
@@ -527,8 +531,9 @@ app.on('window-all-closed', () => {
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('before-quit', (event) => {
 	shepherd.log('before-quit');
-	// shepherd.killRogueProcess('marketmaker');
-
+	if (process.argv.indexOf('dexonly') > -1) {
+		shepherd.killRogueProcess('marketmaker');
+	}
 	/*if (!forceQuitApp &&
 			mainWindow === null &&
 			loadingWindow != null) { // mainWindow not intitialised and loadingWindow not dereferenced

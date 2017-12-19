@@ -106,9 +106,9 @@ module.exports = (shepherd) => {
     const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
     const outputAddress = req.query.address;
     const changeAddress = req.query.change;
-    let value = Number(req.query.value);
     const push = req.query.push;
-    const fee = shepherd.electrumServers[network].txfee;
+    let fee = shepherd.electrumServers[network].txfee;
+    let value = Number(req.query.value);
     let wif = req.query.wif;
 
     if (req.query.gui) {
@@ -163,12 +163,27 @@ module.exports = (shepherd) => {
         shepherd.log('targets =>', true);
         shepherd.log(targets, true);
 
-        const feeRate = 20; // sats/byte
+        const feeRate = shepherd.getNetworkData(network).messagePrefix === '\x19Komodo Signed Message:\n' || shepherd.getNetworkData(network).messagePrefix === '\x19Chips Signed Message:\n' ? 20 : 0; // sats/byte
+
+        if (!feeRate) {
+          targets[0].value = targets[0].value + fee;
+        }
+
+        shepherd.log(`fee rate ${feeRate}`, true);
+        shepherd.log(`default fee ${fee}`, true);
+        shepherd.log(`targets ==>`, true);
+        shepherd.log(targets, true);
 
         // default coin selection algo blackjack with fallback to accumulative
         // make a first run, calc approx tx fee
         // if ins and outs are empty reduce max spend by txfee
-        let { inputs, outputs, fee } = shepherd.coinSelect(utxoListFormatted, targets, feeRate);
+        const firstRun = shepherd.coinSelect(utxoListFormatted, targets, feeRate);
+        let inputs = firstRun.inputs;
+        let outputs = firstRun.outputs;
+
+        if (feeRate) {
+          fee = firstRun.fee;
+        }
 
         shepherd.log('coinselect res =>', true);
         shepherd.log('coinselect inputs =>', true);
@@ -202,6 +217,14 @@ module.exports = (shepherd) => {
         if (outputs &&
             outputs.length === 2) {
           _change = outputs[1].value;
+        }
+
+        // non komodo coins, subtract fee from output value
+        if (!feeRate) {
+          outputs[0].value = outputs[0].value - fee;
+
+          shepherd.log('non komodo adjusted outputs, value - default fee =>', true);
+          shepherd.log(outputs, true);
         }
 
         // check if any outputs are unverified
