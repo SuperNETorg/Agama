@@ -286,7 +286,7 @@ let electrumServers = {
       'electrum1.cipig.net:10000',
       'electrum2.cipig.net:10000'
     ],
-  },
+  },*/
   btg: {
     address: '173.212.225.176',
     port: 10052,
@@ -320,7 +320,7 @@ let electrumServers = {
       'electrum2.cipig.net:10050'
     ],
   },
-  /*bch: {
+  bch: {
     address: 'electrum1.cipig.net',
     port: 10051,
     proto: 'tcp',
@@ -330,7 +330,7 @@ let electrumServers = {
       'electrum1.cipig.net:10051',
       'electrum2.cipig.net:10051'
     ],
-  },*/
+  },
   argentum: { // !estimatefee
     address: '173.212.225.176',
     port: 50081,

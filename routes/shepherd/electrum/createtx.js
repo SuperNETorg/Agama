@@ -1,7 +1,17 @@
+const bitcoinJSForks = require('bitcoinforksjs-lib');
+
 module.exports = (shepherd) => {
   // unsigned tx
   shepherd.buildUnsignedTx = (sendTo, changeAddress, network, utxo, changeValue, spendValue) => {
-    let tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+    let tx;
+
+    if (network === 'btg') {
+      shepherd.log('enable btg');
+      tx = new bitcoinJSForks.TransactionBuilder(shepherd.getNetworkData(network));
+      tx.enableBitcoinGold(true);
+    } else {
+      tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+    }
 
     shepherd.log('buildSignedTx');
     // console.log(`buildSignedTx priv key ${wif}`);
@@ -86,6 +96,60 @@ module.exports = (shepherd) => {
     return rawtx;
   }
 
+  // btg
+  shepherd.buildSignedTxForks = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
+    let tx;
+
+    if (network === 'btg' ||
+        network === 'bch') {
+      tx = new bitcoinJSForks.TransactionBuilder(shepherd.getNetworkData(network));
+    }
+
+    const keyPair = bitcoinJSForks.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
+    const pk = bitcoinJSForks.crypto.hash160(keyPair.getPublicKeyBuffer());
+    const spk = bitcoinJSForks.script.pubKeyHash.output.encode(pk);
+
+    shepherd.log(`buildSignedTx${network.toUpperCase()}`);
+
+    for (let i = 0; i < utxo.length; i++) {
+      tx.addInput(utxo[i].txid, utxo[i].vout, bitcoinJSForks.Transaction.DEFAULT_SEQUENCE, spk);
+    }
+
+    tx.addOutput(sendTo, Number(spendValue));
+
+    if (changeValue > 0) {
+      tx.addOutput(changeAddress, Number(changeValue));
+    }
+
+    if (network === 'btg') {
+      tx.enableBitcoinGold(true);
+    } else if (network === 'bch') {
+      tx.enableBitcoinCash(true);
+    }
+
+    tx.setVersion(2);
+
+    shepherd.log('buildSignedTx unsigned tx data vin', true);
+    shepherd.log(tx.tx.ins, true);
+    shepherd.log('buildSignedTx unsigned tx data vout', true);
+    shepherd.log(tx.tx.outs, true);
+    shepherd.log('buildSignedTx unsigned tx data', true);
+    shepherd.log(tx, true);
+
+    const hashType = bitcoinJSForks.Transaction.SIGHASH_ALL | bitcoinJSForks.Transaction.SIGHASH_BITCOINCASHBIP143;
+
+    for (let i = 0; i < utxo.length; i++) {
+      tx.sign(i, keyPair, null, hashType, utxo[i].value);
+    }
+
+    const rawtx = tx.build().toHex();
+
+    shepherd.log('buildSignedTx signed tx hex', true);
+    shepherd.log(rawtx, true);
+
+    return rawtx;
+  }
+
   shepherd.maxSpendBalance = (utxoList, fee) => {
     let maxSpendBalance = 0;
 
@@ -101,7 +165,7 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/createrawtx', (req, res, next) => {
-    // txid 64 char
+    // TODO: unconf output(s) error message
     const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
     const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
     const outputAddress = req.query.address;
@@ -123,7 +187,9 @@ module.exports = (shepherd) => {
       ecl.close();
 
       if (utxoList &&
-          utxoList.length) {
+          utxoList.length &&
+          utxoList[0] &&
+          utxoList[0].txid) {
         let utxoListFormatted = [];
         let totalInterest = 0;
         let totalInterestUTXOCount = 0;
@@ -316,15 +382,28 @@ module.exports = (shepherd) => {
                 value
               );
             } else {
-              _rawtx = shepherd.buildSignedTx(
-                outputAddress,
-                changeAddress,
-                wif,
-                network,
-                inputs,
-                _change,
-                value
-              );
+              if (network === 'btg' ||
+                  network === 'bch') {
+                _rawtx = shepherd.buildSignedTxForks(
+                  outputAddress,
+                  changeAddress,
+                  wif,
+                  network,
+                  inputs,
+                  _change,
+                  value
+                );
+              } else {
+                _rawtx = shepherd.buildSignedTx(
+                  outputAddress,
+                  changeAddress,
+                  wif,
+                  network,
+                  inputs,
+                  _change,
+                  value
+                );
+              }
             }
 
             if (!push ||
