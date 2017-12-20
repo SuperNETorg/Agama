@@ -30,7 +30,7 @@
     "arch": "^2.1.0",
     "bip39": "^2.4.0",
     "bitcoinjs-lib": "^3.2.0",
-    "bitcoinjs-lib-bch": "git://github.com/bitcoinjs/bitcoinjs-lib#opt-in-bitcoincash-sighash",
+    "bitcoinforksjs-lib": "git://github.com/bitcoinjs/bitcoinjs-lib#opt-in-bitcoincash-sighash",
     "bitcoinjs-lib-zcash": "git://github.com/karel-3d/bitcoinjs-lib#zcash",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
