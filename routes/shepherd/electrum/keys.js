@@ -1,6 +1,9 @@
 const sha256 = require('js-sha256');
 const bip39 = require('bip39');
 const crypto = require('crypto');
+const bigi = require('bigi');
+const bitcoinZcash = require('bitcoinjs-lib-zcash');
+const bitcoin = require('bitcoinjs-lib');
 
 module.exports = (shepherd) => {
   shepherd.seedToWif = (seed, network, iguana) => {
@@ -19,30 +22,19 @@ module.exports = (shepherd) => {
       bytes[31] |= 64;
     }
 
-    const toHexString = (byteArray) => {
-      return Array.from(byteArray, (byte) => {
-        return ('0' + (byte & 0xFF).toString(16)).slice(-2);
-      }).join('');
-    }
-
-    const hex = toHexString(bytes);
-
-    const key = new shepherd.CoinKey(new Buffer(hex, 'hex'), {
-      private: shepherd.getNetworkData(network).wif,
-      public: shepherd.getNetworkData(network).pubKeyHash,
-    });
-
-    key.compressed = true;
+    const d = bigi.fromBuffer(bytes);
+    const keyPair = shepherd.isZcash(network) ? new bitcoinZcash.ECPair(d, null, { network: shepherd.getNetworkData(network) }) : new bitcoinZcash.ECPair(d, null, { network: shepherd.getNetworkData(network) });
+    const keys = {
+      pub: keyPair.getAddress(),
+      priv: keyPair.toWIF(),
+    };
 
     /*shepherd.log(`seed: ${seed}`, true);
     shepherd.log(`network ${network}`, true);
-    shepherd.log(`seedtowif priv key ${key.privateWif}`, true);
-    shepherd.log(`seedtowif pub key ${key.publicAddress}`, true);*/
+    shepherd.log(`seedtowif priv key ${keys.priv}`, true);
+    shepherd.log(`seedtowif pub key ${keys.pub}`, true);*/
 
-    return {
-      priv: key.privateWif,
-      pub: key.publicAddress,
-    };
+    return keys;
   }
 
   shepherd.get('/electrum/wiftopub', (req, res, next) => {
@@ -63,7 +55,7 @@ module.exports = (shepherd) => {
   });
 
   shepherd.get('/electrum/seedtowif', (req, res, next) => {
-    const keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
+    let keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
 
     const successObj = {
       msg: 'success',

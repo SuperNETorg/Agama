@@ -1,4 +1,17 @@
 module.exports = (shepherd) => {
+  shepherd.isZcash = (network) => {
+    if (network === 'ZEC' ||
+        network === 'zec' ||
+        network === 'zcash' ||
+        network === 'ZCASH' ||
+        network === 'HUSH' ||
+        network === 'hush' ||
+        network === 'blk' ||
+        network === 'BLK') {
+      return true;
+    }
+  };
+
   shepherd.getNetworkData = (network) => {
     const coin = shepherd.findNetworkObj(network) || shepherd.findNetworkObj(network.toUpperCase()) || shepherd.findNetworkObj(network.toLowerCase());
     const coinUC = coin ? coin.toUpperCase() : null;

@@ -45,7 +45,7 @@ module.exports = (shepherd) => {
 
                       // decode tx
                       const _network = shepherd.getNetworkData(network);
-                      const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
+                      const decodedTx = shepherd.isZcash(network) ? shepherd.electrumJSTxDecoderZ(_rawtxJSON, _network) : shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
 
                       if (decodedTx &&
                           decodedTx.format &&

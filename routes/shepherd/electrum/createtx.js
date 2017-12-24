@@ -1,4 +1,5 @@
 const bitcoinJSForks = require('bitcoinforksjs-lib');
+const bitcoinZcash = require('bitcoinjs-lib-zcash');
 
 module.exports = (shepherd) => {
   // unsigned tx
@@ -52,8 +53,8 @@ module.exports = (shepherd) => {
 
   // single sig
   shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
-    let key = shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
-    let tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+    let key = shepherd.isZcash(network) ? bitcoinZcash.ECPair.fromWIF(wif, shepherd.getNetworkData(network)) : shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
+    let tx = shepherd.isZcash(network) ? new bitcoinZcash.TransactionBuilder(shepherd.getNetworkData(network)) : new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
 
     shepherd.log('buildSignedTx');
     // console.log(`buildSignedTx priv key ${wif}`);

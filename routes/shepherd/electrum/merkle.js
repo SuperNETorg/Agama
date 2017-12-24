@@ -2,11 +2,11 @@ module.exports = (shepherd) => {
   // get merkle root
   shepherd.getMerkleRoot = (txid, proof, pos) => {
     const reverse = require('buffer-reverse');
-    let hash = txid;
-    let serialized;
     const _sha256 = (data) => {
       return shepherd.crypto.createHash('sha256').update(data).digest();
     }
+    let hash = txid;
+    let serialized;
 
     shepherd.log(`getMerkleRoot txid ${txid}`, true);
     shepherd.log(`getMerkleRoot pos ${pos}`, true);

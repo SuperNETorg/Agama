@@ -1,13 +1,4 @@
 let electrumServers = {
-  /*zcash: { 2 bytes address fix is required
-    address: '173.212.225.176',
-    port: 50032,
-    proto: 'tcp',
-    serverList: [
-      '173.212.225.176:50032',
-      '136.243.45.140:50032'
-    ],
-  },*/
   coqui: { // !estimatefee
     address: 'electrum1.cipig.net',
     port: 10011,
@@ -298,7 +289,7 @@ let electrumServers = {
       '94.130.224.11:10052'
     ],
   },
-  /*blk: { can't decode tx!
+  blk: { // can't decode tx!
     address: 'electrum1.cipig.net',
     port: 10054,
     proto: 'tcp',
@@ -308,7 +299,7 @@ let electrumServers = {
       'electrum1.cipig.net:10054',
       'electrum2.cipig.net:10054'
     ],
-  },*/
+  },
   sib: {
     address: 'electrum1.cipig.net',
     port: 10050,
@@ -351,6 +342,28 @@ let electrumServers = {
     serverList: [
       'electrum1.cipig.net:10053',
       'electrum2.cipig.net:10053'
+    ],
+  },
+  zec: {
+    address: '173.212.225.176',
+    port: 50032,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'ZEC',
+    serverList: [
+      '173.212.225.176:50032',
+      '136.243.45.140:50032'
+    ],
+  },
+  hush: {
+    address: '173.212.225.176',
+    port: 50013,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'HUSH',
+    serverList: [
+      '173.212.225.176:50013',
+      '136.243.45.140:50013'
     ],
   },
 };

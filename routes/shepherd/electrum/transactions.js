@@ -69,9 +69,10 @@ module.exports = (shepherd) => {
 
                         // decode tx
                         const _network = shepherd.getNetworkData(network);
-                        const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
+                        const decodedTx =  shepherd.isZcash(network) ? shepherd.electrumJSTxDecoderZ(_rawtxJSON, _network) : shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
 
                         let txInputs = [];
+                        shepherd.log(`decodedtx network ${network}`, true);
 
                         shepherd.log('decodedtx =>', true);
                         shepherd.log(decodedTx.outputs, true);
@@ -83,7 +84,7 @@ module.exports = (shepherd) => {
                               if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
                                 ecl.blockchainTransactionGet(_decodedInput.txid)
                                 .then((rawInput) => {
-                                  const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, _network);
+                                  const decodedVinVout = shepherd.isZcash(network) ? shepherd.electrumJSTxDecoderZ(rawInput, _network) : shepherd.electrumJSTxDecoder(rawInput, _network);
 
                                   shepherd.log('electrum raw input tx ==>', true);
 
@@ -351,6 +352,7 @@ module.exports = (shepherd) => {
     const decodedTx = shepherd.electrumJSTxDecoder(_rawtx, _network);
 
     shepherd.log('electrum decoderawtx input tx ==>', true);
+
 
     if (req.query.parseonly ||
         decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {

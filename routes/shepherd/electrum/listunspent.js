@@ -36,7 +36,7 @@ module.exports = (shepherd) => {
 
                         // decode tx
                         const _network = shepherd.getNetworkData(network);
-                        const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
+                        const decodedTx = shepherd.isZcash(network) ? shepherd.electrumJSTxDecoderZ(_rawtxJSON, _network) : shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
 
                         shepherd.log('decoded tx =>', true);
                         shepherd.log(decodedTx, true);
@@ -71,7 +71,8 @@ module.exports = (shepherd) => {
                             if (verify) {
                               shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
                               .then((verifyMerkleRes) => {
-                                if (verifyMerkleRes && verifyMerkleRes === shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                                if (verifyMerkleRes &&
+                                    verifyMerkleRes === shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
                                   verifyMerkleRes = false;
                                 }
 

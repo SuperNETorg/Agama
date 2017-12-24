@@ -240,19 +240,32 @@ networks.sib = {
   dustThreshold: 1000,
 };
 
+networks.zcash = {
+  messagePrefix: '\x19Zcash Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x05358394,
+  },
+  pubKeyHash: 0x1cb8,
+  scriptHash: 0x1cbd,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
+networks.hush = {
+  messagePrefix: '\Hush Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x1cb8,
+  scriptHash: 0x1cbd,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
 networks.btc = networks.bitcoin;
 networks.crw = networks.crown;
 networks.dgb = networks.digibyte;
 networks.arg = networks.argentum;
-
-/*networks.zcash = {
-    messagePrefix: '\x19Zcash Signed Message:\n',
-    bip32: {
-      public: 0x0488b21e,
-      private: 0x0488ade4,
-    },
-    pubKeyHash: 0x1cb8,
-    scriptHash: 0x1cbd,
-    wif: 0x80,
-    dustThreshold: 1000,
-};*/
+networks.zec = networks.zcash;
