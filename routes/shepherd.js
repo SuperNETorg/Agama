@@ -61,8 +61,6 @@ shepherd.electrumKeys = {};
 
 shepherd.electrumJSCore = require('./electrumjs/electrumjs.core.js');
 shepherd.electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
-shepherd.electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
-shepherd.electrumJSTxDecoderZ = require('./electrumjs/electrumjs.txdecoder-2bytes.js');
 shepherd.electrumServers = require('./electrumjs/electrumServers.js');
 
 shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';

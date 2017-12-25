@@ -1,3 +1,9 @@
+const txDecoder = {
+  default: require('../../electrumjs/electrumjs.txdecoder.js'),
+  zcash: require('../../electrumjs/electrumjs.txdecoder-2bytes.js'),
+  pos: require('../../electrumjs/electrumjs.txdecoder-pos.js'),
+};
+
 module.exports = (shepherd) => {
   shepherd.isZcash = (network) => {
     if (network === 'ZEC' ||
@@ -5,10 +11,25 @@ module.exports = (shepherd) => {
         network === 'zcash' ||
         network === 'ZCASH' ||
         network === 'HUSH' ||
-        network === 'hush' ||
-        network === 'blk' ||
-        network === 'BLK') {
+        network === 'hush') {
       return true;
+    }
+  };
+
+  shepherd.isPos = (network) => {
+    if (network === 'BLK' ||
+        network === 'blk') {
+      return true;
+    }
+  };
+
+  shepherd.electrumJSTxDecoder = (rawtx, networkName, network) => {
+    if (shepherd.isZcash(networkName)) {
+      return txDecoder.zcash(rawtx, network);
+    } else if (shepherd.isPos(networkName)) {
+      return txDecoder.pos(rawtx, network);
+    } else {
+      return txDecoder.default(rawtx, network);
     }
   };
 

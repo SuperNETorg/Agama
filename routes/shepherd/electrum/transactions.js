@@ -69,7 +69,7 @@ module.exports = (shepherd) => {
 
                         // decode tx
                         const _network = shepherd.getNetworkData(network);
-                        const decodedTx =  shepherd.isZcash(network) ? shepherd.electrumJSTxDecoderZ(_rawtxJSON, _network) : shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
+                        const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, network, _network);
 
                         let txInputs = [];
                         shepherd.log(`decodedtx network ${network}`, true);
@@ -84,7 +84,7 @@ module.exports = (shepherd) => {
                               if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
                                 ecl.blockchainTransactionGet(_decodedInput.txid)
                                 .then((rawInput) => {
-                                  const decodedVinVout = shepherd.isZcash(network) ? shepherd.electrumJSTxDecoderZ(rawInput, _network) : shepherd.electrumJSTxDecoder(rawInput, _network);
+                                  const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
 
                                   shepherd.log('electrum raw input tx ==>', true);
 
@@ -348,11 +348,11 @@ module.exports = (shepherd) => {
   shepherd.get('/electrum/decoderawtx', (req, res, next) => {
     const _network = shepherd.getNetworkData(req.query.network);
     const _rawtx = req.query.rawtx;
-    // const _rawtx = '0100000001dd6d064f5665f8454293ecaa9dbb55accf4f7e443d35f3b5ab7760f54b6c15fe000000006a473044022056355585a4a501ec9afc96aa5df124cf29ad3ac6454b47cd07cd7d89ec95ec2b022074c4604ee349d30e5336f210598e4dc576bf16ebeb67eeac3f4e82f56e930fee012103b90ba01af308757054e0484bb578765d5df59c4a57adbb94e2419df5e7232a63feffffff0289fc923b000000001976a91424af38fcb13bbc171b0b42bb017244a53b6bb2fa88ac20a10700000000001976a9142f4c0f91fc06ac228c120aee41741d0d3909683288ac49258b58';
-    const decodedTx = shepherd.electrumJSTxDecoder(_rawtx, _network);
+    console.log(_network);
+    //const _rawtx = '010000006f2c395a02d81487fc7f9d1be3ea900316730133c044af70cd76d21e988e71de0e9e85918f010000006a47304402202097acd391e1d0eaaf91844bd596e918fb71320e3e0c51554acb71a39e4ee98b0220548fd61d4ae77a08d70b01bf5340983a1ba63f6b71ad71d478af77011f96fd510121031ffc010d8abc4180b4c1a13962bf9153a78082e7f2ac18f7d14cb6a6634ca218feffffff2b31f6c9a7916f7cf128cae94b3fc10e4c74ca3a740e1a7a6fd6624e4e9a5c8b010000006a473044022063f014c5fbaa7614732e0ae486179a854215fc32c02230e13f69b7e81fa000e50220236a2ba6373b1854aafc59c5391ab7505062067f3d293c016cbb5d252b35a56a012102f307f17d282fc0eabf99227c2e0f3122ae9ecd7da0de099f0c6007d4c941b57bfeffffff021b797ad7120000001976a914c7a7142d743b3e6eebe76923f43bae477d3ce31a88acff086d66000000001976a91463800ff36b9c52b2ffe5564af1c2a38df4f0126788ac16381d00';
+    const decodedTx = shepherd.electrumJSTxDecoder(_rawtx, req.query.network, _network);
 
     shepherd.log('electrum decoderawtx input tx ==>', true);
-
 
     if (req.query.parseonly ||
         decodedTx.inputs[0].txid === '0000000000000000000000000000000000000000000000000000000000000000') {
@@ -373,12 +373,14 @@ module.exports = (shepherd) => {
       const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[req.query.network].port, shepherd.electrumServers[req.query.network].address, shepherd.electrumServers[req.query.network].proto); // tcp or tls
 
       ecl.connect();
+      shepherd.log(decodedTx.inputs[0]);
+      shepherd.log(decodedTx.inputs[0].txid);
       ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
       .then((json) => {
         ecl.close();
         shepherd.log(json, true);
 
-        const decodedVin = shepherd.electrumJSTxDecoder(json, _network);
+        const decodedVin = shepherd.electrumJSTxDecoder(json, req.query.network, _network);
 
         const successObj = {
           msg: 'success',

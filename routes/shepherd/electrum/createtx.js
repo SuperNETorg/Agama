@@ -1,11 +1,13 @@
 const bitcoinJSForks = require('bitcoinforksjs-lib');
 const bitcoinZcash = require('bitcoinjs-lib-zcash');
+const bitcoinPos = require('bitcoinjs-lib-pos');
 
 module.exports = (shepherd) => {
   // unsigned tx
   shepherd.buildUnsignedTx = (sendTo, changeAddress, network, utxo, changeValue, spendValue) => {
     let tx;
 
+    // TODO: finish unsigned for zcash, btc forks and pos coins
     if (network === 'btg') {
       shepherd.log('enable btg');
       tx = new bitcoinJSForks.TransactionBuilder(shepherd.getNetworkData(network));
@@ -54,7 +56,15 @@ module.exports = (shepherd) => {
   // single sig
   shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
     let key = shepherd.isZcash(network) ? bitcoinZcash.ECPair.fromWIF(wif, shepherd.getNetworkData(network)) : shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
-    let tx = shepherd.isZcash(network) ? new bitcoinZcash.TransactionBuilder(shepherd.getNetworkData(network)) : new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+    let tx;
+
+    if (shepherd.isZcash(network)) {
+      tx = new bitcoinZcash.TransactionBuilder(shepherd.getNetworkData(network));
+    } else if (shepherd.isPos(network)) {
+      tx = new bitcoinPos.TransactionBuilder(shepherd.getNetworkData(network));
+    } else {
+      tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
+    }
 
     shepherd.log('buildSignedTx');
     // console.log(`buildSignedTx priv key ${wif}`);
@@ -65,10 +75,18 @@ module.exports = (shepherd) => {
       tx.addInput(utxo[i].txid, utxo[i].vout);
     }
 
-    tx.addOutput(sendTo, Number(spendValue));
+    if (shepherd.isPos(network)) {
+      tx.addOutput(sendTo, Number(spendValue), shepherd.getNetworkData(network));
+    } else {
+      tx.addOutput(sendTo, Number(spendValue));
+    }
 
     if (changeValue > 0) {
-      tx.addOutput(changeAddress, Number(changeValue));
+      if (shepherd.isPos(network)) {
+        tx.addOutput(changeAddress, Number(changeValue), shepherd.getNetworkData(network));
+      } else {
+        tx.addOutput(changeAddress, Number(changeValue));
+      }
     }
 
     if (network === 'komodo' ||
@@ -86,7 +104,11 @@ module.exports = (shepherd) => {
     shepherd.log(tx, true);
 
     for (let i = 0; i < utxo.length; i++) {
-      tx.sign(i, key);
+      if (shepherd.isPos(network)) {
+        tx.sign(shepherd.getNetworkData(network), i, key);
+      } else {
+        tx.sign(i, key);
+      }
     }
 
     const rawtx = tx.build().toHex();

@@ -16,7 +16,9 @@
     "agama",
     "SuperNET",
     "komodo",
-    "pax"
+    "multicoin",
+    "wallet",
+    "spv"
   ],
   "author": "SuperNET",
   "license": "MIT",
@@ -33,6 +35,7 @@
     "bitcoinforksjs-lib": "git://github.com/bitcoinjs/bitcoinjs-lib#opt-in-bitcoincash-sighash",
     "bitcoinjs-lib": "^3.2.0",
     "bitcoinjs-lib-zcash": "git://github.com/karel-3d/bitcoinjs-lib#zcash",
+    "bitcoinjs-lib-pos": "git://github.com/KomodoPlatform/bitcoinjs-lib-pos",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
     "buffer-reverse": "^1.0.1",

@@ -226,6 +226,7 @@ networks.blk = {
   scriptHash: 0x55,
   wif: 0x99,
   dustThreshold: 1000,
+  isPoS: true,
 };
 
 networks.sib = {
