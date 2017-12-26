@@ -69,6 +69,7 @@ module.exports = (shepherd) => {
 
   shepherd.post('/electrum/keys', (req, res, next) => {
     let _matchingKeyPairs = 0;
+    let _totalKeys = 0;
     let _electrumKeys = {};
 
     for (let key in shepherd.electrumServers) {
@@ -79,6 +80,7 @@ module.exports = (shepherd) => {
           shepherd.electrumKeys[_abbr].priv === priv) {
         _matchingKeyPairs++;
       }
+      _totalKeys++;
     }
 
     if (req.body.active) {
@@ -93,11 +95,9 @@ module.exports = (shepherd) => {
       _electrumKeys = shepherd.electrumKeys;
     }
 
-    // shepherd.log(JSON.stringify(_electrumKeys, null, '\t'), true);
-
     const successObj = {
       msg: 'success',
-      result: _matchingKeyPairs === Object.keys(shepherd.electrumKeys).length ? _electrumKeys : false,
+      result: _matchingKeyPairs === _totalKeys ? _electrumKeys : false,
     };
 
     res.end(JSON.stringify(successObj));
