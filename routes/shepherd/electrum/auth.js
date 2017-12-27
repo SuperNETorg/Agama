@@ -1,18 +1,28 @@
+const bs58check = require('bs58check');
+const bitcoinZcash = require('bitcoinjs-lib-zcash');
+
 module.exports = (shepherd) => {
   shepherd.post('/electrum/login', (req, res, next) => {
     for (let key in shepherd.electrumServers) {
       const _abbr = shepherd.electrumServers[key].abbr;
       const _seed = req.body.seed;
       let keys;
+      let isWif = false;
 
-      if ((_seed.length === 51 || _seed.length === 52) &&
-          _seed.indexOf(' ') === -1 &&
-          _seed.match(/^[a-zA-Z0-9]*$/)) {
-        let key = shepherd.bitcoinJS.ECPair.fromWIF(_seed, shepherd.electrumJSNetworks.komodo);
+      console.log(_seed);
+
+      try {
+        bs58check.decode(_seed);
+        isWif = true;
+      } catch (e) {}
+
+      if (isWif) {
+        let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : shepherd.bitcoinJS.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
         keys = {
           priv: key.toWIF(),
           pub: key.getAddress(),
         };
+        console.log(keys);
       } else {
         keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
       }

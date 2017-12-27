@@ -38,7 +38,7 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/wiftopub', (req, res, next) => {
-    let key = shepherd.bitcoinJS.ECPair.fromWIF(req.query.wif, shepherd.electrumJSNetworks[req.query.coin]);
+    let key = shepherd.isZcash(req.query.coin.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(req.query.wif, shepherd.electrumJSNetworks[req.query.coin], true) : shepherd.bitcoinJS.ECPair.fromWIF(req.query.wif, shepherd.electrumJSNetworks[req.query.coin], true);
     keys = {
       priv: key.toWIF(),
       pub: key.getAddress(),
