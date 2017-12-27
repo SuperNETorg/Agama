@@ -17,6 +17,7 @@ const appConfig = {
     cliStopTimeout: 1000,
     failedRPCAttemptsThreshold: 10,
     stopNativeDaemonsOnQuit: true,
+    lang: 'EN',
   },
   schema: {
     host: {
@@ -104,6 +105,15 @@ const appConfig = {
       displayName: 'Failed RPC connect attempts threshold',
       info: 'Number of allowed consequent RPC connect failures before the app marks native coin daemon as not running properly',
       type: 'number',
+    },
+    lang: {
+      display: true,
+      displayName: 'Language',
+      type: 'select',
+      data: [
+        { name: 'EN', label: 'English' },
+        { name: 'DE', label: 'German' }
+      ],
     },
   },
 };
