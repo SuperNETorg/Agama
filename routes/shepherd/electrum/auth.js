@@ -9,8 +9,6 @@ module.exports = (shepherd) => {
       let keys;
       let isWif = false;
 
-      console.log(_seed);
-
       try {
         bs58check.decode(_seed);
         isWif = true;
@@ -22,7 +20,6 @@ module.exports = (shepherd) => {
           priv: key.toWIF(),
           pub: key.getAddress(),
         };
-        console.log(keys);
       } else {
         keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
       }

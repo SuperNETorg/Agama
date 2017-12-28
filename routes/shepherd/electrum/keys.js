@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const bigi = require('bigi');
 const bitcoinZcash = require('bitcoinjs-lib-zcash');
 const bitcoin = require('bitcoinjs-lib');
+const bs58check = require('bs58check');
 
 module.exports = (shepherd) => {
   shepherd.seedToWif = (seed, network, iguana) => {
@@ -71,10 +72,28 @@ module.exports = (shepherd) => {
     let _matchingKeyPairs = 0;
     let _totalKeys = 0;
     let _electrumKeys = {};
+    let _seed = req.body.seed;
 
     for (let key in shepherd.electrumServers) {
       const _abbr = shepherd.electrumServers[key].abbr;
-      const { priv, pub } = shepherd.seedToWif(req.body.seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
+      let isWif = false;
+      let priv;
+      let pub;
+
+      try {
+        bs58check.decode(_seed);
+        isWif = true;
+      } catch (e) {}
+
+      if (isWif) {
+        let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : shepherd.bitcoinJS.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
+        priv = key.toWIF();
+        pub = key.getAddress();
+      } else {
+        let _keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
+        priv = _keys.priv;
+        pub = _keys.pub;
+      }
 
       if (shepherd.electrumKeys[_abbr].pub === pub &&
           shepherd.electrumKeys[_abbr].priv === priv) {
