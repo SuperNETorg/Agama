@@ -669,7 +669,7 @@ module.exports = (shepherd) => {
                   shepherd.log('rpcport: NOT FOUND');
                   shepherd.writeLog('rpcport: NOT FOUND');
 
-                  fs.appendFile(DaemonConfPath, '\rpcport=7771', (err) => {
+                  fs.appendFile(DaemonConfPath, '\nrpcport=7771', (err) => {
                     if (err) {
                       shepherd.writeLog(`append daemon conf err: ${err}`);
                       shepherd.log(`append daemon conf err: ${err}`);
