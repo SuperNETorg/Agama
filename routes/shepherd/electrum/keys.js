@@ -73,6 +73,7 @@ module.exports = (shepherd) => {
     let _totalKeys = 0;
     let _electrumKeys = {};
     let _seed = req.body.seed;
+    let _wifError = false;
 
     for (let key in shepherd.electrumServers) {
       const _abbr = shepherd.electrumServers[key].abbr;
@@ -86,9 +87,14 @@ module.exports = (shepherd) => {
       } catch (e) {}
 
       if (isWif) {
-        let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : shepherd.bitcoinJS.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
-        priv = key.toWIF();
-        pub = key.getAddress();
+        try {
+          let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : shepherd.bitcoinJS.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
+          priv = key.toWIF();
+          pub = key.getAddress();
+        } catch (e) {
+          _wifError = true;
+          break;
+        }
       } else {
         let _keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
         priv = _keys.priv;
@@ -115,8 +121,8 @@ module.exports = (shepherd) => {
     }
 
     const successObj = {
-      msg: 'success',
-      result: _matchingKeyPairs === _totalKeys ? _electrumKeys : false,
+      msg: _wifError ? 'error' : 'success',
+      result: _wifError ? false : (_matchingKeyPairs === _totalKeys ? _electrumKeys : false),
     };
 
     res.end(JSON.stringify(successObj));
