@@ -18,6 +18,7 @@ const appConfig = {
     failedRPCAttemptsThreshold: 10,
     stopNativeDaemonsOnQuit: true,
     lang: 'EN',
+    rpc2cli: false,
   },
   schema: {
     host: {
@@ -114,6 +115,11 @@ const appConfig = {
         { name: 'EN', label: 'English' },
         { name: 'DE', label: 'German' }
       ],
+    },
+    rpc2cli: {
+      display: true,
+      displayName: 'Use CLI instead of RPC JSON server',
+      type: 'boolean',
     },
   },
 };

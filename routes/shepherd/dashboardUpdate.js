@@ -244,12 +244,14 @@ module.exports = (shepherd) => {
             chain: coin,
             cmd: cmd,
             params: params,
+            rpc2cli: req.body.rpc2cli,
           };
         } else {
           _payload = {
             mode: null,
             chain: coin,
             cmd: cmd,
+            rpc2cli: req.body.rpc2cli,
           };
         }
 
