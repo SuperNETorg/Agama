@@ -94,7 +94,6 @@ module.exports = (shepherd) => {
             _coindCliBin = `${shepherd.coindRootDir}/${_chain.toLowerCase()}/${shepherd.nativeCoindList[_chain.toLowerCase()].bin.toLowerCase()}-cli`;
           }
 
-          console.log(`cmd ${_cmd}`);
           if (_params.indexOf('*')) {
             _params = _params.replace('*', '"*"');
           }
@@ -105,27 +104,15 @@ module.exports = (shepherd) => {
             _cmd = 'getaddressesbyaccount ""';
           }
 
-          console.log(typeof _params);
-
           let _arg = (_chain ? ' -ac_name=' + _chain : '') + ' ' + _cmd + (typeof _params === 'object' ? _params.join(' ') : _params);
-
-          console.log(_arg);
 
           if (shepherd.appConfig.dataDir.length) {
             _arg = `${_arg} -datadir=${shepherd.appConfig.dataDir  + (_chain ? '/' + key : '')}`;
           }
 
-          /*_arg = _arg.trim().split(' ');
-
-          for (let i = 0; i < _arg.length; i++) {
-            if (_arg[i].indexOf('getaddressesbyaccount') > -1) {
-              _arg[i] = 'getaddressesbyaccount ""';
-            }
-          }*/
-
           shepherd.exec(`"${_coindCliBin}" ${_arg}`, (error, stdout, stderr) => {
-            shepherd.log(`stdout: ${stdout}`);
-            shepherd.log(`stderr: ${stderr}`);
+            //shepherd.log(`stdout: ${stdout}`);
+            //shepherd.log(`stderr: ${stderr}`);
 
             if (error !== null) {
               shepherd.log(`exec error: ${error}`);
@@ -133,14 +120,16 @@ module.exports = (shepherd) => {
 
             let responseObj;
 
-/*error code: -5
-error message:
-Invalid Komodo address*/
-
-
             if (stderr) {
               let _res;
               let _error;
+
+              if (_chain !== 'komodod' &&
+                  stderr.indexOf(`error creating`) > -1) {
+                shepherd.log(`replace error creating (gen${_chain})`);
+                stderr = stderr.replace(`error creating (gen${_chain})`, '');
+                shepherd.log(stderr);
+              }
 
               if ((stderr.indexOf('{') > -1 && stderr.indexOf('}') > -1) ||
                   (stderr.indexOf('[') > -1 && stderr.indexOf(']') > -1)) {
@@ -151,7 +140,7 @@ Invalid Komodo address*/
 
               if (stderr.indexOf('error code:') > -1) {
                 _error = {
-                  code: stderr.substring(stderr.indexOf('error code:') + 11, stderr.indexOf('error message:') - stderr.indexOf('error code:')).trim(),
+                  code: Number(stderr.substring(stderr.indexOf('error code:') + 11, stderr.indexOf('error message:') - stderr.indexOf('error code:')).trim()),
                   message: stderr.substring(stderr.indexOf('error message:') + 15, stderr.length).trim(),
                 };
               }
@@ -169,6 +158,13 @@ Invalid Komodo address*/
               let _res;
               let _error;
 
+              if (_chain !== 'komodod' &&
+                  stdout.indexOf(`error creating`) > -1) {
+                shepherd.log(`replace error creating (gen${_chain})`);
+                stdout = stdout.replace(`error creating (gen${_chain})`, '');
+                shepherd.log(stdout);
+              }
+
               if ((stdout.indexOf('{') > -1 && stdout.indexOf('}') > -1) ||
                   (stdout.indexOf('[') > -1 && stdout.indexOf(']') > -1)) {
                 _res = JSON.parse(stdout);
@@ -178,7 +174,7 @@ Invalid Komodo address*/
 
               if (stdout.indexOf('error code:') > -1) {
                 _error = {
-                  code: stdout.substring(stdout.indexOf('error code:') + 11, stdout.indexOf('error message:') - stdout.indexOf('error code:')).trim(),
+                  code: Number(stdout.substring(stdout.indexOf('error code:') + 11, stdout.indexOf('error message:') - stdout.indexOf('error code:')).trim()),
                   message: stdout.substring(stdout.indexOf('error message:') + 15, stdout.length).trim(),
                 };
               }
@@ -195,7 +191,7 @@ Invalid Komodo address*/
             }
 
             res.end(JSON.stringify(responseObj));
-            shepherd.killRogueProcess('komodo-cli');
+            // shepherd.killRogueProcess('komodo-cli');
           });
         } else {
           if (_cmd === 'debug' &&
