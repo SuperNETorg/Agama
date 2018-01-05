@@ -1,7 +1,7 @@
 {
   "name": "agama-app",
   "productName": "Agama",
-  "version": "0.2.25",
+  "version": "0.2.26",
   "description": "Agama Wallet Desktop App",
   "main": "main.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "make-rpm": "node make-rpm.js",
     "make-deb": "node make-deb.js"
   },
-  "repository": "https://github.com/SuperNETorg/Agama/",
+  "repository": "https://github.com/KomodoPlatform/Agama/",
   "homepage": "http://supernet.org",
   "keywords": [
     "agama",
@@ -20,7 +20,7 @@
     "wallet",
     "spv"
   ],
-  "author": "SuperNET",
+  "author": "SuperNET Team",
   "license": "MIT",
   "devDependencies": {
     "electron": "1.6.5",
