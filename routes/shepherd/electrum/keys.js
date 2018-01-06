@@ -6,9 +6,16 @@ const bitcoinZcash = require('bitcoinjs-lib-zcash');
 const bitcoin = require('bitcoinjs-lib');
 const bs58check = require('bs58check');
 
-// TODO: keys gen refactor
-
 module.exports = (shepherd) => {
+  shepherd.wifToWif = (wif, network) => {
+    const key = shepherd.isZcash(network) ? new bitcoinZcash.ECPair(d, null, { network: shepherd.getNetworkData(network) }) : new bitcoinZcash.ECPair(d, null, { network: shepherd.getNetworkData(network) });
+    
+    return {
+      pub: key.getAddress(),
+      priv: key.toWIF(),
+    };
+  }
+
   shepherd.seedToWif = (seed, network, iguana) => {
     let bytes;
 

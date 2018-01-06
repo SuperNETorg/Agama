@@ -360,7 +360,7 @@ module.exports = (shepherd) => {
             shepherd.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`, true);
 
             if (_maxSpend === value) {
-              _change = totalInterest -_change - _feeOverhead;
+              _change = totalInterest - _change - _feeOverhead;
 
               if (outputAddress === changeAddress) {
                 value += _change;

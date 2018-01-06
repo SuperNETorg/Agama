@@ -19,6 +19,7 @@ const appConfig = {
     stopNativeDaemonsOnQuit: true,
     lang: 'EN',
     rpc2cli: false,
+    fiatRates: false,
   },
   schema: {
     host: {
@@ -120,6 +121,12 @@ const appConfig = {
       display: true,
       displayName: 'Disable RPC',
       info: 'Use CLI instead of RPC JSON server in native mode',
+      type: 'boolean',
+    },
+    fiatRates: {
+      display: true,
+      displayName: 'Fetch fiat rates',
+      info: 'Get coin fiat rates from atomicexplorer.com',
       type: 'boolean',
     },
   },
