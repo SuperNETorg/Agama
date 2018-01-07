@@ -1,40 +1,43 @@
 const bs58check = require('bs58check');
 const bitcoinZcash = require('bitcoinjs-lib-zcash');
+const bitcoin = require('bitcoinjs-lib');
 
 module.exports = (shepherd) => {
   shepherd.post('/electrum/login', (req, res, next) => {
     let _wifError = false;
 
-    for (let key in shepherd.electrumServers) {
-      const _abbr = shepherd.electrumServers[key].abbr;
-      const _seed = req.body.seed;
-      let keys;
-      let isWif = false;
+    for (let key in shepherd.electrumCoins) {
+      if (key !== 'auth') {
+        const _abbr = key;
+        const _seed = req.body.seed;
+        let keys;
+        let isWif = false;
 
-      try {
-        bs58check.decode(_seed);
-        isWif = true;
-      } catch (e) {}
-
-      if (isWif) {
         try {
-          let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : shepherd.bitcoinJS.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
-          keys = {
-            priv: key.toWIF(),
-            pub: key.getAddress(),
-          };
-        } catch (e) {
-          _wifError = true;
-          break;
-        }
-      } else {
-        keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
-      }
+          bs58check.decode(_seed);
+          isWif = true;
+        } catch (e) {}
 
-      shepherd.electrumKeys[_abbr] = {
-        priv: keys.priv,
-        pub: keys.pub,
-      };
+        if (isWif) {
+          try {
+            let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : bitcoin.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
+            keys = {
+              priv: key.toWIF(),
+              pub: key.getAddress(),
+            };
+          } catch (e) {
+            _wifError = true;
+            break;
+          }
+        } else {
+          keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
+        }
+
+        shepherd.electrumKeys[_abbr] = {
+          priv: keys.priv,
+          pub: keys.pub,
+        };
+      }
     }
 
     shepherd.electrumCoins.auth = true;

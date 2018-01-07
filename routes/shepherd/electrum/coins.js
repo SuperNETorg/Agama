@@ -54,6 +54,16 @@ module.exports = (shepherd) => {
           shepherd.log(`${coin} doesnt have any backup electrum servers`, true);
         }
 
+        if (Object.keys(shepherd.electrumKeys).length > 0) {
+          const _keys = shepherd.wifToWif(shepherd.electrumKeys[Object.keys(shepherd.electrumKeys)[0]].priv, coin);
+
+          shepherd.electrumKeys[coin] = {
+            priv: _keys.priv,
+            pub: _keys.pub,
+          };
+          console.log(shepherd.electrumKeys[coin]);
+        }
+
         return true;
       }
     }
