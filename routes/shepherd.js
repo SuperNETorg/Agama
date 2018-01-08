@@ -107,7 +107,6 @@ shepherd = require('./shepherd/dex/electrumServersList.js')(shepherd);
 // core
 shepherd = require('./shepherd/addCoinShortcuts.js')(shepherd);
 shepherd = require('./shepherd/dashboardUpdate.js')(shepherd);
-shepherd = require('./shepherd/binsTestUtil.js')(shepherd);
 shepherd = require('./shepherd/binsUtils.js')(shepherd);
 shepherd = require('./shepherd/downloadUtil.js')(shepherd);
 shepherd = require('./shepherd/init.js')(shepherd);

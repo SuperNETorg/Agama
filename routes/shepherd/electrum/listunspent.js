@@ -155,40 +155,49 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/listunspent', (req, res, next) => {
-    const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-    const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
+    if (shepherd.checkToken(req.query.token)) {
+      const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+      const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
-    if (req.query.full &&
-        req.query.full === 'true') {
-      shepherd.listunspent(
-        ecl,
-        req.query.address,
-        network,
-        true,
-        req.query.verify
-      ).then((listunspent) => {
-        shepherd.log('electrum listunspent ==>', true);
+      if (req.query.full &&
+          req.query.full === 'true') {
+        shepherd.listunspent(
+          ecl,
+          req.query.address,
+          network,
+          true,
+          req.query.verify
+        ).then((listunspent) => {
+          shepherd.log('electrum listunspent ==>', true);
 
-        const successObj = {
-          msg: 'success',
-          result: listunspent,
-        };
+          const successObj = {
+            msg: 'success',
+            result: listunspent,
+          };
 
-        res.end(JSON.stringify(successObj));
-      });
+          res.end(JSON.stringify(successObj));
+        });
+      } else {
+        shepherd.listunspent(ecl, req.query.address, network)
+        .then((listunspent) => {
+          ecl.close();
+          shepherd.log('electrum listunspent ==>', true);
+
+          const successObj = {
+            msg: 'success',
+            result: listunspent,
+          };
+
+          res.end(JSON.stringify(successObj));
+        });
+      }
     } else {
-      shepherd.listunspent(ecl, req.query.address, network)
-      .then((listunspent) => {
-        ecl.close();
-        shepherd.log('electrum listunspent ==>', true);
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
 
-        const successObj = {
-          msg: 'success',
-          result: listunspent,
-        };
-
-        res.end(JSON.stringify(successObj));
-      });
+      res.end(JSON.stringify(errorObj));
     }
   });
 

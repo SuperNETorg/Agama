@@ -128,17 +128,26 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/merkle/verify', (req, res, next) => {
-    shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
-    .then((verifyMerkleRes) => {
-      const successObj = {
-        msg: 'success',
-        result: {
-          merkleProof: verifyMerkleRes,
-        },
+    if (shepherd.checkToken(req.query.token)) {
+      shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
+      .then((verifyMerkleRes) => {
+        const successObj = {
+          msg: 'success',
+          result: {
+            merkleProof: verifyMerkleRes,
+          },
+        };
+
+        res.end(JSON.stringify(successObj));
+      });
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(successObj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   return shepherd;

@@ -105,22 +105,31 @@ module.exports = (shepherd) => {
    *  params: payload
    */
   shepherd.post('/appconf', (req, res, next) => {
-    if (!req.body.payload) {
+    if (shepherd.checkToken(req.body.token)) {
+      if (!req.body.payload) {
+        const errorObj = {
+          msg: 'error',
+          result: 'no payload provided',
+        };
+
+        res.end(JSON.stringify(errorObj));
+      } else {
+        shepherd.saveLocalAppConf(req.body.payload);
+
+        const successObj = {
+          msg: 'success',
+          result: 'config saved',
+        };
+
+        res.end(JSON.stringify(successObj));
+      }
+    } else {
       const errorObj = {
         msg: 'error',
-        result: 'no payload provided',
+        result: 'unauthorized access',
       };
 
       res.end(JSON.stringify(errorObj));
-    } else {
-      shepherd.saveLocalAppConf(req.body.payload);
-
-      const successObj = {
-        msg: 'success',
-        result: 'config saved',
-      };
-
-      res.end(JSON.stringify(successObj));
     }
   });
 
@@ -129,14 +138,23 @@ module.exports = (shepherd) => {
    *  params: none
    */
   shepherd.post('/appconf/reset', (req, res, next) => {
-    shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
+    if (shepherd.checkToken(req.body.token)) {
+      shepherd.saveLocalAppConf(shepherd.defaultAppConfig);
 
-    const successObj = {
-      msg: 'success',
-      result: 'config saved',
-    };
+      const successObj = {
+        msg: 'success',
+        result: 'config saved',
+      };
 
-    res.end(JSON.stringify(successObj));
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   /*
@@ -144,8 +162,17 @@ module.exports = (shepherd) => {
    *
    */
   shepherd.get('/appconf', (req, res, next) => {
-    const obj = shepherd.loadLocalConfig();
-    res.send(obj);
+    if (shepherd.checkToken(req.query.token)) {
+      const obj = shepherd.loadLocalConfig();
+      res.send(obj);
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   return shepherd;

@@ -792,69 +792,81 @@ module.exports = (shepherd) => {
    *  params: herd
    */
   shepherd.post('/herd', (req, res) => {
-    const _body = req.body;
-    shepherd.log('herd req.body =>');
-    shepherd.log(_body);
+    if (shepherd.checkToken(req.body.token)) {
+      const _body = req.body;
+      shepherd.log('herd req.body =>');
+      shepherd.log(_body);
 
-    if (_body.options &&
-        !shepherd.kmdMainPassiveMode) {
-      const testCoindPort = (skipError) => {
-        const _acName = req.body.options.ac_name;
+      if (_body.options &&
+          !shepherd.kmdMainPassiveMode) {
+        const testCoindPort = (skipError) => {
+          const _acName = req.body.options.ac_name;
 
-        if (!shepherd.lockDownAddCoin) {
-          const _port = shepherd.assetChainPorts[_acName];
+          if (!shepherd.lockDownAddCoin) {
+            const _port = shepherd.assetChainPorts[_acName];
 
-          portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
-            // Status is 'open' if currently in use or 'closed' if available
-            if (status === 'open' &&
-                shepherd.appConfig.stopNativeDaemonsOnQuit) {
-              if (!skipError) {
-                shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
-                shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-                shepherd.io.emit('service', {
-                  komodod: {
-                    error: `error starting ${_body.herd} ${_acName} daemon. Port ${_port} is already taken!`,
-                  },
-                });
+            portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+              // Status is 'open' if currently in use or 'closed' if available
+              if (status === 'open' &&
+                  shepherd.appConfig.stopNativeDaemonsOnQuit) {
+                if (!skipError) {
+                  shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
+                  shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
+                  shepherd.io.emit('service', {
+                    komodod: {
+                      error: `error starting ${_body.herd} ${_acName} daemon. Port ${_port} is already taken!`,
+                    },
+                  });
 
-                const obj = {
-                  msg: 'error',
-                  result: `error starting ${_body.herd} ${_acName} daemon. Port ${_port} is already taken!`,
-                };
+                  const obj = {
+                    msg: 'error',
+                    result: `error starting ${_body.herd} ${_acName} daemon. Port ${_port} is already taken!`,
+                  };
 
-                res.status(500);
-                res.end(JSON.stringify(obj));
+                  res.status(500);
+                  res.end(JSON.stringify(obj));
+                } else {
+                  shepherd.log(`komodod service start success at port ${_port}`);
+                  shepherd.writeLog(`komodod service start success at port ${_port}`);
+                }
               } else {
-                shepherd.log(`komodod service start success at port ${_port}`);
-                shepherd.writeLog(`komodod service start success at port ${_port}`);
-              }
-            } else {
-              if (!skipError) {
-                herder(_body.herd, _body.options);
+                if (!skipError) {
+                  herder(_body.herd, _body.options);
 
-                const obj = {
-                  msg: 'success',
-                  result: 'result',
-                };
+                  const obj = {
+                    msg: 'success',
+                    result: 'result',
+                  };
 
-                res.end(JSON.stringify(obj));
-              } else {
-                shepherd.log(`komodod service start error at port ${_port}, reason: unknown`);
-                shepherd.writeLog(`komodod service start error at port ${_port}, reason: unknown`);
+                  res.end(JSON.stringify(obj));
+                } else {
+                  shepherd.log(`komodod service start error at port ${_port}, reason: unknown`);
+                  shepherd.writeLog(`komodod service start error at port ${_port}, reason: unknown`);
+                }
               }
-            }
-          });
+            });
+          }
         }
-      }
 
-      if (_body.herd === 'komodod') {
-        // check if komodod instance is already running
-        testCoindPort();
-        setTimeout(() => {
-          testCoindPort(true);
-        }, 10000);
+        if (_body.herd === 'komodod') {
+          // check if komodod instance is already running
+          testCoindPort();
+          setTimeout(() => {
+            testCoindPort(true);
+          }, 10000);
+        } else {
+          herder(_body.herd, _body.options, _body.coind);
+
+          const obj = {
+            msg: 'success',
+            result: 'result',
+          };
+
+          res.end(JSON.stringify(obj));
+        }
       } else {
-        herder(_body.herd, _body.options, _body.coind);
+        // (?)
+        herder(_body.herd, _body.options);
 
         const obj = {
           msg: 'success',
@@ -864,15 +876,12 @@ module.exports = (shepherd) => {
         res.end(JSON.stringify(obj));
       }
     } else {
-      // (?)
-      herder(_body.herd, _body.options);
-
-      const obj = {
-        msg: 'success',
-        result: 'result',
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(obj));
+      res.end(JSON.stringify(errorObj));
     }
   });
 
@@ -880,46 +889,64 @@ module.exports = (shepherd) => {
    *  type: POST
    */
   shepherd.post('/setconf', (req, res) => {
-    const _body = req.body;
+    if (shepherd.checkToken(req.body.token)) {
+      const _body = req.body;
 
-    shepherd.log('setconf req.body =>');
-    shepherd.log(_body);
+      shepherd.log('setconf req.body =>');
+      shepherd.log(_body);
 
-    if (os.platform() === 'win32' &&
-        _body.chain == 'komodod') {
-      setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+      if (os.platform() === 'win32' &&
+          _body.chain == 'komodod') {
+        setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+      } else {
+        shepherd.setConf(_body.chain);
+      }
+
+      const obj = {
+        msg: 'success',
+        result: 'result',
+      };
+
+      res.end(JSON.stringify(obj));
     } else {
-      shepherd.setConf(_body.chain);
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
     }
-
-    const obj = {
-      msg: 'success',
-      result: 'result',
-    };
-
-    res.end(JSON.stringify(obj));
   });
 
   /*
    *  type: POST
    */
   shepherd.post('/getconf', (req, res) => {
-    const _body = req.body;
+    if (shepherd.checkToken(req.body.token)) {
+      const _body = req.body;
 
-    shepherd.log('getconf req.body =>');
-    shepherd.log(_body);
+      shepherd.log('getconf req.body =>');
+      shepherd.log(_body);
 
-    const confpath = getConf(_body.chain, _body.coind);
+      const confpath = getConf(_body.chain, _body.coind);
 
-    shepherd.log(`getconf path is: ${confpath}`);
-    shepherd.writeLog(`getconf path is: ${confpath}`);
+      shepherd.log(`getconf path is: ${confpath}`);
+      shepherd.writeLog(`getconf path is: ${confpath}`);
 
-    const obj = {
-      msg: 'success',
-      result: confpath,
-    };
+      const obj = {
+        msg: 'success',
+        result: confpath,
+      };
 
-    res.end(JSON.stringify(obj));
+      res.end(JSON.stringify(obj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.setConfKMD = (isChips) => {

@@ -40,7 +40,8 @@ module.exports = (shepherd) => {
         body: JSON.stringify({
           herd: 'komodod',
           options: herdData,
-        })
+          token: shepherd.appSessionHash,
+        }),
       };
 
       shepherd.request(options, (error, response, body) => {
@@ -90,7 +91,8 @@ module.exports = (shepherd) => {
             body: JSON.stringify({
               herd: 'komodod',
               options: herdData[i],
-            })
+              token: shepherd.appSessionHash,
+            }),
           };
 
           shepherd.request(options, (error, response, body) => {

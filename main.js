@@ -57,7 +57,6 @@ shepherd.createAgamaDirs();
 const appSessionHash = md5(Date.now().toString());
 const _spvFees = shepherd.getSpvFees();
 
-shepherd.writeLog(`app init ${appSessionHash}`);
 shepherd.writeLog(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
 shepherd.writeLog('sys info:');
 shepherd.writeLog(`totalmem_readable: ${formatBytes(os.totalmem())}`);
@@ -68,7 +67,9 @@ shepherd.writeLog(`platform: ${osPlatform}`);
 shepherd.writeLog(`os_release: ${os.release()}`);
 shepherd.writeLog(`os_type: ${os.type()}`);
 
-shepherd.log(`app init ${appSessionHash}`);
+if (process.argv.indexOf('devmode') > -1) {
+	shepherd.log(`app init ${appSessionHash}`);
+}
 shepherd.log(`app info: ${appBasicInfo.name} ${appBasicInfo.version}`);
 shepherd.log('sys info:');
 shepherd.log(`totalmem_readable: ${formatBytes(os.totalmem())}`);
