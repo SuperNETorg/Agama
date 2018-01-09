@@ -289,7 +289,7 @@ let electrumServers = {
       '94.130.224.11:10052'
     ],
   },
-  blk: { // can't decode tx!
+  blk: { // pos
     address: 'electrum1.cipig.net',
     port: 10054,
     proto: 'tcp',
@@ -364,6 +364,28 @@ let electrumServers = {
     serverList: [
       '173.212.225.176:50013',
       '136.243.45.140:50013'
+    ],
+  },
+  xmy: {
+    address: 'cetus.cryptap.us',
+    port: 50004,
+    proto: 'ssl',
+    txfee: 5000,
+    abbr: 'XMY',
+    serverList: [
+      'cetus.cryptap.us:50004',
+      'kraken.cryptap.us:50004'
+    ],
+  },
+  zcl: {
+    address: 'electrum1.cipig.net',
+    port: 50055,
+    proto: 'tcp',
+    txfee: 1000,
+    abbr: 'ZCL',
+    serverList: [
+      'electrum1.cipig.net:10055',
+      'electrum2.cipig.net:10055'
     ],
   },
 };

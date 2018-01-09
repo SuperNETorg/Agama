@@ -265,6 +265,30 @@ networks.hush = {
   dustThreshold: 1000,
 };
 
+networks.zcl = {
+  messagePrefix: '\Zclassic Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x1cb8,
+  scriptHash: 0x1cbd,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
+networks.xmy = {
+  messagePrefix: '\Myriad Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x32,
+  scriptHash: 0x9,
+  wif: 0xB2,
+  dustThreshold: 1000,
+};
+
 networks.btc = networks.bitcoin;
 networks.crw = networks.crown;
 networks.dgb = networks.digibyte;
