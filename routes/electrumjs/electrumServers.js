@@ -136,6 +136,28 @@ let electrumServers = {
       'electrum2.cipig.net:10014'
     ],
   },
+  mgw: { // !estimatefee
+    address: 'electrum1.cipig.net',
+    port: 10015,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'MGW',
+    serverList: [
+      'electrum1.cipig.net:10015',
+      'electrum2.cipig.net:10015'
+    ],
+  },
+  btch: { // !estimatefee
+    address: 'electrum1.cipig.net',
+    port: 10020,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'BTCH',
+    serverList: [
+      'electrum1.cipig.net:10020',
+      'electrum2.cipig.net:10020'
+    ],
+  },
   jumblr: { // !estimatefee
     address: 'electrum1.cipig.net',
     port: 10004,
