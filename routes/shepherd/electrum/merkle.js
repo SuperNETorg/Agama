@@ -44,7 +44,7 @@ module.exports = (shepherd) => {
     const _randomServer = randomServer.split(':');
     const _mainServer = mainServer.split(':');
 
-    let ecl = new shepherd.electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
+    let ecl = new shepherd.electrumJSCore(_mainServer[1], _mainServer[0], _mainServer[2]); // tcp or tls
 
     return new shepherd.Promise((resolve, reject) => {
       shepherd.log(`main server: ${mainServer}`, true);
@@ -63,7 +63,7 @@ module.exports = (shepherd) => {
           const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
           shepherd.log(_res, true);
 
-          ecl = new shepherd.electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
+          ecl = new shepherd.electrumJSCore(_randomServer[1], _randomServer[0], _mainServer[2]);
           ecl.connect();
 
           ecl.blockchainBlockGetHeader(height)
@@ -117,7 +117,7 @@ module.exports = (shepherd) => {
           txid,
           height,
           _filteredServerList,
-          shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port
+          shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port + ':' + shepherd.electrumServers[coin === 'KMD' || coin === 'komodo' ? 'komodo' : coin.toLowerCase()].proto
         ).then((proof) => {
           resolve(proof);
         });
