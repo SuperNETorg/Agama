@@ -105,37 +105,39 @@ module.exports = (shepherd) => {
       let _seed = req.body.seed;
       let _wifError = false;
 
-      for (let key in shepherd.electrumServers) {
-        const _abbr = shepherd.electrumServers[key].abbr;
-        let isWif = false;
-        let priv;
-        let pub;
+      for (let key in shepherd.electrumCoins) {
+        if (key !== 'auth') {
+          const _abbr = key;
+          let isWif = false;
+          let priv;
+          let pub;
 
-        try {
-          bs58check.decode(_seed);
-          isWif = true;
-        } catch (e) {}
-
-        if (isWif) {
           try {
-            let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : bitcoin.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
-            priv = key.toWIF();
-            pub = key.getAddress();
-          } catch (e) {
-            _wifError = true;
-            break;
-          }
-        } else {
-          let _keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
-          priv = _keys.priv;
-          pub = _keys.pub;
-        }
+            bs58check.decode(_seed);
+            isWif = true;
+          } catch (e) {}
 
-        if (shepherd.electrumKeys[_abbr].pub === pub &&
-            shepherd.electrumKeys[_abbr].priv === priv) {
-          _matchingKeyPairs++;
+          if (isWif) {
+            try {
+              let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : bitcoin.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
+              priv = key.toWIF();
+              pub = key.getAddress();
+            } catch (e) {
+              _wifError = true;
+              break;
+            }
+          } else {
+            let _keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
+            priv = _keys.priv;
+            pub = _keys.pub;
+          }
+
+          if (shepherd.electrumKeys[_abbr].pub === pub &&
+              shepherd.electrumKeys[_abbr].priv === priv) {
+            _matchingKeyPairs++;
+          }
+          _totalKeys++;
         }
-        _totalKeys++;
       }
 
       if (req.body.active) {
