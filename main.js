@@ -150,9 +150,7 @@ const io = require('socket.io').listen(server);
 const _zcashParamsExist = shepherd.zcashParamsExist();
 let willQuitApp = false;
 let mainWindow;
-let loadingWindow;
 let appCloseWindow;
-let appSettingsWindow;
 let closeAppAfterLoading = false;
 let forceQuitApp = false;
 
@@ -166,123 +164,13 @@ if (os.platform() === 'win32') {
 	agamaIcon = path.join(__dirname, '/assets/icons/agama_app_icon.ico');
 }
 
-function createLoadingWindow() {
-	mainWindow = null;
-
-	// initialise window
-	try {
-		loadingWindow = new BrowserWindow({
-			width: 500,
-			height: 355,
-			frame: false,
-			icon: agamaIcon,
-			show: false,
-		});
-	} catch(e) {}
-
-	loadingWindow.setResizable(false);
-
-	// check if agama is already running
-	portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', (error, status) => {
-		// Status is 'open' if currently in use or 'closed' if available
-		if (status === 'closed') {
-			server.listen(appConfig.agamaPort, () => {
-				shepherd.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
-				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
-				// start sockets.io
-				io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
-
-				/*io.on('connection', function(client) {
-					shepherd.log('EDEX GUI is connected...');
-					shepherd.writeLog('EDEX GUI is connected...');
-
-					client.on('event', function(data) { // listen for client requests
-						shepherd.log(data);
-					});
-					client.on('disconnect', function(data) {
-						shepherd.log('EDEX GUI is disconnected');
-					});
-					client.on('join', function(data) {
-						shepherd.log(data);
-						client.emit('messages', 'Sockets server is listening');
-					});
-				});*/
-			});
-		} else {
-			willQuitApp = true;
-			server.listen(appConfig.agamaPort + 1, () => {
-				shepherd.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
-				shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
-			});
-			loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/startup/agama-instance-error.html`);
-			shepherd.log('another agama app is already running');
-		}
-	});
-
-	shepherd.setIO(io); // pass sockets object to shepherd router
-	shepherd.setVar('appBasicInfo', appBasicInfo);
-	shepherd.setVar('appSessionHash', appSessionHash);
-
-	loadingWindow.createWindow = createWindow; // expose createWindow to front-end scripts
-	loadingWindow.appConfig = appConfig;
-	loadingWindow.forseCloseApp = forseCloseApp;
-	loadingWindow.createAppSettingsWindow = createAppSettingsWindow;
-	loadingWindow.startKMDNative = shepherd.startKMDNative;
-	loadingWindow.startSPV = shepherd.startSPV;
-	loadingWindow.arch = arch();
-
-	// load our index.html (i.e. easyDEX GUI)
-	loadingWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup`);
-  loadingWindow.webContents.on('did-finish-load', () => {
-    setTimeout(() => {
-      loadingWindow.show();
-    }, 40);
-  });
-	shepherd.writeLog('show loading window');
-
-	loadingWindow.on('hide', () => {
-		// our app does not have multiwindow - so we dereference the window object instead of
-		// putting them into an window_arr
-		loadingWindow = null;
-	});
-
-  loadingWindow.on('close', (e) => {
-  	if (!forseCloseApp) {
-	    if (willQuitApp) {
-	      /* the user tried to quit the app */
-	      loadingWindow = null;
-	    } else {
-	      /* the user only tried to close the window */
-	      closeAppAfterLoading = true;
-	      e.preventDefault();
-	    }
-	  }
-  });
-}
-
 // close app
 function forseCloseApp() {
 	forceQuitApp = true;
 	app.quit();
 }
 
-function setDefaultAppSettings() {
-	shepherd.saveLocalAppConf(_defaultAppSettings);
-}
-
-function updateAppSettings(_settings) {
-	shepherd.saveLocalAppConf(_settings);
-	appConfig = _settings;
-}
-
-if (process.argv.indexOf('dexonly') > -1) {
-	app.on('ready', createLoadingWindow);
-	setTimeout(() => {
-		createWindow('open', true);
-	}, 500);
-} else {
-	app.on('ready', createLoadingWindow);
-}
+app.on('ready', () => createWindow('open', process.argv.indexOf('dexonly') > -1 ? true : null));
 
 function createAppCloseWindow() {
 	// initialise window
@@ -305,61 +193,9 @@ function createAppCloseWindow() {
   });
 }
 
-function reloadSettingsWindow() {
-	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-settings.html`);
-}
-
-function createAppSettingsWindow() {
-	// initialise window
-	appSettingsWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
-		width: 750,
-		height: 610,
-		frame: false,
-		icon: agamaIcon,
-		show: false,
-	});
-
-	appSettingsWindow.setResizable(false);
-
-	appSettingsWindow.appConfig = appConfig;
-	appSettingsWindow.appConfigSchema = shepherd.appConfigSchema;
-	appSettingsWindow.defaultAppSettings = _defaultAppSettings;
-	appSettingsWindow.destroyAppSettingsWindow = destroyAppSettingsWindow;
-	appSettingsWindow.reloadSettingsWindow = reloadSettingsWindow;
-	appSettingsWindow.testLocation = shepherd.testLocation;
-	appSettingsWindow.setDefaultAppSettings = setDefaultAppSettings;
-	appSettingsWindow.updateAppSettings = updateAppSettings;
-	appSettingsWindow.testBins = shepherd.testBins;
-	appSettingsWindow.zcashParamsExist = _zcashParamsExist;
-	appSettingsWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/startup/app-settings.html`);
-
-  appSettingsWindow.webContents.on('did-finish-load', () => {
-    setTimeout(() => {
-      appSettingsWindow.show();
-    }, 40);
-  });
-}
-
-function destroyAppSettingsWindow() {
-	appSettingsWindow.hide();
-	appSettingsWindow = null;
-}
-
 function createWindow(status, hideLoadingWindow) {
-	if (appSettingsWindow) {
-		destroyAppSettingsWindow();
-	}
-
 	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
-
-		// initialise window
-		mainWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
-			width: closeAppAfterLoading ? 1 : 1280,
-			height: closeAppAfterLoading ? 1 : 800,
-			icon: agamaIcon,
-			show: false,
-		});
 
 		if (closeAppAfterLoading) {
 			mainWindow = null;
@@ -383,135 +219,185 @@ function createWindow(status, hideLoadingWindow) {
 			{ role: 'selectall' },
 		]);
 
-		// load our index.html (i.e. easyDEX GUI)
-		shepherd.writeLog('show edex gui');
-		mainWindow.appConfig = appConfig;
-		mainWindow.appConfigSchema = shepherd.appConfigSchema;
-		mainWindow.arch = arch();
-		mainWindow.appBasicInfo = appBasicInfo;
-		mainWindow.appSessionHash = appSessionHash;
-		mainWindow.assetChainPorts = require('./routes/ports.js');
-		mainWindow.agamaIcon = agamaIcon;
-		mainWindow.testLocation = shepherd.testLocation;
-		mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
-		mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
-		mainWindow.nativeCoindList = nativeCoindList;
-		mainWindow.zcashParamsExist = _zcashParamsExist;
-		mainWindow.zcashParamsExistPromise = shepherd.zcashParamsExistPromise;
-		mainWindow.zcashParamsDownloadLinks = shepherd.zcashParamsDownloadLinks;
-		mainWindow.isWindows = os.platform() === 'win32' ? true : false; // obsolete(?)
-		mainWindow.appExit = appExit;
-		mainWindow.getMaxconKMDConf = shepherd.getMaxconKMDConf;
-		mainWindow.setMaxconKMDConf = shepherd.setMaxconKMDConf;
-		mainWindow.getMMCacheData = shepherd.getMMCacheData;
-		mainWindow.activeSection = 'wallets';
-		mainWindow.argv = process.argv;
-		mainWindow.getAssetChainPorts = shepherd.getAssetChainPorts;
-		mainWindow.spvFees = _spvFees;
-
-		if (appConfig.dev) {
-			mainWindow.loadURL('http://127.0.0.1:3000');
-		} else {
-			mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
-		}
-
-	  mainWindow.webContents.on('did-finish-load', () => {
-	    setTimeout(() => {
-	      mainWindow.show();
-
-	      if (hideLoadingWindow &&
-	      		loadingWindow) {
-	      	loadingWindow.hide();
-	    	}
-	    }, 40);
-	  });
-
-		mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
-			const { selectionText, isEditable } = params; // params obj
-
-			if (isEditable) {
-				editMenu.popup(mainWindow);
-			} else if (selectionText && selectionText.trim() !== '') {
-				staticMenu.popup(mainWindow);
-			}
-		});
-
-		// DEVTOOLS - only for dev purposes - ca333
-		// mainWindow.webContents.openDevTools()
-
-		function appExit() {
-			const CloseDaemons = () => {
-				return new Promise((resolve, reject) => {
-					shepherd.log('Closing Main Window...');
-					shepherd.writeLog('exiting app...');
-
-					shepherd.quitKomodod(appConfig.cliStopTimeout);
-
-					const result = 'Closing daemons: done';
-
-					shepherd.log(result);
-					shepherd.writeLog(result);
-					resolve(result);
+		// check if agama is already running
+		portscanner.checkPortStatus(appConfig.agamaPort, '127.0.0.1', (error, status) => {
+			// Status is 'open' if currently in use or 'closed' if available
+			if (status === 'closed') {
+				server.listen(appConfig.agamaPort, () => {
+					shepherd.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+					shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort}`);
+					// start sockets.io
+					io.set('origins', appConfig.dev ? 'http://127.0.0.1:3000' : `http://127.0.0.1:${appConfig.agamaPort}`); // set origin
 				});
-			}
 
-			const HideMainWindow = () => {
-				return new Promise((resolve, reject) => {
-					const result = 'Hiding Main Window: done';
-
-					shepherd.log('Exiting App...');
-					mainWindow = null;
-					shepherd.log(result);
-					resolve(result);
+				// initialise window
+				mainWindow = new BrowserWindow({ // dirty hack to prevent main window flash on quit
+					width: closeAppAfterLoading ? 1 : 1280,
+					height: closeAppAfterLoading ? 1 : 800,
+					icon: agamaIcon,
+					show: false,
 				});
-			}
 
-			const HideAppClosingWindow = () => {
-				return new Promise((resolve, reject) => {
-					appCloseWindow = null;
-					resolve(true);
-				});
-			}
+				if (appConfig.dev) {
+					mainWindow.loadURL('http://127.0.0.1:3000');
+				} else {
+					mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort}/gui/EasyDEX-GUI/react/build`);
+				}
 
-			const QuitApp = () => {
-				return new Promise((resolve, reject) => {
-					const result = 'Quiting App: done';
+				shepherd.setIO(io); // pass sockets object to shepherd router
+				shepherd.setVar('appBasicInfo', appBasicInfo);
+				shepherd.setVar('appSessionHash', appSessionHash);
 
-					app.quit();
-					shepherd.log(result);
-					resolve(result);
-				});
-			}
-
-			const closeApp = () => {
-				CloseDaemons()
-				.then(HideMainWindow)
-				.then(HideAppClosingWindow)
-				.then(QuitApp);
-			}
-
-			let _appClosingInterval;
-
-			if (process.argv.indexOf('dexonly') > -1) {
-				shepherd.killRogueProcess('marketmaker');
-			}
-			if (!Object.keys(shepherd.coindInstanceRegistry).length ||
-					!appConfig.stopNativeDaemonsOnQuit) {
-				closeApp();
+				// load our index.html (i.e. easyDEX GUI)
+				shepherd.writeLog('show edex gui');
+				mainWindow.appConfig = appConfig;
+				mainWindow.appConfigSchema = shepherd.appConfigSchema;
+				mainWindow.arch = arch();
+				mainWindow.appBasicInfo = appBasicInfo;
+				mainWindow.appSessionHash = appSessionHash;
+				mainWindow.assetChainPorts = require('./routes/ports.js');
+				mainWindow.agamaIcon = agamaIcon;
+				mainWindow.testLocation = shepherd.testLocation;
+				mainWindow.kmdMainPassiveMode = shepherd.kmdMainPassiveMode;
+				mainWindow.getAppRuntimeLog = shepherd.getAppRuntimeLog;
+				mainWindow.nativeCoindList = nativeCoindList;
+				mainWindow.zcashParamsExist = _zcashParamsExist;
+				mainWindow.zcashParamsExistPromise = shepherd.zcashParamsExistPromise;
+				mainWindow.zcashParamsDownloadLinks = shepherd.zcashParamsDownloadLinks;
+				mainWindow.isWindows = os.platform() === 'win32' ? true : false; // obsolete(?)
+				mainWindow.appExit = appExit;
+				mainWindow.getMaxconKMDConf = shepherd.getMaxconKMDConf;
+				mainWindow.setMaxconKMDConf = shepherd.setMaxconKMDConf;
+				mainWindow.getMMCacheData = shepherd.getMMCacheData;
+				mainWindow.activeSection = 'wallets';
+				mainWindow.argv = process.argv;
+				mainWindow.getAssetChainPorts = shepherd.getAssetChainPorts;
+				mainWindow.spvFees = _spvFees;
 			} else {
-				createAppCloseWindow();
-				shepherd.quitKomodod(appConfig.cliStopTimeout);
-				_appClosingInterval = setInterval(() => {
-					if (!Object.keys(shepherd.coindInstanceRegistry).length) {
-						closeApp();
-					}
-				}, 1000);
-			}
-		}
+				mainWindow = new BrowserWindow({
+					width: 500,
+					height: 355,
+					frame: false,
+					icon: agamaIcon,
+					show: false,
+				});
 
-		// close app
-		mainWindow.on('closed', () => {
-			appExit();
+				mainWindow.setResizable(false);
+				mainWindow.forseCloseApp = forseCloseApp;
+
+				willQuitApp = true;
+				server.listen(appConfig.agamaPort + 1, () => {
+					shepherd.log(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+					shepherd.writeLog(`guiapp and sockets.io are listening on port ${appConfig.agamaPort + 1}`);
+				});
+				mainWindow.loadURL(`http://${appConfig.host}:${appConfig.agamaPort + 1}/gui/startup/agama-instance-error.html`);
+				shepherd.log('another agama app is already running');
+			}
+
+		  mainWindow.webContents.on('did-finish-load', () => {
+		    setTimeout(() => {
+		      mainWindow.show();
+		    }, 40);
+		  });
+
+		  /*loadingWindow.on('close', (e) => {
+		  	if (!forseCloseApp) {
+			    if (willQuitApp) {
+			      loadingWindow = null;
+			    } else {
+			      closeAppAfterLoading = true;
+			      e.preventDefault();
+			    }
+			  }
+		  });*/
+
+			mainWindow.webContents.on('context-menu', (e, params) => { // context-menu returns params
+				const { selectionText, isEditable } = params; // params obj
+
+				if (isEditable) {
+					editMenu.popup(mainWindow);
+				} else if (selectionText && selectionText.trim() !== '') {
+					staticMenu.popup(mainWindow);
+				}
+			});
+
+			// DEVTOOLS - only for dev purposes - ca333
+			// mainWindow.webContents.openDevTools()
+
+			function appExit() {
+				const CloseDaemons = () => {
+					return new Promise((resolve, reject) => {
+						shepherd.log('Closing Main Window...');
+						shepherd.writeLog('exiting app...');
+
+						shepherd.quitKomodod(appConfig.cliStopTimeout);
+
+						const result = 'Closing daemons: done';
+
+						shepherd.log(result);
+						shepherd.writeLog(result);
+						resolve(result);
+					});
+				}
+
+				const HideMainWindow = () => {
+					return new Promise((resolve, reject) => {
+						const result = 'Hiding Main Window: done';
+
+						shepherd.log('Exiting App...');
+						mainWindow = null;
+						shepherd.log(result);
+						resolve(result);
+					});
+				}
+
+				const HideAppClosingWindow = () => {
+					return new Promise((resolve, reject) => {
+						appCloseWindow = null;
+						resolve(true);
+					});
+				}
+
+				const QuitApp = () => {
+					return new Promise((resolve, reject) => {
+						const result = 'Quiting App: done';
+
+						app.quit();
+						shepherd.log(result);
+						resolve(result);
+					});
+				}
+
+				const closeApp = () => {
+					CloseDaemons()
+					.then(HideMainWindow)
+					.then(HideAppClosingWindow)
+					.then(QuitApp);
+				}
+
+				let _appClosingInterval;
+
+				if (process.argv.indexOf('dexonly') > -1) {
+					shepherd.killRogueProcess('marketmaker');
+				}
+				if (!Object.keys(shepherd.coindInstanceRegistry).length ||
+						!appConfig.stopNativeDaemonsOnQuit) {
+					closeApp();
+				} else {
+					createAppCloseWindow();
+					shepherd.quitKomodod(appConfig.cliStopTimeout);
+					_appClosingInterval = setInterval(() => {
+						if (!Object.keys(shepherd.coindInstanceRegistry).length) {
+							closeApp();
+						}
+					}, 1000);
+				}
+			}
+
+			// close app
+			mainWindow.on('closed', () => {
+				appExit();
+			});
 		});
 	}
 }
@@ -538,23 +424,19 @@ app.on('before-quit', (event) => {
 // Emitted when all windows have been closed and the application will quit.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('will-quit', (event) => {
-	if (!forceQuitApp &&
-			mainWindow === null &&
-			loadingWindow != null) {
+	if (!forceQuitApp) {
 		// loading window is still open
 		shepherd.log('will-quit while loading window active');
-		event.preventDefault();
+		//event.preventDefault();
 	}
 });
 
 // Emitted when the application is quitting.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
 app.on('quit', (event) => {
-	if (!forceQuitApp &&
-			mainWindow === null &&
-			loadingWindow != null) {
+	if (!forceQuitApp) {
 		shepherd.log('quit while loading window active');
-		event.preventDefault();
+		//event.preventDefault();
 	}
 })
 
