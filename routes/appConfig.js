@@ -1,58 +1,24 @@
 const appConfig = {
   config: { // default config
-    edexGuiOnly: true,
-    iguanaGuiOnly: false,
-    manualIguanaStart: false,
-    skipBasiliskNetworkCheck: true,
-    minNotaries: 8,
     host: '127.0.0.1',
     agamaPort: 17777,
-    iguanaCorePort: 7778,
     maxDescriptors: {
       darwin: 90000,
       linux: 1000000,
     },
-    killIguanaOnStart: true,
     dev: false,
-    v2: true,
-    useBasiliskInstance: true,
     debug: false,
-    cli: {
-      passthru: true,
-      default: true,
-    },
-    iguanaLessMode: true,
     roundValues: false,
     experimentalFeatures: false,
     dataDir: '',
+    dex: {
+      walletUnlockTimeout: 3600,
+    },
+    cliStopTimeout: 1000,
+    failedRPCAttemptsThreshold: 10,
+    stopNativeDaemonsOnQuit: true,
   },
   schema: {
-    edexGuiOnly: {
-      display: false,
-      type: 'boolean',
-      displayName: 'EDEX GUI only',
-    },
-    iguanaGuiOnly: {
-      display: false,
-      type: 'boolean',
-      displayName: 'Iguana GUI only',
-    },
-    manualIguanaStart: {
-      display: false,
-      type: 'boolean',
-      displayName: 'Manual Iguana Start',
-    },
-    skipBasiliskNetworkCheck: {
-      display: false,
-      type: 'boolean',
-      displayName: 'Skip Basilisk Network Check',
-    },
-    minNotaries: {
-      display: false,
-      type: 'number',
-      displayName: 'Minimum notaries count',
-      info: 'Minimum number of notaries to connect to on startup',
-    },
     host: {
       display: true,
       type: 'string',
@@ -64,13 +30,6 @@ const appConfig = {
       type: 'number',
       displayName: 'Agama Port',
       info: 'Agama HTTP port. Required to run GUI.',
-    },
-    iguanaCorePort: {
-      display: true,
-      initDisplay: true,
-      type: 'number',
-      displayName: 'Iguana Core Port',
-      info: 'Default Iguana Core Port. Change it if you have conflicts with other applications.',
     },
     maxDescriptors: {
       display: false,
@@ -86,12 +45,6 @@ const appConfig = {
         type: 'number',
       },
     },
-    killIguanaOnStart: {
-      display: true,
-      displayName: 'Kill Iguana Core Processes on Startup',
-      info: 'Kill any rogue Iguana Core processes during app startup',
-      type: 'boolean',
-    },
     dev: {
       display: true,
       initDisplay: true,
@@ -99,44 +52,11 @@ const appConfig = {
       info: 'Enable developer mode',
       type: 'boolean',
     },
-    v2: {
-      display: false,
-      type: 'boolean',
-    },
-    useBasiliskInstance: {
-      display: true,
-      initDisplay: true,
-      displayName: 'Iguana Core Basilisk Instance',
-      info: 'Enable dedicated Iguana Core instance to handle all Basilisk network requests',
-      type: 'boolean',
-    },
     debug: {
       display: true,
       initDisplay: true,
       displayName: 'Debug',
       info: 'Enable debug output',
-      type: 'boolean',
-    },
-    cli: {
-      display: true,
-      displayName: 'Direct BitcoinRPC passthru interface',
-      info: 'Enable direct BitcoinRPC passthru interface. It will bypass Iguana Core and send requests directly to Bitcoin JSON server.',
-      passthru: {
-        display: true,
-        displayName: 'Enable Direct Passthru',
-        type: 'boolean',
-      },
-      default: {
-        display: true,
-        displayName: 'Enable CLI passthru',
-        info: 'Enable komodo-cli passthru. This allows you to send CLI compatible commands directly from UI to komodo-cli.',
-        type: 'boolean',
-      },
-    },
-    iguanaLessMode: {
-      display: true,
-      displayName: 'Enable Native Only mode',
-      info: 'Limited to only Komodo native mode to speed up loading and reduce hardware resources consumption.',
       type: 'boolean',
     },
     roundValues: {
@@ -158,12 +78,32 @@ const appConfig = {
       info: 'The data directory is the location where Komodo data files are stored, including the wallet data file',
       type: 'folder',
     },
-    daemonOutput: {
+    dex: {
       display: false,
-      initDisplay: false,
-      displayName: 'Output daemon prints (debug)',
-      info: 'Output daemon prints to GUI for debug purposes',
+      displayName: 'dex',
+      walletUnlockTimeout: {
+        display: true,
+        displayName: 'walletUnlockTimeout',
+        type: 'number',
+      },
+    },
+    cliStopTimeout: {
+      display: true,
+      displayName: 'CLI stop timeout',
+      info: 'Timeout between consequent CLI stop commands',
+      type: 'number',
+    },
+    stopNativeDaemonsOnQuit: {
+      display: true,
+      displayName: 'Stop native daemons on app quit',
+      info: 'If set to false agama will run in detached coin daemon mode',
       type: 'boolean',
+    },
+    failedRPCAttemptsThreshold: {
+      display: true,
+      displayName: 'Failed RPC connect attempts threshold',
+      info: 'Number of allowed consequent RPC connect failures before the app marks native coin daemon as not running properly',
+      type: 'number',
     },
   },
 };

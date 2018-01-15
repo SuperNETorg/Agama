@@ -1,43 +1,52 @@
 {
-  "name": "agama_app",
+  "name": "agama-app",
   "productName": "Agama",
-  "version": "0.2.22",
-  "description": "Agama Desktop App",
+  "version": "0.2.24",
+  "description": "Agama Wallet Desktop App",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "make-patch": "./make-patch.sh"
+    "make-patch": "./make-patch.sh",
+    "make-rpm": "node make-rpm.js",
+    "make-deb": "node make-deb.js"
   },
   "repository": "https://github.com/SuperNETorg/Agama/",
+  "homepage": "http://supernet.org",
   "keywords": [
-    "iguana",
     "agama",
-    "superNET",
+    "SuperNET",
     "komodo",
-    "easydex",
-    "instantdex",
     "pax"
   ],
-  "author": "ca333, grewalsatinder",
+  "author": "SuperNET",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^1.4.1"
+    "electron": "1.6.5",
+    "electron-installer-debian": "^0.6.0",
+    "electron-installer-redhat": "^0.5.0"
   },
   "dependencies": {
     "adm-zip": "^0.4.7",
+    "bitcoinjs-lib": "^3.2.0",
     "bluebird": "^3.4.7",
     "body-parser": "^1.15.2",
+    "buffer-reverse": "^1.0.1",
+    "coinkey": "^2.0.0",
+    "coinselect": "github:bitcoinjs/coinselect",
+    "marketmaker": "git://github.com/pbca26/marketmaker",
     "electron": "1.6.5",
     "express": "^4.14.0",
     "fix-path": "^2.1.0",
-    "fs-extra": "^1.0.0",
+    "fs-extra": "^4.0.2",
     "graceful-fs": "^4.1.11",
+    "js-sha256": "^0.7.1",
     "nodejs-aes256": "^1.0.1",
-    "pm2": "^2.4.3",
     "portscanner": "^2.1.1",
     "ps-node": "^0.1.5",
     "remote-file-size": "^3.0.3",
     "request": "^2.80.0",
-    "socket.io": "^1.7.3"
+    "sha256": "^0.2.0",
+    "socket.io": "^1.7.3",
+    "wif": "^2.0.6"
   }
 }

@@ -1,7 +1,9 @@
 const assetChainPorts = {
   'komodod': '7771',
+  'CHIPS': '57776',
   'SUPERNET': '11341',
   'REVS': '10196',
+  'MNZ': '14337',
   'WLC': '12167',
   'PANGEA': '14068',
   'DEX': '11890',
@@ -9,7 +11,7 @@ const assetChainPorts = {
   'BET': '14250',
   'CRYPTO': '8516',
   'HODL': '14431',
-  'SHARK': '10114',
+  'MSHARK': '8846',
   'BOTS': '11964',
   'MGW': '12386',
   'COQUI': '14276',

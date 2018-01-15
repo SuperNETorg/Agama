@@ -3,14 +3,12 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
     <link rel="stylesheet" href="../EasyDEX-GUI/assets/global/css/bootstrap.min.css">
-    <link rel="stylesheet" href="../EasyDEX-GUI/assets/mainWindow/css/jRoll.min.css">
     <link rel="stylesheet" href="../EasyDEX-GUI/assets/mainWindow/css/loading.css">
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/module-hack.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/global/vendor/jquery/jquery.min.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/scripts/config.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/bluebird.min.js"></script>
     <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/loading.js"></script>
-    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/jRoll.min.js"></script>
     <script>if (window.module) module = window.module;</script>
   </head>
   <body class="agamaMode loading-window">
@@ -21,13 +19,33 @@
           onClick="quitApp()">
           <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-close.png">
         </div>
-        <img
-          src="../EasyDEX-GUI/assets/mainWindow/img/agama-icon.svg"
-          class="agama-logo"
-          alt="Agama Wallet"
-          width="80"
-          height="100" />
-        <div id="agamaModeStatus">Choose Agama mode</div>
+        <div class="intro">
+          <img
+            src="../EasyDEX-GUI/assets/mainWindow/img/agama-icon.svg"
+            class="agama-logo"
+            alt="Agama Wallet"
+            width="80"
+            height="100" />
+          <div id="agamaModeStatus">
+            <span id="agamaModeStatusText">Choose Agama mode</span>
+            <div
+              onClick="toggleMainWindowHelp()"
+              class="settings-help pointer"
+              title="About Agama modes">
+              <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-question.png" />
+            </div>
+          </div>
+        </div>
+        <div class="agama-modes-help" style="display: none">
+          <img
+            onClick="toggleMainWindowHelp()"
+            class="close-btn"
+            src="../EasyDEX-GUI/assets/mainWindow/img/fa-close.png">
+          <strong>Be aware:</strong> <u>Native mode</u> requires to download the whole blockchain data to a local disk before you can start using it. This may take from <strong>several hours to a day</strong> depending on your connection and hardware. Please <u>try to keep Agama running</u> until the whole process is finished.
+          <br /><br />
+          If you need a quick and easy access to your funds try <u>Lite (SPV) mode</u> which doesn't require any blockchain to be loaded locally. All data is requested on demand from Electrum servers. <strong>To gain access to Lite mode toggle "Enable experimental features" in Settings.</strong>
+        </div>
+        <div class="mode-desc native">Full blockchain mode</div>
         <button
           id="nativeOnlyBtn"
           onClick="closeMainWindow(true)"
@@ -40,33 +58,54 @@
           onClick="toggleDropdown()">
           <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
         </div>
-        <ul class="dropdown-menu hide">
+        <ul class="dropdown-menu native hide">
           <li onClick="closeMainWindow()">
             <a>KMD + REVS + JUMBLR</a>
           </li>
           <li onClick="closeMainWindow(null, true)">
             <a>Custom</a>
           </li>
-          <li onClick="startKMDPassive()">
+          <li id="kmdPassiveMode" onClick="startKMDPassive()">
             <a>KMD (passive)</a>
           </li>
         </ul>
+
+        <div class="mode-desc spv">Starts in seconds</div>
         <button
-          id="normalStartBtn"
-          onClick="normalStart()"
-          class="btn btn-primary btn-mode">
-          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cubes.png"> All modes
+          id="spvBtn"
+          onClick="startSPV('KMD')"
+          class="btn btn-primary btn-mode btn-native margin-left-20">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-flash.png"> KMD lite
         </button>
-        <div class="margin-top-20 settings-stick-to-right">
+        <div
+          id="spvBtnCarret"
+          class="btn btn-primary btn-caret"
+          onClick="toggleDropdown('lite')">
+          <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-caret-down.png">
+        </div>
+        <ul class="dropdown-menu lite hide">
+          <li onClick="startSPV('KMD+REVS+JUMBLR')">
+            <a>Lite: KMD + REVS + JUMBLR</a>
+          </li>
+          <li onClick="startSPV('CHIPS')">
+            <a>CHIPS lite</a>
+          </li>
+          <li onClick="closeMainWindow(null, true)">
+            <a>Custom</a>
+          </li>
+        </ul>
+
+        <div class="margin-top-20">
           <button
             id="settingsBtn"
             onClick="openSettingsWindow()"
             class="btn btn-info btn-mode">
             <img src="../EasyDEX-GUI/assets/mainWindow/img/fa-cogs.png"> Settings
           </button>
+          <button class="btn btn-primary btn-mode hide" onClick="closeMainWindow(null, true)">Custom</button>
         </div>
       </div>
     </div>
-    <script type="text/javascript" src="../EasyDEX-GUI/assets/mainWindow/js/init.js"></script>
+    <script type="text/javascript">init()</script>
   </body>
 </html>
