@@ -194,6 +194,10 @@ function createAppCloseWindow() {
 }
 
 function createWindow(status, hideLoadingWindow) {
+	if (process.argv.indexOf('spvcoins=all/add-all') > -1) {
+		shepherd.startSPV('kmd');
+	}
+
 	if (status === 'open') {
 		require(path.join(__dirname, 'private/mainmenu'));
 
@@ -273,6 +277,8 @@ function createWindow(status, hideLoadingWindow) {
 				mainWindow.argv = process.argv;
 				mainWindow.getAssetChainPorts = shepherd.getAssetChainPorts;
 				mainWindow.spvFees = _spvFees;
+				mainWindow.startSPV = shepherd.startSPV;
+				mainWindow.startKMDNative = shepherd.startKMDNative;
 			} else {
 				mainWindow = new BrowserWindow({
 					width: 500,
