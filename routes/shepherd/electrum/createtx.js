@@ -209,7 +209,6 @@ module.exports = (shepherd) => {
       shepherd.listunspent(ecl, changeAddress, network, true, true)
       .then((utxoList) => {
         ecl.close();
-        console.log(utxoList);
 
         if (utxoList &&
             utxoList.length &&
@@ -254,13 +253,8 @@ module.exports = (shepherd) => {
           shepherd.log('targets =>', true);
           shepherd.log(targets, true);
 
-          const feeRate = shepherd.getNetworkData(network).messagePrefix === '\x19Komodo Signed Message:\n' || shepherd.getNetworkData(network).messagePrefix === '\x19Chips Signed Message:\n' ? 20 : 0; // sats/byte
+          targets[0].value = targets[0].value + fee;
 
-          if (!feeRate) {
-            targets[0].value = targets[0].value + fee;
-          }
-
-          shepherd.log(`fee rate ${feeRate}`, true);
           shepherd.log(`default fee ${fee}`, true);
           shepherd.log(`targets ==>`, true);
           shepherd.log(targets, true);
@@ -268,13 +262,9 @@ module.exports = (shepherd) => {
           // default coin selection algo blackjack with fallback to accumulative
           // make a first run, calc approx tx fee
           // if ins and outs are empty reduce max spend by txfee
-          const firstRun = shepherd.coinSelect(utxoListFormatted, targets, feeRate);
+          const firstRun = shepherd.coinSelect(utxoListFormatted, targets, 0);
           let inputs = firstRun.inputs;
           let outputs = firstRun.outputs;
-
-          if (feeRate) {
-            fee = firstRun.fee;
-          }
 
           shepherd.log('coinselect res =>', true);
           shepherd.log('coinselect inputs =>', true);
@@ -290,7 +280,7 @@ module.exports = (shepherd) => {
             shepherd.log('coinselect adjusted targets =>', true);
             shepherd.log(targets, true);
 
-            const secondRun = shepherd.coinSelect(utxoListFormatted, targets, feeRate);
+            const secondRun = shepherd.coinSelect(utxoListFormatted, targets, 0);
             inputs = secondRun.inputs;
             outputs = secondRun.outputs;
             fee = secondRun.fee;
@@ -310,13 +300,10 @@ module.exports = (shepherd) => {
             _change = outputs[1].value;
           }
 
-          // non komodo coins, subtract fee from output value
-          if (!feeRate) {
-            outputs[0].value = outputs[0].value - fee;
+          outputs[0].value = outputs[0].value - fee;
 
-            shepherd.log('non komodo adjusted outputs, value - default fee =>', true);
-            shepherd.log(outputs, true);
-          }
+          shepherd.log('adjusted outputs, value - default fee =>', true);
+          shepherd.log(outputs, true);
 
           // check if any outputs are unverified
           if (inputs &&
@@ -355,7 +342,8 @@ module.exports = (shepherd) => {
             if (network === 'komodo' &&
                 totalInterest > 0) {
               // account for extra vout
-              const _feeOverhead = outputs.length === 1 ? shepherd.estimateTxSize(0, 1) * feeRate : 0;
+              // const _feeOverhead = outputs.length === 1 ? shepherd.estimateTxSize(0, 1) * feeRate : 0;
+              const _feeOverhead = 0;
 
               shepherd.log(`max interest to claim ${totalInterest} (${totalInterest * 0.00000001})`, true);
               shepherd.log(`estimated fee overhead ${_feeOverhead}`, true);
