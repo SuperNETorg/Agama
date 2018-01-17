@@ -5,8 +5,7 @@ Desktop App for SuperNET DAPPs
 You must have `node.js` and `npm` installed on your machine.
 
 Clone DabVault Desktop App with DabVault-GUI submodule
-```shell
-<<<<<<< HEAD
+```
 git clone --recursive https://github.com/dabsolutions/DabVault.git
 cd DabVault/gui/EasyDEX-GUI && git checkout master && cd ../../
 =======
@@ -24,7 +23,6 @@ with this command you git clone agama - but explicitly just the pkg_automation_e
 10) sync komodod and/or asset chains
 
 You're ready to dev
->>>>>>> 3a688906998fb2246a08493d7a80d832d395ae0f
 ```
 
 Install & Run Dabvault
