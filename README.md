@@ -1,11 +1,14 @@
-# Agama Desktop App
+# DabVault Desktop App
 Desktop App for SuperNET DAPPs
 
 #### For Developers
 You must have `node.js` and `npm` installed on your machine.
 
-Clone Agama Desktop App with EasyDEX-GUI submodule
-```shell
+Clone DabVault Desktop App with DabVault-GUI submodule
+```
+git clone --recursive https://github.com/dabsolutions/DabVault.git
+cd DabVault/gui/EasyDEX-GUI && git checkout master && cd ../../
+=======
 1) git clone https://github.com/supernetorg/agama --recursive --branch pkg_automation_electrum --single-branch
 with this command you git clone agama - but explicitly just the pkg_automation_electrum branch (therefore --single-branch) which we also use for the release packages.
 2) cd agama && cd gui/EasyDEX-GUI/
@@ -22,14 +25,9 @@ with this command you git clone agama - but explicitly just the pkg_automation_e
 You're ready to dev
 ```
 
-Install Agama App
-```shell
-cd Agama
-npm install
+Install & Run Dabvault
 ```
-
-Then start Agama App
-```shell
+npm install
 npm start
 ```
 
@@ -42,7 +40,7 @@ In dev mode backend is configured to send/receive messages from/to http://127.0.
 Run binary_artifacts.sh from under agama folder you cloned previously. The script will fetch
 
 #### For end users
-The instructions to make production build of Agama App will be updated soon.
+The instructions to make production build of DabVault App will be updated soon.
 
 To build the production ready app, install `electron-packager` and `electron-prebuilt` packages from npm
 ```shell
@@ -88,4 +86,4 @@ change architecture build parameter to ```--arch=x64``` for 64 bit build
 ### Windows DLL issues
 On Windows it's noticed iguana.exe complains about `VCRUNTIME140D.DLL` and `ucrtbased.dll` file.
 
-Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running Agama App.
+Please see **windeps** directory and README file for instructions to install the required DLL files on Windows, and then try again running DabVault App.
