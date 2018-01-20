@@ -206,7 +206,7 @@ module.exports = (shepherd) => {
       shepherd.log('electrum createrawtx =>', true);
 
       ecl.connect();
-      shepherd.listunspent(ecl, changeAddress, network, true, true)
+      shepherd.listunspent(ecl, changeAddress, network, true, req.query.verify === 'true' ? true : null)
       .then((utxoList) => {
         ecl.close();
 
@@ -395,27 +395,29 @@ module.exports = (shepherd) => {
                   value
                 );
               } else {
-                if (network === 'btg' ||
-                    network === 'bch') {
-                  _rawtx = shepherd.buildSignedTxForks(
-                    outputAddress,
-                    changeAddress,
-                    wif,
-                    network,
-                    inputs,
-                    _change,
-                    value
-                  );
-                } else {
-                  _rawtx = shepherd.buildSignedTx(
-                    outputAddress,
-                    changeAddress,
-                    wif,
-                    network,
-                    inputs,
-                    _change,
-                    value
-                  );
+                if (!req.query.offline) {
+                  if (network === 'btg' ||
+                      network === 'bch') {
+                    _rawtx = shepherd.buildSignedTxForks(
+                      outputAddress,
+                      changeAddress,
+                      wif,
+                      network,
+                      inputs,
+                      _change,
+                      value
+                    );
+                  } else {
+                    _rawtx = shepherd.buildSignedTx(
+                      outputAddress,
+                      changeAddress,
+                      wif,
+                      network,
+                      inputs,
+                      _change,
+                      value
+                    );
+                  }
                 }
               }
 
@@ -586,10 +588,11 @@ module.exports = (shepherd) => {
     }
   });
 
-  shepherd.get('/electrum/pushtx', (req, res, next) => {
-    if (shepherd.checkToken(req.query.token)) {
-      const rawtx = req.query.rawtx;
-      const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[req.query.network].port, shepherd.electrumServers[req.query.network].address, shepherd.electrumServers[req.query.network].proto); // tcp or tls
+  shepherd.post('/electrum/pushtx', (req, res, next) => {
+    if (shepherd.checkToken(req.body.token)) {
+      const rawtx = req.body.rawtx;
+      const _network = req.body.network;
+      const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[_network].port, shepherd.electrumServers[_network].address, shepherd.electrumServers[_network].proto); // tcp or tls
 
       ecl.connect();
       ecl.blockchainTransactionBroadcast(rawtx)
