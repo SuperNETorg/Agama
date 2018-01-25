@@ -75,9 +75,9 @@ module.exports = (shepherd) => {
     }
   });
 
-  shepherd.get('/electrum/seedtowif', (req, res, next) => {
-    if (shepherd.checkToken(req.query.token)) {
-      let keys = shepherd.seedToWif(req.query.seed, req.query.network, req.query.iguana);
+  shepherd.post('/electrum/seedtowif', (req, res, next) => {
+    if (shepherd.checkToken(req.body.token)) {
+      let keys = shepherd.seedToWif(req.body.seed, req.body.network, req.body.iguana);
 
       const successObj = {
         msg: 'success',

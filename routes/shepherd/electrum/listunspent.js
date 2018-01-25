@@ -167,7 +167,8 @@ module.exports = (shepherd) => {
           network,
           true,
           req.query.verify
-        ).then((listunspent) => {
+        )
+        .then((listunspent) => {
           shepherd.log('electrum listunspent ==>', true);
 
           const successObj = {

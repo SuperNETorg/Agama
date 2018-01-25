@@ -8,7 +8,7 @@ module.exports = (shepherd) => {
     if (shepherd.checkToken(req.query.token)) {
       const successObj = {
         msg: 'success',
-        result: 'dl started'
+        result: 'dl started',
       };
 
       res.end(JSON.stringify(successObj));
