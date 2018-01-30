@@ -640,9 +640,7 @@ module.exports = (shepherd) => {
       }
 
       shepherd.log('buildSignedTx', true);
-      // console.log(`buildSignedTx priv key ${wif}`);
       shepherd.log(`buildSignedTx pub key ${key.getAddress().toString()}`, true);
-      // console.log('buildSignedTx std tx fee ' + shepherd.electrumServers[network].txfee);
 
       for (let i = 0; i < utxo.length; i++) {
         tx.addInput(utxo[i].txid, utxo[i].vout);
@@ -660,7 +658,7 @@ module.exports = (shepherd) => {
         if (shepherd.isPos(network)) {
           tx.addOutput(changeAddress, Number(change), shepherd.getNetworkData(network));
         } else {
-          console.log(`change ${change}`);
+          shepherd.log(`change ${change}`, true);
           tx.addOutput(changeAddress, Number(change));
         }
       }
@@ -672,13 +670,6 @@ module.exports = (shepherd) => {
         shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
       }
 
-      /*shepherd.log('buildSignedTx unsigned tx data vin', true);
-      shepherd.log(tx.tx.ins, true);
-      shepherd.log('buildSignedTx unsigned tx data vout', true);
-      shepherd.log(tx.tx.outs, true);
-      shepherd.log('buildSignedTx unsigned tx data', true);
-      shepherd.log(tx, true);*/
-
       for (let i = 0; i < utxo.length; i++) {
         if (shepherd.isPos(network)) {
           tx.sign(shepherd.getNetworkData(network), i, key);
@@ -688,11 +679,6 @@ module.exports = (shepherd) => {
       }
 
       const rawtx = tx.build().toHex();
-
-      /*shepherd.log('buildSignedTx signed tx hex', true);
-      shepherd.log(rawtx, true);*/
-
-      // return rawtx;
 
       const successObj = {
         msg: 'success',

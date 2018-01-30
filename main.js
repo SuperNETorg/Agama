@@ -115,7 +115,7 @@ process.once('loaded', () => {
 			applicationVersion: `${app.getVersion().replace('version=', '')}-beta`,
 			copyright: 'Released under the MIT license',
 			credits: 'SuperNET Team',
-		})
+		});
 	}
 	if (osPlatform === 'linux') {
 		process.setFdLimit(appConfig.maxDescriptors.linux);
@@ -409,14 +409,14 @@ function createWindow(status, hideLoadingWindow) {
 }
 
 app.on('window-all-closed', () => {
-	//if (os.platform() !== 'win32') { ig.kill(); }
+	// if (os.platform() !== 'win32') { ig.kill(); }
 	// in osx apps stay active in menu bar until explictly closed or quitted by CMD Q
 	// so we do not kill the app --> for the case user clicks again on the iguana icon
 	// we open just a new window and respawn iguana proc
 	/*if (process.platform !== 'darwin' || process.platform !== 'linux' || process.platform !== 'win32') {
 		app.quit()
 	}*/
-})
+});
 
 // Emitted before the application starts closing its windows.
 // Calling event.preventDefault() will prevent the default behaviour, which is terminating the application.
@@ -433,7 +433,7 @@ app.on('will-quit', (event) => {
 	if (!forceQuitApp) {
 		// loading window is still open
 		shepherd.log('will-quit while loading window active');
-		//event.preventDefault();
+		// event.preventDefault();
 	}
 });
 
@@ -442,9 +442,9 @@ app.on('will-quit', (event) => {
 app.on('quit', (event) => {
 	if (!forceQuitApp) {
 		shepherd.log('quit while loading window active');
-		//event.preventDefault();
+		// event.preventDefault();
 	}
-})
+});
 
 app.commandLine.appendSwitch('ignore-certificate-errors'); // dirty hack
 
