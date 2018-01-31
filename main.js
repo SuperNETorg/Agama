@@ -279,6 +279,11 @@ function createWindow(status, hideLoadingWindow) {
 				mainWindow.spvFees = _spvFees;
 				mainWindow.startSPV = shepherd.startSPV;
 				mainWindow.startKMDNative = shepherd.startKMDNative;
+				mainWindow.createSeed = {
+					triggered: false,
+					firstLoginPH: null,
+					secondaryLoginPH: null,
+				};
 			} else {
 				mainWindow = new BrowserWindow({
 					width: 500,
