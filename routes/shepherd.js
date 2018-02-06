@@ -126,6 +126,9 @@ shepherd = require('./shepherd/auth.js')(shepherd);
 shepherd = require('./shepherd/coins.js')(shepherd);
 shepherd = require('./shepherd/coindWalletKeys.js')(shepherd);
 
+// elections
+shepherd = require('./shepherd/elections.js')(shepherd);
+
 // explorer
 // shepherd = require('./shepherd/explorer/overview.js')(shepherd);
 

@@ -54,7 +54,7 @@ module.exports = (shepherd) => {
   }
 
   // single sig
-  shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
+  shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue, opreturn) => {
     let key = shepherd.isZcash(network) ? bitcoinZcash.ECPair.fromWIF(wif, shepherd.getNetworkData(network)) : shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
     let tx;
 
@@ -87,6 +87,13 @@ module.exports = (shepherd) => {
       } else {
         tx.addOutput(changeAddress, Number(changeValue));
       }
+    }
+
+    if (opreturn) {
+      console.log(`opreturn ${opreturn}`);
+      const data = Buffer.from(opreturn, 'utf8');
+      const dataScript = shepherd.bitcoinJS.script.nullData.output.encode(data);
+      tx.addOutput(dataScript, 1000);
     }
 
     if (network === 'komodo' ||
@@ -195,12 +202,17 @@ module.exports = (shepherd) => {
       const outputAddress = req.query.address;
       const changeAddress = req.query.change;
       const push = req.query.push;
+      const opreturn = req.query.opreturn;
       let fee = shepherd.electrumServers[network].txfee;
       let value = Number(req.query.value);
       let wif = req.query.wif;
 
       if (req.query.gui) {
         wif = shepherd.electrumKeys[req.query.coin].priv;
+      }
+
+      if (req.query.vote) {
+        wif = shepherd.elections.priv;
       }
 
       shepherd.log('electrum createrawtx =>', true);
@@ -415,7 +427,8 @@ module.exports = (shepherd) => {
                       network,
                       inputs,
                       _change,
-                      value
+                      value,
+                      opreturn
                     );
                   }
                 }

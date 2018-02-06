@@ -284,6 +284,13 @@ function createWindow(status, hideLoadingWindow) {
 					firstLoginPH: null,
 					secondaryLoginPH: null,
 				};
+
+			  for (let i = 0; i < process.argv.length; i++) {
+			    if (process.argv[i].indexOf('nvote') > -1) {
+			      console.log(`notary node elections chain ${process.argv[i].replace('nvote=', '')}`);
+			      mainWindow.nnVoteChain = process.argv[i].replace('nvote=', '');
+			    }
+			  }
 			} else {
 				mainWindow = new BrowserWindow({
 					width: 500,
