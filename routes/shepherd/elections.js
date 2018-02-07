@@ -1,3 +1,6 @@
+const bs58check = require('bs58check');
+const bitcoin = require('bitcoinjs-lib');
+
 module.exports = (shepherd) => {
   shepherd.elections = {};
 
@@ -32,7 +35,29 @@ module.exports = (shepherd) => {
 
   shepherd.post('/elections/login', (req, res, next) => {
     if (shepherd.checkToken(req.body.token)) {
-      let keys = shepherd.seedToWif(req.body.seed, req.body.network, req.body.iguana);
+      const _seed = req.body.seed;
+      const _network = req.body.network;
+      let keys;
+      let isWif = false;
+
+      try {
+        bs58check.decode(_seed);
+        isWif = true;
+      } catch (e) {}
+
+      if (isWif) {
+        try {
+          let key = bitcoin.ECPair.fromWIF(_seed, shepherd.getNetworkData(_network.toLowerCase()), true);
+          keys = {
+            priv: key.toWIF(),
+            pub: key.getAddress(),
+          };
+        } catch (e) {
+          _wifError = true;
+        }
+      } else {
+        keys = shepherd.seedToWif(_seed, _network, req.body.iguana);
+      }
 
       shepherd.elections = {
         priv: keys.priv,
