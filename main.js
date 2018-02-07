@@ -279,6 +279,7 @@ function createWindow(status, hideLoadingWindow) {
 				mainWindow.spvFees = _spvFees;
 				mainWindow.startSPV = shepherd.startSPV;
 				mainWindow.startKMDNative = shepherd.startKMDNative;
+				mainWindow.resetSettings = function() { shepherd.saveLocalAppConf(__defaultAppSettings) };
 				mainWindow.createSeed = {
 					triggered: false,
 					firstLoginPH: null,
