@@ -36,7 +36,7 @@ module.exports = (shepherd) => {
 
                         // decode tx
                         const _network = shepherd.getNetworkData(network);
-                        const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, _network);
+                        const decodedTx = shepherd.electrumJSTxDecoder(_rawtxJSON, network, _network);
 
                         shepherd.log('decoded tx =>', true);
                         shepherd.log(decodedTx, true);
@@ -71,7 +71,8 @@ module.exports = (shepherd) => {
                             if (verify) {
                               shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
                               .then((verifyMerkleRes) => {
-                                if (verifyMerkleRes && verifyMerkleRes === shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
+                                if (verifyMerkleRes &&
+                                    verifyMerkleRes === shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA) {
                                   verifyMerkleRes = false;
                                 }
 
@@ -154,40 +155,50 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/listunspent', (req, res, next) => {
-    const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
-    const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
+    if (shepherd.checkToken(req.query.token)) {
+      const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+      const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
 
-    if (req.query.full &&
-        req.query.full === 'true') {
-      shepherd.listunspent(
-        ecl,
-        req.query.address,
-        network,
-        true,
-        req.query.verify
-      ).then((listunspent) => {
-        shepherd.log('electrum listunspent ==>', true);
+      if (req.query.full &&
+          req.query.full === 'true') {
+        shepherd.listunspent(
+          ecl,
+          req.query.address,
+          network,
+          true,
+          req.query.verify
+        )
+        .then((listunspent) => {
+          shepherd.log('electrum listunspent ==>', true);
 
-        const successObj = {
-          msg: 'success',
-          result: listunspent,
-        };
+          const successObj = {
+            msg: 'success',
+            result: listunspent,
+          };
 
-        res.end(JSON.stringify(successObj));
-      });
+          res.end(JSON.stringify(successObj));
+        });
+      } else {
+        shepherd.listunspent(ecl, req.query.address, network)
+        .then((listunspent) => {
+          ecl.close();
+          shepherd.log('electrum listunspent ==>', true);
+
+          const successObj = {
+            msg: 'success',
+            result: listunspent,
+          };
+
+          res.end(JSON.stringify(successObj));
+        });
+      }
     } else {
-      shepherd.listunspent(ecl, req.query.address, network)
-      .then((listunspent) => {
-        ecl.close();
-        shepherd.log('electrum listunspent ==>', true);
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
 
-        const successObj = {
-          msg: 'success',
-          result: listunspent,
-        };
-
-        res.end(JSON.stringify(successObj));
-      });
+      res.end(JSON.stringify(errorObj));
     }
   });
 

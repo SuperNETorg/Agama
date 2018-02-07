@@ -62,7 +62,18 @@ module.exports = (shepherd) => {
 
   shepherd.getCoinsHelper = () => {
     const defaultCoinsListFile = path.join(__dirname, '../dex/coins.json');
-    shepherd.mmPublic.coinsHelper = fs.readJsonSync(defaultCoinsListFile, { throws: false });
+    const _coins = fs.readJsonSync(defaultCoinsListFile, { throws: false });
+    let coins = {};
+
+    for (let i = 0; i < _coins.length; i++) {
+      coins[_coins[i].coin] = _coins[i];
+    }
+    coins.MNZ.name = 'Monaize';
+    coins.KMD =  { coin: 'KMD', name: 'Komodo' };
+    coins.BTC = { coin: 'BTC', name: 'Bitcoin' };
+    coins.IOP.name = 'Internet of People';
+
+    shepherd.mmPublic.coinsHelper = coins;
   }
 
   shepherd.getRates = () => {

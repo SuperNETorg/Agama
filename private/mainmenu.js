@@ -86,42 +86,18 @@ const template = [
       }
     ]
   },
-  /*{
+  {
     role: 'help',
-    label: 'Support',
+    label: 'Debug',
     submenu: [
       {
-        label: 'Supernet.org',
+        label: 'Reset settings',
         click () {
-          if (process.platform === 'linux') {
-            require('child_process').exec('xdg-open http://support.supernet.org');
-          } else {
-            shell.openExternal('http://support.supernet.org');
-          }
+          console.log(window.require('electron').remote.getCurrentWindow().appConfig);
         }
       },
-      {
-        label: 'Slack',
-        click () {
-          if (process.platform === 'linux') {
-            require('child_process').exec('xdg-open https://sprnt.slack.com/messages/support');
-          } else {
-            shell.openExternal('https://sprnt.slack.com/messages/support');
-          }
-        }
-      },
-      {
-        label: 'Github',
-        click () {
-          if (process.platform === 'linux') {
-            require('child_process').exec('xdg-open https://github.com/SuperNETorg/iguana/issues');
-          } else {
-            shell.openExternal('https://github.com/SuperNETorg/iguana/issues');
-          }
-        }
-      }
     ]
-  }*/
+  }
 ]
 
 if (process.platform === 'darwin') {

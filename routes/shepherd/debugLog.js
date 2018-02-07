@@ -4,74 +4,92 @@ module.exports = (shepherd) => {
    *  params: herd, lastLines
    */
   shepherd.post('/debuglog', (req, res) => {
-    let _herd = req.body.herdname;
-    let _ac = req.body.ac;
-    let _lastNLines = req.body.lastLines;
-    let _location;
+    if (shepherd.checkToken(req.body.token)) {
+      let _herd = req.body.herdname;
+      let _ac = req.body.ac;
+      let _lastNLines = req.body.lastLines;
+      let _location;
 
-    if (shepherd.os.platform() === 'darwin') {
-      shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`;
-    }
-
-    if (shepherd.os.platform() === 'linux') {
-      shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`;
-    }
-
-    if (shepherd.os.platform() === 'win32') {
-      shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`;
-      shepherd.komodoDir = shepherd.path.normalize(shepherd.komodoDir);
-    }
-
-    if (_herd === 'komodo') {
-      _location = shepherd.komodoDir;
-    }
-
-    if (_ac) {
-      _location = `${shepherd.komodoDir}/${_ac}`;
-
-      if (_ac === 'CHIPS') {
-        _location = shepherd.chipsDir;
+      if (shepherd.os.platform() === 'darwin') {
+        shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/Library/Application Support/Komodo`;
       }
-    }
 
-    shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
-    .then((result) => {
-      const _obj = {
-        msg: 'success',
-        result: result,
-      };
+      if (shepherd.os.platform() === 'linux') {
+        shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.HOME}/.komodo`;
+      }
 
-      res.end(JSON.stringify(_obj));
-    }, (result) => {
-      const _obj = {
+      if (shepherd.os.platform() === 'win32') {
+        shepherd.komodoDir = shepherd.appConfig.dataDir.length ? shepherd.appConfig.dataDir : `${process.env.APPDATA}/Komodo`;
+        shepherd.komodoDir = shepherd.path.normalize(shepherd.komodoDir);
+      }
+
+      if (_herd === 'komodo') {
+        _location = shepherd.komodoDir;
+      }
+
+      if (_ac) {
+        _location = `${shepherd.komodoDir}/${_ac}`;
+
+        if (_ac === 'CHIPS') {
+          _location = shepherd.chipsDir;
+        }
+      }
+
+      shepherd.readDebugLog(`${_location}/debug.log`, _lastNLines)
+      .then((result) => {
+        const _obj = {
+          msg: 'success',
+          result: result,
+        };
+
+        res.end(JSON.stringify(_obj));
+      }, (result) => {
+        const _obj = {
+          msg: 'error',
+          result: result,
+        };
+
+        res.end(JSON.stringify(_obj));
+      });
+    } else {
+      const errorObj = {
         msg: 'error',
-        result: result,
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(_obj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.get('/coind/stdout', (req, res) => {
-    const _daemonName = req.query.chain !== 'komodod' ? req.query.chain : 'komodod';
-    const _daemonLogName = `${shepherd.agamaDir}/${_daemonName}.log`;
+    if (shepherd.checkToken(req.query.token)) {
+      const _daemonName = req.query.chain !== 'komodod' ? req.query.chain : 'komodod';
+      const _daemonLogName = `${shepherd.agamaDir}/${_daemonName}.log`;
 
-    shepherd.readDebugLog(_daemonLogName, 'all')
-    .then((result) => {
-      const _obj = {
-        msg: 'success',
-        result: result,
-      };
+      shepherd.readDebugLog(_daemonLogName, 'all')
+      .then((result) => {
+        const _obj = {
+          msg: 'success',
+          result: result,
+        };
 
-      res.end(JSON.stringify(_obj));
-    }, (result) => {
-      const _obj = {
+        res.end(JSON.stringify(_obj));
+      }, (result) => {
+        const _obj = {
+          msg: 'error',
+          result: result,
+        };
+
+        res.end(JSON.stringify(_obj));
+      });
+    } else {
+      const errorObj = {
         msg: 'error',
-        result: result,
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(_obj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.readDebugLog = (fileLocation, lastNLines) => {

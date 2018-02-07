@@ -12,25 +12,14 @@ with this command you git clone agama - but explicitly just the pkg_automation_e
 3) git checkout electrum && git pull origin electrum
 4) npm install && npm install webpack
 5) ./binary_artifacts.sh
-6) npm start in projects' root folder
+6) npm start in project root folder
 7) cd gui/EasyDEX-GUI/react/src
 8) npm start
 8) toggle dev and debug options in settings
 9) restart the app
 10) sync komodod and/or asset chains
 
-You're ready to dev
-```
-
-Install Agama App
-```shell
-cd Agama
-npm install
-```
-
-Then start Agama App
-```shell
-npm start
+You are ready to dev
 ```
 
 ### Important dev notes
