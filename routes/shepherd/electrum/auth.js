@@ -14,30 +14,39 @@ module.exports = (shepherd) => {
           let keys;
           let isWif = false;
 
-          try {
-            bs58check.decode(_seed);
-            isWif = true;
-          } catch (e) {}
-
-          if (isWif) {
-            try {
-              let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : bitcoin.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
-              keys = {
-                priv: key.toWIF(),
-                pub: key.getAddress(),
-              };
-            } catch (e) {
-              _wifError = true;
-              break;
-            }
+          if (req.body.seed.match('^[a-zA-Z0-9]{34}$') &&
+              shepherd.appConfig.experimentalFeatures) {
+            shepherd.log('watchonly pub addr');
+            shepherd.electrumKeys[_abbr] = {
+              priv: req.body.seed,
+              pub: req.body.seed,
+            };
           } else {
-            keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
-          }
+            try {
+              bs58check.decode(_seed);
+              isWif = true;
+            } catch (e) {}
 
-          shepherd.electrumKeys[_abbr] = {
-            priv: keys.priv,
-            pub: keys.pub,
-          };
+            if (isWif) {
+              try {
+                let key = shepherd.isZcash(_abbr.toLowerCase()) ? bitcoinZcash.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true) : bitcoin.ECPair.fromWIF(_seed, shepherd.getNetworkData(_abbr.toLowerCase()), true);
+                keys = {
+                  priv: key.toWIF(),
+                  pub: key.getAddress(),
+                };
+              } catch (e) {
+                _wifError = true;
+                break;
+              }
+            } else {
+              keys = shepherd.seedToWif(_seed, shepherd.findNetworkObj(_abbr), req.body.iguana);
+            }
+
+            shepherd.electrumKeys[_abbr] = {
+              priv: keys.priv,
+              pub: keys.pub,
+            };
+          }
         }
       }
 

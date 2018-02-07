@@ -2,7 +2,7 @@ module.exports = (shepherd) => {
   shepherd.elections = {};
 
   shepherd.hex2str = (hexx) => {
-    const hex = hexx.toString(); //force conversion
+    const hex = hexx.toString(); // force conversion
     let str = '';
 
     for (let i = 0; i < hex.length; i += 2) {
