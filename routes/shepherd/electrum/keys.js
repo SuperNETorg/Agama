@@ -77,7 +77,7 @@ module.exports = (shepherd) => {
 
   shepherd.post('/electrum/seedtowif', (req, res, next) => {
     if (shepherd.checkToken(req.body.token)) {
-      let keys = shepherd.seedToWif(req.body.seed, req.body.network, req.body.iguana);
+      let keys = shepherd.seedToWif(req.body.seed, req.body.network.toLowerCase(), req.body.iguana);
 
       const successObj = {
         msg: 'success',

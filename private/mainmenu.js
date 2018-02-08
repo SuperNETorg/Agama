@@ -93,7 +93,6 @@ const template = [
       {
         label: 'Reset settings',
         click (item, focusedWindow) {
-          console.log(focusedWindow);
           focusedWindow.resetSettings();
         }
       },
