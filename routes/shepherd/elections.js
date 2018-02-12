@@ -141,12 +141,16 @@ module.exports = (shepherd) => {
                     let _opreturnFound = false;
                     let _region;
 
-                    for (let i = 0; i < decodedTx.outputs.length; i++) {
-                      if (decodedTx.outputs[i].scriptPubKey.asm.indexOf('OP_RETURN') > -1) {
-                        _opreturnFound = true;
-                        _region = shepherd.hex2str(decodedTx.outputs[i].scriptPubKey.hex.substr(4, decodedTx.outputs[i].scriptPubKey.hex.length));
-                        shepherd.log(`found opreturn tag ${_region}`);
-                        break;
+                    if (decodedTx &&
+                        decodedTx.outputs &&
+                        decodedTx.outputs.length) {
+                      for (let i = 0; i < decodedTx.outputs.length; i++) {
+                        if (decodedTx.outputs[i].scriptPubKey.asm.indexOf('OP_RETURN') > -1) {
+                          _opreturnFound = true;
+                          _region = shepherd.hex2str(decodedTx.outputs[i].scriptPubKey.hex.substr(4, decodedTx.outputs[i].scriptPubKey.hex.length));
+                          shepherd.log(`found opreturn tag ${_region}`);
+                          break;
+                        }
                       }
                     }
 

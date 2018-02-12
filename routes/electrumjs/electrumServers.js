@@ -158,6 +158,39 @@ let electrumServers = {
       'electrum2.cipig.net:10020'
     ],
   },
+  beer: { // !estimatefee
+    address: 'electrum1.cipig.net',
+    port: 10022,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'BEER',
+    serverList: [
+      'electrum1.cipig.net:10022',
+      'electrum2.cipig.net:10022'
+    ],
+  },
+  pizza: { // !estimatefee
+    address: 'electrum1.cipig.net',
+    port: 10024,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'PIZZA',
+    serverList: [
+      'electrum1.cipig.net:10024',
+      'electrum2.cipig.net:10024'
+    ],
+  },
+  vote: { // !estimatefee
+    address: 'electrum1.cipig.net',
+    port: 10021,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'VOTE',
+    serverList: [
+      'electrum1.cipig.net:10021',
+      'electrum2.cipig.net:10021'
+    ],
+  },
   jumblr: { // !estimatefee
     address: 'electrum1.cipig.net',
     port: 10004,
