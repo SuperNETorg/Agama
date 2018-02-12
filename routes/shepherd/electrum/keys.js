@@ -97,6 +97,72 @@ module.exports = (shepherd) => {
     }
   });
 
+  shepherd.post('/electrum/seedtowif', (req, res, next) => {
+    if (shepherd.checkToken(req.body.token)) {
+      let keys = shepherd.seedToWif(req.body.seed, req.body.network.toLowerCase(), req.body.iguana);
+
+      const successObj = {
+        msg: 'success',
+        result: {
+          keys,
+        },
+      };
+
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
+  });
+
+  shepherd.getCoinByPub = (address) => {
+    const _skipNetworks = ['btc', 'crw', 'dgb', 'arg', 'zec', 'nmc', 'ltc', 'vtc', 'via', 'fair', 'doge', 'kmd', 'mona'];
+
+    try {
+      const _b58check = bitcoin.address.fromBase58Check(address);
+      let _coin = [];
+      let returnObj;
+
+      for (let key in shepherd.electrumJSNetworks) {
+        if (_b58check.version === shepherd.electrumJSNetworks[key].pubKeyHash &&
+            !_skipNetworks.find((item) => { return item === key ? true : false })) {
+          _coin.push(key);
+        }
+      }
+
+      if (_coin.length) {
+        return {
+          coin: _coin,
+          version: _b58check.version,
+        };
+      } else {
+        return 'Unable to find matching coin version';
+      }
+    } catch(e) {
+      return 'Invalid pub address';
+    }
+  };
+
+  shepherd.addressVersionCheck = (network, address) => {
+    const _network = shepherd.getNetworkData(network.toLowerCase());
+
+    try {
+      const _b58check = bitcoin.address.fromBase58Check(address);
+
+      if (_b58check.version === _network.pubKeyHash) {
+        return true;
+      } else {
+        return false;
+      }
+    } catch(e) {
+      return 'Invalid pub address';
+    }
+  };
+
   shepherd.post('/electrum/keys', (req, res, next) => {
     if (shepherd.checkToken(req.body.token)) {
       let _matchingKeyPairs = 0;
@@ -183,7 +249,7 @@ module.exports = (shepherd) => {
   shepherd.post('/electrum/seed/bip39/match', (req, res, next) => {
     if (shepherd.checkToken(req.body.token)) {
       const seed = bip39.mnemonicToSeed(req.body.seed);
-      const hdMaster = bitcoin.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo); // seed from above
+      const hdMaster = bitcoin.HDNode.fromSeedBuffer(seed, shepherd.electrumJSNetworks.komodo);
       const matchPattern = req.body.match;
       const _defaultAddressDepth = req.body.addressdepth;
       const _defaultAccountCount = req.body.accounts;
