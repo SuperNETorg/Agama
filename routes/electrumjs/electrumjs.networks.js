@@ -254,7 +254,7 @@ networks.zcash = {
 };
 
 networks.hush = {
-  messagePrefix: '\Hush Signed Message:\n',
+  messagePrefix: '\x19Hush Signed Message:\n',
   bip32: {
     public: 0x0488b21e,
     private: 0x0488ade4,
@@ -266,7 +266,7 @@ networks.hush = {
 };
 
 networks.zcl = {
-  messagePrefix: '\Zclassic Signed Message:\n',
+  messagePrefix: '\x19Zclassic Signed Message:\n',
   bip32: {
     public: 0x0488b21e,
     private: 0x0488ade4,
@@ -278,7 +278,7 @@ networks.zcl = {
 };
 
 networks.xmy = {
-  messagePrefix: '\Myriad Signed Message:\n',
+  messagePrefix: '\x19Myriad Signed Message:\n',
   bip32: {
     public: 0x0488b21e,
     private: 0x0488ade4,
@@ -286,6 +286,66 @@ networks.xmy = {
   pubKeyHash: 0x32,
   scriptHash: 0x9,
   wif: 0xB2,
+  dustThreshold: 1000,
+};
+
+networks.hodlc = {
+  messagePrefix: '\x19Hodlc Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x28,
+  scriptHash: 0x5,
+  wif: 0x28 + 128,
+  dustThreshold: 1000,
+};
+
+networks.qtum = {
+  messagePrefix: '\x19Qtum Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x3A,
+  scriptHash: 0x32,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
+networks.btx = {
+  messagePrefix: '\x19Bitcore Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x0,
+  scriptHash: 0x5,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
+networks.btcz = {
+  messagePrefix: '\x19BitcoinZ Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x1cb8,
+  scriptHash: 0x1cbd,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
+networks.grs = { // fails to gen a proper addr
+  messagePrefix: '\x19Groestlcoin Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x24,
+  scriptHash: 0x5,
+  wif: 0x80,
   dustThreshold: 1000,
 };
 

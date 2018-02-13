@@ -13,7 +13,9 @@ module.exports = (shepherd) => {
         network === 'HUSH' ||
         network === 'hush' ||
         network === 'ZCL' ||
-        network === 'zcl') {
+        network === 'zcl' ||
+        network === 'BTCZ' ||
+        network === 'btcz') {
       return true;
     }
   };

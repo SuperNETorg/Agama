@@ -443,6 +443,61 @@ let electrumServers = {
       'electrum2.cipig.net:10055'
     ],
   },
+  hodlc: {
+    address: 'hodl.amit177.cf',
+    port: 17989,
+    proto: 'tcp',
+    txfee: 5000,
+    abbr: 'HODLC',
+    serverList: [
+      'hodl.amit177.cf:17989',
+      'hodl2.amit177.cf:17898'
+    ],
+  },
+  btx: {
+    address: 'electrum1.cipig.net',
+    port: 10057,
+    proto: 'tcp',
+    txfee: 50000,
+    abbr: 'BTX',
+    serverList: [
+      'electrum1.cipig.net:10057',
+      'electrum2.cipig.net:10057'
+    ],
+  },
+  btcz: {
+    address: 'electrum1.cipig.net',
+    port: 10056,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'BTCZ',
+    serverList: [
+      'electrum1.cipig.net:10056',
+      'electrum2.cipig.net:10056'
+    ],
+  },
+  grs: {
+    address: 'electrum10.groestlcoin.org',
+    port: 50001,
+    proto: 'tcp',
+    txfee: 50000,
+    abbr: 'GRS',
+    serverList: [
+      'electrum10.groestlcoin.org:50001',
+      'electrum11.groestlcoin.org:50001'
+    ],
+  },
+  qtum: {
+    address: 's1.qtum.info',
+    port: 50001,
+    proto: 'tcp',
+    txfee: 400000,
+    abbr: 'QTUM',
+    serverList: [
+      's1.qtum.info:50001',
+      's2.qtum.info:50001'
+    ],
+  },
 };
 
 electrumServers.crw = electrumServers.crown;

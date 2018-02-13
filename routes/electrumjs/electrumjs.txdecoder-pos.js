@@ -81,7 +81,6 @@ var decodeOutput = function(tx, network) {
         break;
     }
 
-console.log(vout);
     return vout;
   }
 
