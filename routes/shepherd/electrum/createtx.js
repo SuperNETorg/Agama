@@ -203,6 +203,7 @@ module.exports = (shepherd) => {
       const changeAddress = req.query.change;
       const push = req.query.push;
       const opreturn = req.query.opreturn;
+      const btcFee = req.query.btcfee ? Number(req.query.btcfee) : null;
       let fee = shepherd.electrumServers[network].txfee;
       let value = Number(req.query.value);
       let wif = req.query.wif;
@@ -213,6 +214,10 @@ module.exports = (shepherd) => {
 
       if (req.query.vote) {
         wif = shepherd.elections.priv;
+      }
+
+      if (btcFee) {
+        fee = 0;
       }
 
       shepherd.log('electrum createrawtx =>', true);
@@ -274,9 +279,14 @@ module.exports = (shepherd) => {
           // default coin selection algo blackjack with fallback to accumulative
           // make a first run, calc approx tx fee
           // if ins and outs are empty reduce max spend by txfee
-          const firstRun = shepherd.coinSelect(utxoListFormatted, targets, 0);
+          const firstRun = shepherd.coinSelect(utxoListFormatted, targets, btcFee ? btcFee : 0);
           let inputs = firstRun.inputs;
           let outputs = firstRun.outputs;
+
+          if (btcFee) {
+            shepherd.log(`btc fee per byte ${btcFee}`, true);
+            fee = firstRun.fee;
+          }
 
           shepherd.log('coinselect res =>', true);
           shepherd.log('coinselect inputs =>', true);
@@ -295,7 +305,7 @@ module.exports = (shepherd) => {
             const secondRun = shepherd.coinSelect(utxoListFormatted, targets, 0);
             inputs = secondRun.inputs;
             outputs = secondRun.outputs;
-            fee = secondRun.fee;
+            fee = fee ? fee : secondRun.fee;
 
             shepherd.log('second run coinselect inputs =>', true);
             shepherd.log(inputs, true);
@@ -309,10 +319,21 @@ module.exports = (shepherd) => {
 
           if (outputs &&
               outputs.length === 2) {
-            _change = outputs[1].value;
+            _change = outputs[1].value - fee;
           }
 
-          outputs[0].value = outputs[0].value - fee;
+          if (!btcFee &&
+              _change === 0) {
+            outputs[0].value = outputs[0].value - fee;
+          }
+
+          if (btcFee) {
+            value = outputs[0].value;
+          } else {
+            if (_change > 0) {
+              value = outputs[0].value - fee;
+            }
+          }
 
           shepherd.log('adjusted outputs, value - default fee =>', true);
           shepherd.log(outputs, true);
@@ -361,7 +382,7 @@ module.exports = (shepherd) => {
               shepherd.log(`estimated fee overhead ${_feeOverhead}`, true);
               shepherd.log(`current change amount ${_change} (${_change * 0.00000001}), boosted change amount ${_change + (totalInterest - _feeOverhead)} (${(_change + (totalInterest - _feeOverhead)) * 0.00000001})`, true);
 
-              if (_maxSpend === value) {
+              if (_maxSpend - fee === value) {
                 _change = totalInterest - _change - _feeOverhead;
 
                 if (outputAddress === changeAddress) {
@@ -394,6 +415,13 @@ module.exports = (shepherd) => {
 
               shepherd.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`, true);
               shepherd.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`, true);
+              // double check no extra fee is applied
+              shepherd.log(`vin - vout ${vinSum - value - _change}`);
+
+              if ((vinSum - value - _change) > fee) {
+                _change += fee;
+                shepherd.log(`double fee, increase change by ${fee}`);
+              }
 
               let _rawtx;
 

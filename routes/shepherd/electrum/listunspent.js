@@ -1,3 +1,5 @@
+// TODO: watchonly spendable switch
+
 module.exports = (shepherd) => {
   shepherd.listunspent = (ecl, address, network, full, verify) => {
     let _atLeastOneDecodeTxFailed = false;

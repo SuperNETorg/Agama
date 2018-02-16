@@ -74,7 +74,7 @@ module.exports = (shepherd) => {
                         interest: Number(interestTotal.toFixed(8)),
                         interestSats: Math.floor(interestTotal * 100000000),
                         total: interestTotal > 0 ? Number((0.00000001 * json.confirmed + interestTotal).toFixed(8)) : 0,
-                        totalSats: interestTotal > 0 ?json.confirmed + Math.floor(interestTotal * 100000000) : 0,
+                        totalSats: interestTotal > 0 ? json.confirmed + Math.floor(interestTotal * 100000000) : 0,
                       },
                     };
 
