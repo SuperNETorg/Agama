@@ -423,6 +423,12 @@ module.exports = (shepherd) => {
                 shepherd.log(`double fee, increase change by ${fee}`);
               }
 
+              // TODO: use individual dust thresholds
+              if (_change < 1000) {
+                shepherd.log(`change is < 1000 sats, donate ${_change} sats to miners`, true);
+                _change = 0;
+              }
+
               let _rawtx;
 
               if (req.query.unsigned) {
