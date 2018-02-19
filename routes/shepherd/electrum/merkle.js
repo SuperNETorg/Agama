@@ -83,13 +83,16 @@ module.exports = (shepherd) => {
                   resolve(false);
                 }
               } else {
+                ecl.close();
                 resolve(shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA);
               }
             } else {
+              ecl.close();
               resolve(shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA);
             }
           });
         } else {
+          ecl.close();
           resolve(shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA);
         }
       });
@@ -118,7 +121,8 @@ module.exports = (shepherd) => {
           height,
           _filteredServerList,
           shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port + ':' + shepherd.electrumServers[coin === 'KMD' || coin === 'komodo' ? 'komodo' : coin.toLowerCase()].proto
-        ).then((proof) => {
+        )
+        .then((proof) => {
           resolve(proof);
         });
       } else {

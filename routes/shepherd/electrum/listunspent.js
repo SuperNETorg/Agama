@@ -26,6 +26,7 @@ module.exports = (shepherd) => {
                 }
 
                 if (!_utxo.length) { // no confirmed utxo
+                  ecl.close();
                   resolve('no valid utxo');
                 } else {
                   shepherd.Promise.all(_utxo.map((_utxoItem, index) => {
@@ -129,6 +130,7 @@ module.exports = (shepherd) => {
                   });
                 }
               } else {
+                ecl.close();
                 resolve('cant get current height');
               }
             });

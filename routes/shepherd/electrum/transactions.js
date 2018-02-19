@@ -188,6 +188,8 @@ module.exports = (shepherd) => {
                   res.end(JSON.stringify(successObj));
                 });
               } else {
+                ecl.close();
+                
                 const successObj = {
                   msg: 'success',
                   result: [],

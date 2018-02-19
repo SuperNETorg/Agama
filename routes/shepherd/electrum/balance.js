@@ -13,9 +13,8 @@ module.exports = (shepherd) => {
             json.hasOwnProperty('confirmed') &&
             json.hasOwnProperty('unconfirmed')) {
           if (network === 'komodo') {
-            ecl.connect();
             ecl.blockchainAddressListunspent(req.query.address)
-            .then((utxoList) => {
+            .then((utxoList) => {              
               if (utxoList &&
                   utxoList.length) {
                 // filter out < 10 KMD amounts
@@ -81,6 +80,8 @@ module.exports = (shepherd) => {
                     res.end(JSON.stringify(successObj));
                   });
                 } else {
+                  ecl.close();
+                  
                   const successObj = {
                     msg: 'success',
                     result: {
@@ -98,6 +99,8 @@ module.exports = (shepherd) => {
                   res.end(JSON.stringify(successObj));
                 }
               } else {
+                ecl.close();
+                
                 const successObj = {
                   msg: 'success',
                   result: {
@@ -133,6 +136,8 @@ module.exports = (shepherd) => {
             res.end(JSON.stringify(successObj));
           }
         } else {
+          ecl.close();
+          
           const successObj = {
             msg: 'error',
             result: shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA,
