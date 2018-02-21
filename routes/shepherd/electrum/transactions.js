@@ -50,9 +50,10 @@ module.exports = (shepherd) => {
             .then((json) => {
               if (json &&
                   json.length) {
+                let _rawtx = [];
+
                 json = shepherd.sortTransactions(json);
                 json = json.length > MAX_TX ? json.slice(0, MAX_TX) : json;
-                let _rawtx = [];
 
                 shepherd.log(json.length, true);
 
@@ -189,7 +190,7 @@ module.exports = (shepherd) => {
                 });
               } else {
                 ecl.close();
-                
+
                 const successObj = {
                   msg: 'success',
                   result: [],
@@ -248,10 +249,11 @@ module.exports = (shepherd) => {
     }
   });
 
-  shepherd.parseTransactionAddresses = (tx, targetAddress, network) => {
+  shepherd.parseTransactionAddresses = (tx, targetAddress, network, skipTargetAddress) => {
     // TODO: - sum vins / sum vouts to the same address
     //       - multi vin multi vout
     //       - detect change address
+    //       - double check for exact sum input/output values
     let result = [];
     let _parse = {
       inputs: {},
@@ -264,6 +266,10 @@ module.exports = (shepherd) => {
     let _total = {
       inputs: 0,
       outputs: 0,
+    };
+    let _addresses = {
+      inputs: [],
+      outputs: [],
     };
 
     shepherd.log('parseTransactionAddresses result ==>', true);
@@ -294,11 +300,44 @@ module.exports = (shepherd) => {
 
         _total[key] += Number(_parse[key][i].value);
 
+        // ignore op return outputs
         if (_parse[key][i].scriptPubKey &&
             _parse[key][i].scriptPubKey.addresses &&
+            _parse[key][i].scriptPubKey.addresses[0] &&
             _parse[key][i].scriptPubKey.addresses[0] === targetAddress &&
             _parse[key][i].value) {
           _sum[key] += Number(_parse[key][i].value);
+        }
+
+        if (_parse[key][i].scriptPubKey &&
+            _parse[key][i].scriptPubKey.addresses &&
+            _parse[key][i].scriptPubKey.addresses[0]) {
+          _addresses[key].push(_parse[key][i].scriptPubKey.addresses[0]);
+
+          if (_parse[key][i].scriptPubKey.addresses[0] === targetAddress && skipTargetAddress) {
+            _addresses[key].pop();
+          }
+        }
+      }
+    }
+
+    _addresses.inputs = [ ...new Set(_addresses.inputs) ];
+    _addresses.outputs = [ ...new Set(_addresses.outputs) ];
+
+    shepherd.log('addresses in =>', true);
+    shepherd.log(_addresses.inputs, true);
+    shepherd.log('addresses out =>', true);
+    shepherd.log(_addresses.outputs, true);
+
+    let isSelfSend = {
+      inputs: false,
+      outputs: false,
+    };
+
+    for (let key in _parse) {
+      for (let i = 0; i < _addresses[key].length; i++) {
+        if (_addresses[key][i] === targetAddress && _addresses[key].length === 1) {
+          isSelfSend[key] = true;
         }
       }
     }
@@ -306,27 +345,54 @@ module.exports = (shepherd) => {
     if (_sum.inputs > 0 &&
         _sum.outputs > 0) {
       // vin + change, break into two tx
-      result = [{ // reorder since tx sort by default is from newest to oldest
-        type: 'sent',
-        amount: Number(_sum.inputs.toFixed(8)),
-        address: targetAddress,
-        timestamp: tx.timestamp,
-        txid: tx.format.txid,
-        confirmations: tx.confirmations,
-      }, {
-        type: 'received',
-        amount: Number(_sum.outputs.toFixed(8)),
-        address: targetAddress,
-        timestamp: tx.timestamp,
-        txid: tx.format.txid,
-        confirmations: tx.confirmations,
-      }];
 
-      if (network === 'komodo') { // calc claimed interest amount
-        const vinVoutDiff = _total.inputs - _total.outputs;
+      // send to self
+      if (isSelfSend.inputs && isSelfSend.outputs) {
+        result = {
+          type: 'self',
+          amount: Number(_sum.inputs - _sum.outputs).toFixed(8),
+          sumIn: _sum.inputs,
+          sumOut: _sum.outputs,
+          address: targetAddress,
+          timestamp: tx.timestamp,
+          txid: tx.format.txid,
+          confirmations: tx.confirmations,
+        };
 
-        if (vinVoutDiff < 0) {
-          result[1].interest = Number(vinVoutDiff.toFixed(8));
+        if (network === 'komodo') { // calc claimed interest amount
+          const vinVoutDiff = _total.inputs - _total.outputs;
+
+          if (vinVoutDiff < 0) {
+            result.interest = Number(vinVoutDiff.toFixed(8));
+          }
+        }
+      } else {
+        result = [{ // reorder since tx sort by default is from newest to oldest
+          type: 'sent',
+          amount: Number(_sum.inputs.toFixed(8)),
+          address: _addresses.outputs[0],
+          timestamp: tx.timestamp,
+          txid: tx.format.txid,
+          confirmations: tx.confirmations,
+          inputAddresses: _addresses.inputs,
+          outputAddresses: _addresses.outputs,
+        }, {
+          type: 'received',
+          amount: Number(_sum.outputs.toFixed(8)),
+          address: targetAddress,
+          timestamp: tx.timestamp,
+          txid: tx.format.txid,
+          confirmations: tx.confirmations,
+          inputAddresses: _addresses.inputs,
+          outputAddresses: _addresses.outputs,
+        }];
+
+        if (network === 'komodo') { // calc claimed interest amount
+          const vinVoutDiff = _total.inputs - _total.outputs;
+
+          if (vinVoutDiff < 0) {
+            result[1].interest = Number(vinVoutDiff.toFixed(8));
+          }
         }
       }
     } else if (_sum.inputs === 0 && _sum.outputs > 0) {
@@ -337,22 +403,26 @@ module.exports = (shepherd) => {
         timestamp: tx.timestamp,
         txid: tx.format.txid,
         confirmations: tx.confirmations,
+        inputAddresses: _addresses.inputs,
+        outputAddresses: _addresses.outputs,
       };
     } else if (_sum.inputs > 0 && _sum.outputs === 0) {
       result = {
         type: 'sent',
         amount: Number(_sum.inputs.toFixed(8)),
-        address: targetAddress,
+        address: isSelfSend.inputs && isSelfSend.outputs ? targetAddress : _addresses.outputs[0],
         timestamp: tx.timestamp,
         txid: tx.format.txid,
         confirmations: tx.confirmations,
+        inputAddresses: _addresses.inputs,
+        outputAddresses: _addresses.outputs,
       };
     } else {
       // (?)
       result = {
         type: 'other',
         amount: 'unknown',
-        address: targetAddress,
+        address: 'unknown',
         timestamp: tx.timestamp,
         txid: tx.format.txid,
         confirmations: tx.confirmations,
