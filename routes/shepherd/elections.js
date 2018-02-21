@@ -303,7 +303,7 @@ module.exports = (shepherd) => {
                         if (_regularTx[0] &&
                             _regularTx[1]) {
                           _rawtx.push({
-                            address: _regularTx[type === 'voter' ? 0 : 1].address,
+                            address: _regularTx[type === 'voter' ? 0 : 1].address || 'self',
                             timestamp: _regularTx[type === 'voter' ? 0 : 1].timestamp,
                             amount: _regularTx[type === 'voter' ? 0 : 1].amount,
                             region: 'unknown',
@@ -311,14 +311,16 @@ module.exports = (shepherd) => {
                             hash: transaction['tx_hash'],
                           });
                         } else {
-                          _rawtx.push({
-                            address: _regularTx.address,
-                            timestamp: _regularTx.timestamp,
-                            amount: _regularTx.amount,
-                            region: 'unknown',
-                            regularTx: true,
-                            hash: transaction['tx_hash'],
-                          });
+                          if ((type === 'voter' && _regularTx.type !== 'received') && (type === 'candidate' && _regularTx.type !== 'sent')) {
+                            _rawtx.push({
+                              address: _regularTx.address || 'self',
+                              timestamp: _regularTx.timestamp,
+                              amount: _regularTx.amount,
+                              region: 'unknown',
+                              regularTx: true,
+                              hash: transaction['tx_hash'],
+                            });
+                          }
                         }
                         resolve(true);
                       });
