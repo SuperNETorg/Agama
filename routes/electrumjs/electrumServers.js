@@ -272,7 +272,7 @@ let electrumServers = {
     address: '173.212.225.176',
     port: 50012,
     proto: 'tcp',
-    txfee: 30000,
+    txfee: 100000,
     abbr: 'LTC',
     serverList: [
       '173.212.225.176:50012',
