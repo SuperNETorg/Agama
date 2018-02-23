@@ -30,6 +30,7 @@
   "dependencies": {
     "adm-zip": "^0.4.7",
     "arch": "^2.1.0",
+    "async": "^2.6.0",
     "bigi": "^1.4.2",
     "bip39": "^2.4.0",
     "bitcoinforksjs-lib": "git://github.com/bitcoinjs/bitcoinjs-lib#opt-in-bitcoincash-sighash",

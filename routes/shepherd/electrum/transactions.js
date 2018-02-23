@@ -1,3 +1,5 @@
+const async = require('async');
+
 module.exports = (shepherd) => {
   shepherd.sortTransactions = (transactions) => {
     return transactions.sort((b, a) => {
@@ -51,14 +53,16 @@ module.exports = (shepherd) => {
               if (json &&
                   json.length) {
                 let _rawtx = [];
+                let _inputTxs = {};
 
                 json = shepherd.sortTransactions(json);
                 json = json.length > MAX_TX ? json.slice(0, MAX_TX) : json;
 
                 shepherd.log(json.length, true);
-
-                shepherd.Promise.all(json.map((transaction, index) => {
-                  return new shepherd.Promise((resolve, reject) => {
+                let index = 0;
+                async.eachOfSeries(json, (transaction, ind, callback) => {
+                  console.log(`index ${index}`);
+                  //return new shepherd.Promise((resolve, reject) => {
                     ecl.blockchainBlockGetHeader(transaction.height)
                     .then((blockInfo) => {
                       if (blockInfo &&
@@ -79,72 +83,113 @@ module.exports = (shepherd) => {
                           shepherd.log('decodedtx =>', true);
                           shepherd.log(decodedTx.outputs, true);
 
+                          let index2 = 0;
                           if (decodedTx &&
                               decodedTx.inputs) {
-                            shepherd.Promise.all(decodedTx.inputs.map((_decodedInput, index) => {
-                              return new shepherd.Promise((_resolve, _reject) => {
+                            async.eachOfSeries(decodedTx.inputs, (_decodedInput, index2, callback2) => {
+                            //shepherd.Promise.all(decodedTx.inputs.map((_decodedInput, index) => {
+                              //return new shepherd.Promise((_resolve, _reject) => {
                                 if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
-                                  ecl.blockchainTransactionGet(_decodedInput.txid)
-                                  .then((rawInput) => {
-                                    const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
+                                  if (!_inputTxs[_decodedInput.txid]) {
+                                    ecl.blockchainTransactionGet(_decodedInput.txid)
+                                    .then((rawInput) => {
+                                      _inputTxs[_decodedInput.txid] = rawInput;
 
-                                    shepherd.log('electrum raw input tx ==>', true);
+                                      const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
+
+                                      shepherd.log(`electrum raw input tx ${_decodedInput.txid} ==>`, true);
+
+                                      if (decodedVinVout) {
+                                        shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
+                                        txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
+                                        index2++;
+                                        callback2();
+                                      } else {
+                                        index2++;
+                                        callback2();
+                                      }
+                                    });
+                                  } else {
+                                    const decodedVinVout = shepherd.electrumJSTxDecoder(_inputTxs[_decodedInput.txid], network, _network);
+                                    
+                                    shepherd.log(`electrum raw one time cached input tx ${_decodedInput.txid} ==>`, true);
 
                                     if (decodedVinVout) {
                                       shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
                                       txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
-                                      _resolve(true);
+                                      index2++;
+                                      callback2();
                                     } else {
-                                      _resolve(true);
+                                      index2++;
+                                      callback2();
                                     }
-                                  });
+                                  }
                                 } else {
-                                  _resolve(true);
+                                  index2++;
+                                  callback2();
                                 }
-                              });
-                            }))
-                            .then(promiseResult => {
-                              const _parsedTx = {
-                                network: decodedTx.network,
-                                format: decodedTx.format,
-                                inputs: txInputs,
-                                outputs: decodedTx.outputs,
-                                height: transaction.height,
-                                timestamp: Number(transaction.height) === 0 ? Math.floor(Date.now() / 1000) : blockInfo.timestamp,
-                                confirmations: Number(transaction.height) === 0 ? 0 : currentHeight - transaction.height,
-                              };
+                              
+                                console.log(`${index2} | ${decodedTx.inputs.length - 1} => main callback`);
+                                if (index2 === decodedTx.inputs.length - 1) {
+                                  index++;
+                                  const _parsedTx = {
+                                    network: decodedTx.network,
+                                    format: decodedTx.format,
+                                    inputs: txInputs,
+                                    outputs: decodedTx.outputs,
+                                    height: transaction.height,
+                                    timestamp: Number(transaction.height) === 0 ? Math.floor(Date.now() / 1000) : blockInfo.timestamp,
+                                    confirmations: Number(transaction.height) === 0 ? 0 : currentHeight - transaction.height,
+                                  };
+    
+                                  const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
+    
+                                  if (formattedTx.type) {
+                                    formattedTx.height = transaction.height;
+                                    formattedTx.blocktime = blockInfo.timestamp;
+                                    formattedTx.timereceived = blockInfo.timereceived;
+                                    formattedTx.hex = _rawtxJSON;
+                                    formattedTx.inputs = decodedTx.inputs;
+                                    formattedTx.outputs = decodedTx.outputs;
+                                    formattedTx.locktime = decodedTx.format.locktime;
+                                    _rawtx.push(formattedTx);
+                                  } else {
+                                    formattedTx[0].height = transaction.height;
+                                    formattedTx[0].blocktime = blockInfo.timestamp;
+                                    formattedTx[0].timereceived = blockInfo.timereceived;
+                                    formattedTx[0].hex = _rawtxJSON;
+                                    formattedTx[0].inputs = decodedTx.inputs;
+                                    formattedTx[0].outputs = decodedTx.outputs;
+                                    formattedTx[0].locktime = decodedTx.format.locktime;
+                                    formattedTx[1].height = transaction.height;
+                                    formattedTx[1].blocktime = blockInfo.timestamp;
+                                    formattedTx[1].timereceived = blockInfo.timereceived;
+                                    formattedTx[1].hex = _rawtxJSON;
+                                    formattedTx[1].inputs = decodedTx.inputs;
+                                    formattedTx[1].outputs = decodedTx.outputs;
+                                    formattedTx[1].locktime = decodedTx.format.locktime;
+                                    _rawtx.push(formattedTx[0]);
+                                    _rawtx.push(formattedTx[1]);
+                                  }
+                                  callback();
+                                }
 
-                              const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
-
-                              if (formattedTx.type) {
-                                formattedTx.height = transaction.height;
-                                formattedTx.blocktime = blockInfo.timestamp;
-                                formattedTx.timereceived = blockInfo.timereceived;
-                                formattedTx.hex = _rawtxJSON;
-                                formattedTx.inputs = decodedTx.inputs;
-                                formattedTx.outputs = decodedTx.outputs;
-                                formattedTx.locktime = decodedTx.format.locktime;
-                                _rawtx.push(formattedTx);
-                              } else {
-                                formattedTx[0].height = transaction.height;
-                                formattedTx[0].blocktime = blockInfo.timestamp;
-                                formattedTx[0].timereceived = blockInfo.timereceived;
-                                formattedTx[0].hex = _rawtxJSON;
-                                formattedTx[0].inputs = decodedTx.inputs;
-                                formattedTx[0].outputs = decodedTx.outputs;
-                                formattedTx[0].locktime = decodedTx.format.locktime;
-                                formattedTx[1].height = transaction.height;
-                                formattedTx[1].blocktime = blockInfo.timestamp;
-                                formattedTx[1].timereceived = blockInfo.timereceived;
-                                formattedTx[1].hex = _rawtxJSON;
-                                formattedTx[1].inputs = decodedTx.inputs;
-                                formattedTx[1].outputs = decodedTx.outputs;
-                                formattedTx[1].locktime = decodedTx.format.locktime;
-                                _rawtx.push(formattedTx[0]);
-                                _rawtx.push(formattedTx[1]);
-                              }
-                              resolve(true);
+                                if (index === json.length) {
+                                  ecl.close();
+                                  
+                                  const successObj = {
+                                    msg: 'success',
+                                    result: _rawtx,
+                                  };
+                
+                                  res.end(JSON.stringify(successObj));
+                                }
+                              //});
                             });
+                            /*.then(promiseResult => {
+
+                              resolve(true);
+                            });*/
                           } else {
                             const _parsedTx = {
                               network: decodedTx.network,
@@ -158,7 +203,19 @@ module.exports = (shepherd) => {
 
                             const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
                             _rawtx.push(formattedTx);
-                            resolve(true);
+                            index++;
+                            callback();
+
+                            if (index === json.length) {
+                              ecl.close();
+                              
+                              const successObj = {
+                                msg: 'success',
+                                result: _rawtx,
+                              };
+            
+                              res.end(JSON.stringify(successObj));
+                            }
                           }
                         });
                       } else {
@@ -173,12 +230,24 @@ module.exports = (shepherd) => {
                         };
                         const formattedTx = shepherd.parseTransactionAddresses(_parsedTx, req.query.address, network);
                         _rawtx.push(formattedTx);
-                        resolve(true);
+                        callback();
+                        index++;
                       }
                     });
-                  });
-                }))
-                .then(promiseResult => {
+                  //});
+
+                  if (index === json.length) {
+                    ecl.close();
+                    
+                    const successObj = {
+                      msg: 'success',
+                      result: _rawtx,
+                    };
+  
+                    res.end(JSON.stringify(successObj));
+                  }
+                });
+                /*.then(promiseResult => {
                   ecl.close();
 
                   const successObj = {
@@ -187,7 +256,7 @@ module.exports = (shepherd) => {
                   };
 
                   res.end(JSON.stringify(successObj));
-                });
+                });*/
               } else {
                 ecl.close();
 
