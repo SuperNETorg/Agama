@@ -418,8 +418,6 @@ module.exports = (shepherd) => {
         result = {
           type: 'self',
           amount: Number(_sum.inputs - _sum.outputs).toFixed(8),
-          sumIn: _sum.inputs,
-          sumOut: _sum.outputs,
           address: targetAddress,
           timestamp: tx.timestamp,
           txid: tx.format.txid,
@@ -441,8 +439,8 @@ module.exports = (shepherd) => {
           timestamp: tx.timestamp,
           txid: tx.format.txid,
           confirmations: tx.confirmations,
-          inputAddresses: _addresses.inputs,
-          outputAddresses: _addresses.outputs,
+          from: _addresses.inputs,
+          to: _addresses.outputs,
         }, {
           type: 'received',
           amount: Number(_sum.outputs.toFixed(8)),
@@ -450,8 +448,8 @@ module.exports = (shepherd) => {
           timestamp: tx.timestamp,
           txid: tx.format.txid,
           confirmations: tx.confirmations,
-          inputAddresses: _addresses.inputs,
-          outputAddresses: _addresses.outputs,
+          from: _addresses.inputs,
+          to: _addresses.outputs,
         }];
 
         if (network === 'komodo') { // calc claimed interest amount
@@ -470,8 +468,8 @@ module.exports = (shepherd) => {
         timestamp: tx.timestamp,
         txid: tx.format.txid,
         confirmations: tx.confirmations,
-        inputAddresses: _addresses.inputs,
-        outputAddresses: _addresses.outputs,
+        from: _addresses.inputs,
+        to: _addresses.outputs,
       };
     } else if (_sum.inputs > 0 && _sum.outputs === 0) {
       result = {
@@ -481,8 +479,8 @@ module.exports = (shepherd) => {
         timestamp: tx.timestamp,
         txid: tx.format.txid,
         confirmations: tx.confirmations,
-        inputAddresses: _addresses.inputs,
-        outputAddresses: _addresses.outputs,
+        from: _addresses.inputs,
+        to: _addresses.outputs,
       };
     } else {
       // (?)
