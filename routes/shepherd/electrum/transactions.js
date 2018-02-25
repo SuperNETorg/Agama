@@ -53,7 +53,6 @@ module.exports = (shepherd) => {
               if (json &&
                   json.length) {
                 let _rawtx = [];
-                let _inputTxs = {};
 
                 json = shepherd.sortTransactions(json);
                 json = json.length > MAX_TX ? json.slice(0, MAX_TX) : json;
@@ -63,16 +62,20 @@ module.exports = (shepherd) => {
 
                 const _getTransaction = (txid) => {
                   return new shepherd.Promise((resolve, reject) => {
-                    if (!_inputTxs[txid]) {
+                    if (!shepherd.electrumCache[network]) {
+                      shepherd.electrumCache[network] = {};
+                    }
+
+                    if (!shepherd.electrumCache[network][txid]) {
                       ecl.blockchainTransactionGet(txid)
                       .then((_rawtxJSON) => {
                         resolve(_rawtxJSON);
                       });
                     } else {
-                      resolve(_inputTxs[txid]);
+                      resolve(shepherd.electrumCache[network][txid]);
                     }
                   });
-                } ;
+                }
 
                 async.eachOfSeries(json, (transaction, ind, callback) => {
                   ecl.blockchainBlockGetHeader(transaction.height)
@@ -81,8 +84,8 @@ module.exports = (shepherd) => {
                         blockInfo.timestamp) {
                       _getTransaction(transaction['tx_hash'])
                       .then((_rawtxJSON) => {
-                        if (!_inputTxs[transaction['tx_hash']]) {
-                          _inputTxs[transaction['tx_hash']] = _rawtxJSON;
+                        if (!shepherd.electrumCache[network][transaction['tx_hash']]) {
+                          shepherd.electrumCache[network][transaction['tx_hash']] = _rawtxJSON;
                         }
                         shepherd.log('electrum gettransaction ==>', true);
                         shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);
@@ -167,10 +170,10 @@ module.exports = (shepherd) => {
                             }
 
                             if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
-                              if (!_inputTxs[_decodedInput.txid]) {
+                              if (!shepherd.electrumCache[network][_decodedInput.txid]) {
                                 ecl.blockchainTransactionGet(_decodedInput.txid)
                                 .then((rawInput) => {
-                                  _inputTxs[_decodedInput.txid] = rawInput;
+                                  shepherd.electrumCache[network][_decodedInput.txid] = rawInput;
 
                                   const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
 
@@ -183,9 +186,9 @@ module.exports = (shepherd) => {
                                   checkLoop();
                                 });
                               } else {
-                                const decodedVinVout = shepherd.electrumJSTxDecoder(_inputTxs[_decodedInput.txid], network, _network);
+                                const decodedVinVout = shepherd.electrumJSTxDecoder(shepherd.electrumCache[network][_decodedInput.txid], network, _network);
                                 
-                                shepherd.log(`electrum raw one time cached input tx ${_decodedInput.txid} ==>`, true);
+                                shepherd.log(`electrum raw cached input tx ${_decodedInput.txid} ==>`, true);
 
                                 if (decodedVinVout) {
                                   shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
@@ -527,9 +530,10 @@ module.exports = (shepherd) => {
       } else {
         const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[req.query.network].port, shepherd.electrumServers[req.query.network].address, shepherd.electrumServers[req.query.network].proto); // tcp or tls
 
-        ecl.connect();
         shepherd.log(decodedTx.inputs[0]);
         shepherd.log(decodedTx.inputs[0].txid);
+
+        ecl.connect();
         ecl.blockchainTransactionGet(decodedTx.inputs[0].txid)
         .then((json) => {
           ecl.close();
