@@ -14,6 +14,27 @@ module.exports = (shepherd) => {
       return 0;
     });
   }
+  
+  shepherd.getTransaction = (txid, network, ecl) => {
+    return new shepherd.Promise((resolve, reject) => {
+      if (!shepherd.electrumCache[network]) {
+        shepherd.electrumCache[network] = {
+          tx: {},
+          blocksHeaders: {},
+        };
+      }
+
+      if (!shepherd.electrumCache[network].tx[txid]) {
+        ecl.blockchainTransactionGet(txid)
+        .then((_rawtxJSON) => {
+          shepherd.electrumCache[network].tx[txid] = _rawtxJSON;
+          resolve(_rawtxJSON);
+        });
+      } else {
+        resolve(shepherd.electrumCache[network].tx[txid]);
+      }
+    });
+  }
 
   shepherd.get('/electrum/listtransactions', (req, res, next) => {
     if (shepherd.checkToken(req.query.token)) {
@@ -60,33 +81,13 @@ module.exports = (shepherd) => {
                 shepherd.log(json.length, true);
                 let index = 0;
 
-                const _getTransaction = (txid) => {
-                  return new shepherd.Promise((resolve, reject) => {
-                    if (!shepherd.electrumCache[network]) {
-                      shepherd.electrumCache[network] = {};
-                    }
-
-                    if (!shepherd.electrumCache[network][txid]) {
-                      ecl.blockchainTransactionGet(txid)
-                      .then((_rawtxJSON) => {
-                        resolve(_rawtxJSON);
-                      });
-                    } else {
-                      resolve(shepherd.electrumCache[network][txid]);
-                    }
-                  });
-                }
-
                 async.eachOfSeries(json, (transaction, ind, callback) => {
                   ecl.blockchainBlockGetHeader(transaction.height)
                   .then((blockInfo) => {
                     if (blockInfo &&
                         blockInfo.timestamp) {
-                      _getTransaction(transaction['tx_hash'])
+                      shepherd.getTransaction(transaction['tx_hash'], network, ecl)
                       .then((_rawtxJSON) => {
-                        if (!shepherd.electrumCache[network][transaction['tx_hash']]) {
-                          shepherd.electrumCache[network][transaction['tx_hash']] = _rawtxJSON;
-                        }
                         shepherd.log('electrum gettransaction ==>', true);
                         shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);
                         // shepherd.log(_rawtxJSON, true);
@@ -170,32 +171,18 @@ module.exports = (shepherd) => {
                             }
 
                             if (_decodedInput.txid !== '0000000000000000000000000000000000000000000000000000000000000000') {
-                              if (!shepherd.electrumCache[network][_decodedInput.txid]) {
-                                ecl.blockchainTransactionGet(_decodedInput.txid)
-                                .then((rawInput) => {
-                                  shepherd.electrumCache[network][_decodedInput.txid] = rawInput;
+                              shepherd.getTransaction(_decodedInput.txid, network, ecl)
+                              .then((rawInput) => {
+                                const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
 
-                                  const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
-
-                                  shepherd.log(`electrum raw input tx ${_decodedInput.txid} ==>`, true);
-
-                                  if (decodedVinVout) {
-                                    shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
-                                    txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
-                                  }
-                                  checkLoop();
-                                });
-                              } else {
-                                const decodedVinVout = shepherd.electrumJSTxDecoder(shepherd.electrumCache[network][_decodedInput.txid], network, _network);
-                                
-                                shepherd.log(`electrum raw cached input tx ${_decodedInput.txid} ==>`, true);
+                                shepherd.log(`electrum raw input tx ${_decodedInput.txid} ==>`, true);
 
                                 if (decodedVinVout) {
                                   shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
                                   txInputs.push(decodedVinVout.outputs[_decodedInput.n]);
                                 }
                                 checkLoop();
-                              }
+                              });
                             } else {
                               checkLoop();
                             }
@@ -384,7 +371,8 @@ module.exports = (shepherd) => {
             _parse[key][i].scriptPubKey.addresses[0]) {
           _addresses[key].push(_parse[key][i].scriptPubKey.addresses[0]);
 
-          if (_parse[key][i].scriptPubKey.addresses[0] === targetAddress && skipTargetAddress) {
+          if (_parse[key][i].scriptPubKey.addresses[0] === targetAddress &&
+              skipTargetAddress) {
             _addresses[key].pop();
           }
         }
@@ -406,7 +394,8 @@ module.exports = (shepherd) => {
 
     for (let key in _parse) {
       for (let i = 0; i < _addresses[key].length; i++) {
-        if (_addresses[key][i] === targetAddress && _addresses[key].length === 1) {
+        if (_addresses[key][i] === targetAddress &&
+            _addresses[key].length === 1) {
           isSelfSend[key] = true;
         }
       }

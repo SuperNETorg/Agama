@@ -59,9 +59,7 @@ shepherd.electrumCoins = {
 };
 shepherd.electrumKeys = {};
 
-shepherd.electrumCache = {
-  rawtx: {},
-};
+shepherd.electrumCache = {};
 
 shepherd.electrumJSCore = require('./electrumjs/electrumjs.core.js');
 shepherd.electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
