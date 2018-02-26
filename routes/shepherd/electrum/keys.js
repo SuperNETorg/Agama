@@ -151,7 +151,7 @@ module.exports = (shepherd) => {
     const _network = shepherd.getNetworkData(network.toLowerCase());
 
     try {
-      const _b58check = bitcoin.address.fromBase58Check(address);
+      const _b58check = shepherd.isZcash(network.toLowerCase()) ? bitcoinZcash.address.fromBase58Check(address) : bitcoin.address.fromBase58Check(address);
 
       if (_b58check.version === _network.pubKeyHash) {
         return true;
