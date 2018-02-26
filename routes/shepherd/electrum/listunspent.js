@@ -31,7 +31,7 @@ module.exports = (shepherd) => {
                 } else {
                   shepherd.Promise.all(_utxo.map((_utxoItem, index) => {
                     return new shepherd.Promise((resolve, reject) => {
-                      ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                      shepherd.getTransaction(_utxoItem['tx_hash'], network, ecl)
                       .then((_rawtxJSON) => {
                         shepherd.log('electrum gettransaction ==>', true);
                         shepherd.log(index + ' | ' + (_rawtxJSON.length - 1), true);
@@ -70,7 +70,7 @@ module.exports = (shepherd) => {
                               verified: false,
                             };
 
-                            // merkle root verification agains another electrum server
+                            // merkle root verification against another electrum server
                             if (verify) {
                               shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
                               .then((verifyMerkleRes) => {
@@ -97,7 +97,7 @@ module.exports = (shepherd) => {
                               verified: false,
                             };
 
-                            // merkle root verification agains another electrum server
+                            // merkle root verification against another electrum server
                             if (verify) {
                               shepherd.verifyMerkleByCoin(shepherd.findCoinName(network), _utxoItem['tx_hash'], _utxoItem.height)
                               .then((verifyMerkleRes) => {

@@ -30,7 +30,7 @@ module.exports = (shepherd) => {
     return hash;
   }
 
-  shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
+  shepherd.verifyMerkle = (txid, height, serverList, mainServer, network) => {
     // select random server
     const getRandomIntInclusive = (min, max) => {
       min = Math.ceil(min);
@@ -66,7 +66,7 @@ module.exports = (shepherd) => {
           ecl = new shepherd.electrumJSCore(_randomServer[1], _randomServer[0], _mainServer[2]);
           ecl.connect();
 
-          ecl.blockchainBlockGetHeader(height)
+          shepherd.getBlockHeader(height, network, ecl)
           .then((blockInfo) => {
             if (blockInfo &&
                 blockInfo['merkle_root']) {
@@ -120,7 +120,8 @@ module.exports = (shepherd) => {
           txid,
           height,
           _filteredServerList,
-          shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port + ':' + shepherd.electrumServers[coin === 'KMD' || coin === 'komodo' ? 'komodo' : coin.toLowerCase()].proto
+          shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port + ':' + shepherd.electrumServers[coin === 'KMD' || coin === 'komodo' ? 'komodo' : coin.toLowerCase()].proto,
+          coin
         )
         .then((proof) => {
           resolve(proof);
