@@ -37,7 +37,7 @@ module.exports = (shepherd) => {
 
                   shepherd.Promise.all(_utxo.map((_utxoItem, index) => {
                     return new shepherd.Promise((resolve, reject) => {
-                      ecl.blockchainTransactionGet(_utxoItem['tx_hash'])
+                      shepherd.getTransaction(_utxoItem['tx_hash'], network, ecl)
                       .then((_rawtxJSON) => {
                         shepherd.log('electrum gettransaction ==>', true);
                         shepherd.log((index + ' | ' + (_rawtxJSON.length - 1)), true);

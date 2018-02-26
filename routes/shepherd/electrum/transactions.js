@@ -18,20 +18,47 @@ module.exports = (shepherd) => {
   shepherd.getTransaction = (txid, network, ecl) => {
     return new shepherd.Promise((resolve, reject) => {
       if (!shepherd.electrumCache[network]) {
-        shepherd.electrumCache[network] = {
-          tx: {},
-          blocksHeaders: {},
-        };
+        shepherd.electrumCache[network] = {};
+      }
+      if (!shepherd.electrumCache[network].tx) {
+        shepherd.electrumCache[network]['tx'] = {};        
       }
 
       if (!shepherd.electrumCache[network].tx[txid]) {
+        shepherd.log(`electrum raw input tx ${txid}`, true);
+        
         ecl.blockchainTransactionGet(txid)
         .then((_rawtxJSON) => {
           shepherd.electrumCache[network].tx[txid] = _rawtxJSON;
           resolve(_rawtxJSON);
         });
       } else {
+        shepherd.log(`electrum cached raw input tx ${txid}`, true);        
         resolve(shepherd.electrumCache[network].tx[txid]);
+      }
+    });
+  }
+
+  shepherd.getBlockHeader = (height, network, ecl) => {
+    return new shepherd.Promise((resolve, reject) => {
+      if (!shepherd.electrumCache[network]) {
+        shepherd.electrumCache[network] = {};
+      }
+      if (!shepherd.electrumCache[network].blockHeader) {
+        shepherd.electrumCache[network]['blockHeader'] = {};        
+      }
+
+      if (!shepherd.electrumCache[network].blockHeader[height]) {
+        shepherd.log(`electrum raw block ${height}`, true);
+        
+        ecl.blockchainBlockGetHeader(height)
+        .then((_rawtxJSON) => {
+          shepherd.electrumCache[network].blockHeader[height] = _rawtxJSON;
+          resolve(_rawtxJSON);
+        });
+      } else {
+        shepherd.log(`electrum cached raw block ${height}`, true);        
+        resolve(shepherd.electrumCache[network].blockHeader[height]);
       }
     });
   }
@@ -82,7 +109,7 @@ module.exports = (shepherd) => {
                 let index = 0;
 
                 async.eachOfSeries(json, (transaction, ind, callback) => {
-                  ecl.blockchainBlockGetHeader(transaction.height)
+                  shepherd.getBlockHeader(transaction.height, network, ecl)
                   .then((blockInfo) => {
                     if (blockInfo &&
                         blockInfo.timestamp) {
@@ -174,8 +201,6 @@ module.exports = (shepherd) => {
                               shepherd.getTransaction(_decodedInput.txid, network, ecl)
                               .then((rawInput) => {
                                 const decodedVinVout = shepherd.electrumJSTxDecoder(rawInput, network, _network);
-
-                                shepherd.log(`electrum raw input tx ${_decodedInput.txid} ==>`, true);
 
                                 if (decodedVinVout) {
                                   shepherd.log(decodedVinVout.outputs[_decodedInput.n], true);
