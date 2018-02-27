@@ -52,7 +52,6 @@ module.exports = (shepherd) => {
       sysInfo,
       releaseInfo,
       dirs,
-      appSession: shepherd.appSessionHash,
     };
   }
 
@@ -61,8 +60,17 @@ module.exports = (shepherd) => {
    *
    */
   shepherd.get('/sysinfo', (req, res, next) => {
-    const obj = shepherd.SystemInfo();
-    res.send(obj);
+    if (shepherd.checkToken(req.query.token)) {
+      const obj = shepherd.SystemInfo();
+      res.send(obj);
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   /*
@@ -70,8 +78,17 @@ module.exports = (shepherd) => {
    *
    */
   shepherd.get('/appinfo', (req, res, next) => {
-    const obj = shepherd.appInfo();
-    res.send(obj);
+    if (shepherd.checkToken(req.query.token)) {
+      const obj = shepherd.appInfo();
+      res.send(obj);
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   return shepherd;

@@ -1,14 +1,23 @@
 module.exports = (shepherd) => {
   shepherd.get('/electrum/getblockinfo', (req, res, next) => {
-    shepherd.electrumGetBlockInfo(req.query.height, req.query.network)
-    .then((json) => {
-      const successObj = {
-        msg: 'success',
-        result: json,
+    if (shepherd.checkToken(req.query.token)) {
+      shepherd.electrumGetBlockInfo(req.query.height, req.query.network)
+      .then((json) => {
+        const successObj = {
+          msg: 'success',
+          result: json,
+        };
+
+        res.end(JSON.stringify(successObj));
+      });
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(successObj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.electrumGetBlockInfo = (height, network) => {
@@ -28,15 +37,24 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/getcurrentblock', (req, res, next) => {
-    shepherd.electrumGetCurrentBlock(req.query.network)
-    .then((json) => {
-      const successObj = {
-        msg: 'success',
-        result: json,
+    if (shepherd.checkToken(req.query.token)) {
+      shepherd.electrumGetCurrentBlock(req.query.network)
+      .then((json) => {
+        const successObj = {
+          msg: 'success',
+          result: json,
+        };
+
+        res.end(JSON.stringify(successObj));
+      });
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(successObj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.electrumGetCurrentBlock = (network) => {

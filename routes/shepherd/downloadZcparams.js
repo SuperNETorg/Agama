@@ -67,66 +67,75 @@ module.exports = (shepherd) => {
    *  params:
    */
   shepherd.get('/zcparamsdl', (req, res, next) => {
-    // const dlLocation = shepherd.zcashParamsDir + '/test';
-    const dlLocation = shepherd.zcashParamsDir;
-    const dlOption = req.query.dloption;
+    if (shepherd.checkToken(req.query.token)) {
+      // const dlLocation = shepherd.zcashParamsDir + '/test';
+      const dlLocation = shepherd.zcashParamsDir;
+      const dlOption = req.query.dloption;
 
-    const successObj = {
-      msg: 'success',
-      result: 'zcash params dl started',
-    };
+      const successObj = {
+        msg: 'success',
+        result: 'zcash params dl started',
+      };
 
-    res.end(JSON.stringify(successObj));
+      res.end(JSON.stringify(successObj));
 
-    for (let key in shepherd.zcashParamsDownloadLinks[dlOption]) {
-      shepherd.downloadFile({
-        remoteFile: shepherd.zcashParamsDownloadLinks[dlOption][key],
-        localFile: `${dlLocation}/sprout-${key}.key`,
-        onProgress: (received, total) => {
-          const percentage = (received * 100) / total;
+      for (let key in shepherd.zcashParamsDownloadLinks[dlOption]) {
+        shepherd.downloadFile({
+          remoteFile: shepherd.zcashParamsDownloadLinks[dlOption][key],
+          localFile: `${dlLocation}/sprout-${key}.key`,
+          onProgress: (received, total) => {
+            const percentage = (received * 100) / total;
 
-          if (percentage.toString().indexOf('.10') > -1) {
+            if (percentage.toString().indexOf('.10') > -1) {
+              shepherd.io.emit('zcparams', {
+                msg: {
+                  type: 'zcpdownload',
+                  status: 'progress',
+                  file: key,
+                  bytesTotal: total,
+                  bytesReceived: received,
+                  progress: percentage,
+                },
+              });
+              // shepherd.log(`${key} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+            }
+          }
+        })
+        .then(() => {
+          const checkZcashParams = shepherd.zcashParamsExist();
+
+          shepherd.log(`${key} dl done`);
+
+          if (checkZcashParams.error) {
             shepherd.io.emit('zcparams', {
               msg: {
                 type: 'zcpdownload',
-                status: 'progress',
                 file: key,
-                bytesTotal: total,
-                bytesReceived: received,
-                progress: percentage,
+                status: 'error',
+                message: 'size mismatch',
+                progress: 100,
               },
             });
-            // shepherd.log(`${key} ${percentage}% | ${received} bytes out of ${total} bytes.`);
+          } else {
+            shepherd.io.emit('zcparams', {
+              msg: {
+                type: 'zcpdownload',
+                file: key,
+                progress: 100,
+                status: 'done',
+              },
+            });
+            shepherd.log(`file ${key} succesfully downloaded`);
           }
-        }
-      })
-      .then(() => {
-        const checkZcashParams = shepherd.zcashParamsExist();
+        });
+      }
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
 
-        shepherd.log(`${key} dl done`);
-
-        if (checkZcashParams.error) {
-          shepherd.io.emit('zcparams', {
-            msg: {
-              type: 'zcpdownload',
-              file: key,
-              status: 'error',
-              message: 'size mismatch',
-              progress: 100,
-            },
-          });
-        } else {
-          shepherd.io.emit('zcparams', {
-            msg: {
-              type: 'zcpdownload',
-              file: key,
-              progress: 100,
-              status: 'done',
-            },
-          });
-          shepherd.log(`file ${key} succesfully downloaded`);
-        }
-      });
+      res.end(JSON.stringify(errorObj));
     }
   });
 

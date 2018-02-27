@@ -19,7 +19,7 @@ module.exports = (shepherd) => {
       }
       timestampDiffMinutes -= 59;
 
-      shepherd.log(`minutes if statement ${timestampDiffMinutes}`, true);
+      // shepherd.log(`minutes if statement ${timestampDiffMinutes}`, true);
 
       // TODO: check if interest is > 5% yr
       // calc ytd and 5% for 1 yr

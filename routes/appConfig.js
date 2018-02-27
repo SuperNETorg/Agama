@@ -17,6 +17,9 @@ const appConfig = {
     cliStopTimeout: 1000,
     failedRPCAttemptsThreshold: 10,
     stopNativeDaemonsOnQuit: true,
+    lang: 'EN',
+    rpc2cli: false,
+    fiatRates: false,
   },
   schema: {
     host: {
@@ -104,6 +107,27 @@ const appConfig = {
       displayName: 'Failed RPC connect attempts threshold',
       info: 'Number of allowed consequent RPC connect failures before the app marks native coin daemon as not running properly',
       type: 'number',
+    },
+    lang: {
+      display: true,
+      displayName: 'Language',
+      type: 'select',
+      data: [
+        { name: 'EN', label: 'English' },
+        { name: 'DE', label: 'German' }
+      ],
+    },
+    rpc2cli: {
+      display: true,
+      displayName: 'Disable RPC',
+      info: 'Use CLI instead of RPC JSON server in native mode',
+      type: 'boolean',
+    },
+    fiatRates: {
+      display: true,
+      displayName: 'Fetch fiat rates',
+      info: 'Get coin fiat rates from atomicexplorer.com',
+      type: 'boolean',
     },
   },
 };

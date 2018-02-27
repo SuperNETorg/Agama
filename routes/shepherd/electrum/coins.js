@@ -54,37 +54,84 @@ module.exports = (shepherd) => {
           shepherd.log(`${coin} doesnt have any backup electrum servers`, true);
         }
 
+        if (Object.keys(shepherd.electrumKeys).length > 0) {
+          const _keys = shepherd.wifToWif(shepherd.electrumKeys[Object.keys(shepherd.electrumKeys)[0]].priv, coin);
+
+          shepherd.electrumKeys[coin] = {
+            priv: _keys.priv,
+            pub: _keys.pub,
+          };
+        }
+
         return true;
       }
     }
   }
 
+  shepherd.get('/electrum/coin/changepub', (req, res, next) => {
+    if (shepherd.checkToken(req.query.token)) {
+      shepherd.electrumKeys[req.query.coin].pub = req.query.pub;
+
+      const successObj = {
+        msg: 'success',
+        result: 'true',
+      };
+
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
+  });
+
   shepherd.get('/electrum/coins/add', (req, res, next) => {
-    const result = shepherd.addElectrumCoin(req.query.coin);
+    if (shepherd.checkToken(req.query.token)) {
+      const result = shepherd.addElectrumCoin(req.query.coin);
 
-    const successObj = {
-      msg: 'success',
-      result,
-    };
+      const successObj = {
+        msg: 'success',
+        result,
+      };
 
-    res.end(JSON.stringify(successObj));
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.get('/electrum/coins', (req, res, next) => {
-    let _electrumCoins = JSON.parse(JSON.stringify(shepherd.electrumCoins)); // deep cloning
+    if (shepherd.checkToken(req.query.token)) {
+      let _electrumCoins = JSON.parse(JSON.stringify(shepherd.electrumCoins)); // deep cloning
 
-    for (let key in _electrumCoins) {
-      if (shepherd.electrumKeys[key]) {
-        _electrumCoins[key].pub = shepherd.electrumKeys[key].pub;
+      for (let key in _electrumCoins) {
+        if (shepherd.electrumKeys[key]) {
+          _electrumCoins[key].pub = shepherd.electrumKeys[key].pub;
+        }
       }
+
+      const successObj = {
+        msg: 'success',
+        result: _electrumCoins,
+      };
+
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
     }
-
-    const successObj = {
-      msg: 'success',
-      result: _electrumCoins,
-    };
-
-    res.end(JSON.stringify(successObj));
   });
 
   return shepherd;

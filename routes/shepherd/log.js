@@ -40,12 +40,21 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/log/runtime', (req, res, next) => {
-    const successObj = {
-      msg: 'success',
-      result: req.query.spv && req.query.spv === 'true' ? shepherd.appRuntimeSPVLog : shepherd.appRuntimeLog,
-    };
+    if (shepherd.checkToken(req.query.token)) {
+      const successObj = {
+        msg: 'success',
+        result: req.query.spv && req.query.spv === 'true' ? shepherd.appRuntimeSPVLog : shepherd.appRuntimeLog,
+      };
 
-    res.end(JSON.stringify(successObj));
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.getAppRuntimeLog = () => {
@@ -59,37 +68,46 @@ module.exports = (shepherd) => {
    *  params: payload
    */
   shepherd.post('/guilog', (req, res, next) => {
-    const logLocation = `${shepherd.agamaDir}/shepherd`;
+    if (shepherd.checkToken(req.body.token)) {
+      const logLocation = `${shepherd.agamaDir}/shepherd`;
 
-    if (!shepherd.guiLog[shepherd.appSessionHash]) {
-      shepherd.guiLog[shepherd.appSessionHash] = {};
-    }
-
-    if (shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp]) {
-      shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp].status = req.body.status;
-      shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
-    } else {
-      shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp] = {
-        function: req.body.function,
-        type: req.body.type,
-        url: req.body.url,
-        payload: req.body.payload,
-        status: req.body.status,
-      };
-    }
-
-    shepherd.fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(shepherd.guiLog), (err) => {
-      if (err) {
-        shepherd.writeLog('error writing gui log file');
+      if (!shepherd.guiLog[shepherd.appSessionHash]) {
+        shepherd.guiLog[shepherd.appSessionHash] = {};
       }
 
-      const returnObj = {
-        msg: 'success',
-        result: 'gui log entry is added',
+      if (shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp]) {
+        shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp].status = req.body.status;
+        shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp].response = req.body.response;
+      } else {
+        shepherd.guiLog[shepherd.appSessionHash][req.body.timestamp] = {
+          function: req.body.function,
+          type: req.body.type,
+          url: req.body.url,
+          payload: req.body.payload,
+          status: req.body.status,
+        };
+      }
+
+      shepherd.fs.writeFile(`${logLocation}/agamalog.json`, JSON.stringify(shepherd.guiLog), (err) => {
+        if (err) {
+          shepherd.writeLog('error writing gui log file');
+        }
+
+        const returnObj = {
+          msg: 'success',
+          result: 'gui log entry is added',
+        };
+
+        res.end(JSON.stringify(returnObj));
+      });
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(returnObj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   /*
@@ -97,30 +115,39 @@ module.exports = (shepherd) => {
    *  params: type
    */
   shepherd.get('/getlog', (req, res, next) => {
-    const logExt = req.query.type === 'txt' ? 'txt' : 'json';
+    if (shepherd.checkToken(req.query.token)) {
+      const logExt = req.query.type === 'txt' ? 'txt' : 'json';
 
-    if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/agamalog.${logExt}`)) {
-      shepherd.fs.readFile(`${shepherd.agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', (err, data) => {
-        if (err) {
-          const errorObj = {
-            msg: 'error',
-            result: err,
-          };
+      if (shepherd.fs.existsSync(`${shepherd.agamaDir}/shepherd/agamalog.${logExt}`)) {
+        shepherd.fs.readFile(`${shepherd.agamaDir}/shepherd/agamalog.${logExt}`, 'utf8', (err, data) => {
+          if (err) {
+            const errorObj = {
+              msg: 'error',
+              result: err,
+            };
 
-          res.end(JSON.stringify(errorObj));
-        } else {
-          const successObj = {
-            msg: 'success',
-            result: data ? JSON.parse(data) : '',
-          };
+            res.end(JSON.stringify(errorObj));
+          } else {
+            const successObj = {
+              msg: 'success',
+              result: data ? JSON.parse(data) : '',
+            };
 
-          res.end(JSON.stringify(successObj));
-        }
-      });
+            res.end(JSON.stringify(successObj));
+          }
+        });
+      } else {
+        const errorObj = {
+          msg: 'error',
+          result: `agama.${logExt} doesnt exist`,
+        };
+
+        res.end(JSON.stringify(errorObj));
+      }
     } else {
       const errorObj = {
         msg: 'error',
-        result: `agama.${logExt} doesnt exist`,
+        result: 'unauthorized access',
       };
 
       res.end(JSON.stringify(errorObj));

@@ -5,14 +5,23 @@ module.exports = (shepherd) => {
    *  params: patchList
    */
   shepherd.get('/update/patch', (req, res, next) => {
-    const successObj = {
-      msg: 'success',
-      result: 'dl started'
-    };
+    if (shepherd.checkToken(req.query.token)) {
+      const successObj = {
+        msg: 'success',
+        result: 'dl started',
+      };
 
-    res.end(JSON.stringify(successObj));
+      res.end(JSON.stringify(successObj));
 
-    shepherd.updateAgama();
+      shepherd.updateAgama();
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.updateAgama = () => {
@@ -85,51 +94,60 @@ module.exports = (shepherd) => {
    *  params:
    */
   shepherd.get('/update/patch/check', (req, res, next) => {
-    const rootLocation = shepherd.path.join(__dirname, '../../');
-    const options = {
-      url: 'https://github.com/pbca26/dl-test/raw/master/version',
-      method: 'GET',
-    };
+    if (shepherd.checkToken(req.query.token)) {
+      const rootLocation = shepherd.path.join(__dirname, '../../');
+      const options = {
+        url: 'https://github.com/pbca26/dl-test/raw/master/version',
+        method: 'GET',
+      };
 
-    shepherd.request(options, (error, response, body) => {
-      if (response &&
-          response.statusCode &&
-          response.statusCode === 200) {
-        const remoteVersion = body.split('\n');
-        const localVersionFile = shepherd.fs.readFileSync(`${rootLocation}version`, 'utf8');
-        let localVersion;
+      shepherd.request(options, (error, response, body) => {
+        if (response &&
+            response.statusCode &&
+            response.statusCode === 200) {
+          const remoteVersion = body.split('\n');
+          const localVersionFile = shepherd.fs.readFileSync(`${rootLocation}version`, 'utf8');
+          let localVersion;
 
-        if (localVersionFile.indexOf('\r\n') > -1) {
-          localVersion = localVersionFile.split('\r\n');
+          if (localVersionFile.indexOf('\r\n') > -1) {
+            localVersion = localVersionFile.split('\r\n');
+          } else {
+            localVersion = localVersionFile.split('\n');
+          }
+
+          if (remoteVersion[0] === localVersion[0]) {
+            const successObj = {
+              msg: 'success',
+              result: 'latest',
+            };
+
+            res.end(JSON.stringify(successObj));
+          } else {
+            const successObj = {
+              msg: 'success',
+              result: 'update',
+              version: {
+                local: localVersion[0],
+                remote: remoteVersion[0],
+              },
+            };
+
+            res.end(JSON.stringify(successObj));
+          }
         } else {
-          localVersion = localVersionFile.split('\n');
+          res.end({
+            err: 'error getting update',
+          });
         }
+      });
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
 
-        if (remoteVersion[0] === localVersion[0]) {
-          const successObj = {
-            msg: 'success',
-            result: 'latest',
-          };
-
-          res.end(JSON.stringify(successObj));
-        } else {
-          const successObj = {
-            msg: 'success',
-            result: 'update',
-            version: {
-              local: localVersion[0],
-              remote: remoteVersion[0],
-            },
-          };
-
-          res.end(JSON.stringify(successObj));
-        }
-      } else {
-        res.end({
-          err: 'error getting update',
-        });
-      }
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   /*
@@ -138,16 +156,25 @@ module.exports = (shepherd) => {
    *  params:
    */
   shepherd.get('/unpack', (req, res, next) => {
-    const dlLocation = shepherd.path.join(__dirname, '../../');
-    const zip = new shepherd.AdmZip(`${dlLocation}patch.zip`);
-    zip.extractAllTo(/*target path*/ `${dlLocation}/patch/unpack`, /*overwrite*/true);
+    if (shepherd.checkToken(req.query.token)) {
+      const dlLocation = shepherd.path.join(__dirname, '../../');
+      const zip = new shepherd.AdmZip(`${dlLocation}patch.zip`);
+      zip.extractAllTo(/*target path*/ `${dlLocation}/patch/unpack`, /*overwrite*/true);
 
-    const successObj = {
-      msg: 'success',
-      result: 'unpack started',
-    };
+      const successObj = {
+        msg: 'success',
+        result: 'unpack started',
+      };
 
-    res.end(JSON.stringify(successObj));
+      res.end(JSON.stringify(successObj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   return shepherd;
