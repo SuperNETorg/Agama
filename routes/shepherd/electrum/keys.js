@@ -123,7 +123,7 @@ module.exports = (shepherd) => {
     const _skipNetworks = ['btc', 'crw', 'dgb', 'arg', 'zec', 'nmc', 'ltc', 'vtc', 'via', 'fair', 'doge', 'kmd', 'mona'];
 
     try {
-      const _b58check = bitcoin.address.fromBase58Check(address);
+      const _b58check = shepherd.isZcash(network.toLowerCase()) ? bitcoinZcash.address.fromBase58Check(address) : bitcoin.address.fromBase58Check(address);
       let _coin = [];
       let returnObj;
 
