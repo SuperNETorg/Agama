@@ -65,6 +65,17 @@ let electrumServers = {
       'electrum2.cipig.net:10008'
     ],
   },
+  denarius: { // !estimatefee
+    address: 'denarius.tech',
+    port: 50002,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'DNR',
+    serverList: [
+      '173.254.244.119:50002',
+      '173.254.244.122:50002'
+    ],
+  },
   hodl: { // !estimatefee
     address: 'electrum1.cipig.net',
     port: 10009,

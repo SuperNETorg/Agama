@@ -18,6 +18,19 @@ networks.litecoin = {
   dustThreshold: 0, // https://github.com/litecoin-project/litecoin/blob/v0.8.7.2/src/main.cpp#L360-L365
 }
 
+networks.denarius = {
+  messagePrefix: '\x19Denarius Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x0488ade4,
+  },
+  pubKeyHash: 0x1e,
+  scriptHash: 0x5a,
+  wif: 0x9e,
+  dustThreshold: 1000,
+  isPoS: true,
+};
+
 networks.dogecoin = {
   messagePrefix: '\x19Dogecoin Signed Message:\n',
   bip32: {
