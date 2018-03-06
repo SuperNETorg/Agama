@@ -269,7 +269,47 @@ module.exports = (shepherd) => {
                   if (response &&
                       response.statusCode &&
                       response.statusCode === 200) {
-                    res.end(body);
+                    if (_cmd === 'listunspent') {
+                      res.end(JSON.stringify({
+                        'null': null,
+                        error: null,
+                        result: [{
+                          "txid": "95ba60d5e9b2af58f5ff7585eab37e1e75b6004180814af8d3116b83ab6b0800",
+                          "vout": 1,
+                          "address": "RSmAzbDVXXe3BNVYPUsS51N4dUmibPdBmk",
+                          "account": "RSmAzbDVXXe3BNVYPUsS51N4dUmibPdBmk",
+                          "scriptPubKey": "76a914928104f862284623c4e744009923356ff4832ba388ac",
+                          "amount": 100.0000000,
+                          "interest": 2.00000000,
+                          "confirmations": 51147,
+                          "spendable": false
+                        },
+                        {
+                          "txid": "e59c34514d0ad9d9fd40669859d8efbaf61d2a6935b71e5e560dda80cf2c7f00",
+                          "vout": 1,
+                          "address": "RSmAzbDVXXe3BNVYPUsS51N4dUmibPdBmk",
+                          "account": "RSmAzbDVXXe3BNVYPUsS51N4dUmibPdBmk",
+                          "scriptPubKey": "76a914928104f862284623c4e744009923356ff4832ba388ac",
+                          "amount": 200.00000000,
+                          "interest": 10.00000000,
+                          "confirmations": 75718,
+                          "spendable": false
+                        },
+                        {
+                          "txid": "aef5555436bf38fc7db27ba015f57495d80ad8cb85d2cb3ed6fd317d8c990a01",
+                          "vout": 1,
+                          "address": "RMo9oGpjkefBsxXiev76NQfcBomKHk75UW",
+                          "account": "RMo9oGpjkefBsxXiev76NQfcBomKHk75UW",
+                          "scriptPubKey": "76a914928104f862284623c4e744009923356ff4832ba388ac",
+                          "amount": 120.00000000,
+                          "interest": 12.00000000,
+                          "confirmations": 138021,
+                          "spendable": true
+                        }]
+                      }));
+                    } else {
+                      res.end(body);
+                    }
                   } else {
                     res.end(body ? body : JSON.stringify({
                       result: 'error',
