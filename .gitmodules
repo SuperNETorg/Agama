@@ -1,3 +1,4 @@
 [submodule "gui/EasyDEX-GUI"]
 	path = gui/EasyDEX-GUI
-	url = https://github.com/SuperNETorg/EasyDEX-GUI.git
+	url = https://github.com/carsenk/EasyDEX-GUI.git
+	branch = v0.25
