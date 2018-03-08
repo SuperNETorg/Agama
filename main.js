@@ -90,7 +90,7 @@ shepherd.log(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 shepherd.writeLog(`app started in ${(appConfig.dev ? 'dev mode' : ' user mode')}`);
 
 shepherd.setConfKMD();
-shepherd.setConfKMD('CHIPS');
+// shepherd.setConfKMD('CHIPS');
 
 guiapp.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', appConfig.dev ? '*' : 'http://127.0.0.1:3000');
@@ -116,8 +116,7 @@ process.once('loaded', () => {
 			copyright: 'Released under the MIT license',
 			credits: 'SuperNET Team',
 		});
-	}
-	if (osPlatform === 'linux') {
+	} else if (osPlatform === 'linux') {
 		process.setFdLimit(appConfig.maxDescriptors.linux);
 	}
 });

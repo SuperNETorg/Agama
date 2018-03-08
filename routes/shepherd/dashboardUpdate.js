@@ -59,7 +59,8 @@ module.exports = (shepherd) => {
               coin,
               _type === 'public' ? 'getaddressesbyaccount' : 'z_listaddresses',
               ['']
-            ).then((_json) => {
+            )
+            .then((_json) => {
               if (_json === 'Work queue depth exceeded' ||
                   !_json) {
                 resolve({ error: 'daemon is busy' });
@@ -110,6 +111,7 @@ module.exports = (shepherd) => {
                   return result[0].indexOf(elem) === pos;
                 });
               }
+
               if (result[1] &&
                   result[1].length) {
                 result[1] = result[1].filter((elem, pos) => {
@@ -118,6 +120,7 @@ module.exports = (shepherd) => {
               }
 
               let newAddressArray = [];
+
               for (let a = 0; a < result.length; a++) {
                 newAddressArray[a] = [];
 
@@ -305,6 +308,7 @@ module.exports = (shepherd) => {
             } else {
               _returnObj[_call] = JSON.parse(json);
             }
+
             resolve(json);
           });
         });

@@ -15,8 +15,8 @@ networks.litecoin = {
   pubKeyHash: 0x30,
   scriptHash: 0x32,
   wif: 0xb0,
-  dustThreshold: 0, // https://github.com/litecoin-project/litecoin/blob/v0.8.7.2/src/main.cpp#L360-L365
-}
+  dustThreshold: 0 // https://github.com/litecoin-project/litecoin/blob/v0.8.7.2/src/main.cpp#L360-L365
+};
 
 networks.dogecoin = {
   messagePrefix: '\x19Dogecoin Signed Message:\n',
@@ -27,7 +27,7 @@ networks.dogecoin = {
   pubKeyHash: 0x1e,
   scriptHash: 0x16,
   wif: 0x9e,
-  dustThreshold: 0 // https://github.com/dogecoin/dogecoin/blob/v1.7.1/src/core.h#L155-L160
+  dustThreshold: 0, // https://github.com/dogecoin/dogecoin/blob/v1.7.1/src/core.h#L155-L160
 };
 
 // https://github.com/monacoinproject/monacoin/blob/master-0.10/src/chainparams.cpp#L161
