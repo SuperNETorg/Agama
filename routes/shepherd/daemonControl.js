@@ -11,6 +11,7 @@ const md5 = require('../md5.js');
 
 module.exports = (shepherd) => {
   const getConf = (flock, coind) => {
+    const _platform = os.platform();
     let DaemonConfPath = '';
     let nativeCoindDir;
 
@@ -23,7 +24,7 @@ module.exports = (shepherd) => {
     shepherd.writeLog(`getconf flock: ${flock}`);
 
     if (coind) {
-      switch (os.platform()) {
+      switch (_platform) {
         case 'darwin':
           nativeCoindDir = `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}`;
           break;
@@ -39,29 +40,29 @@ module.exports = (shepherd) => {
     switch (flock) {
       case 'komodod':
         DaemonConfPath = shepherd.komodoDir;
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
           shepherd.log('===>>> SHEPHERD API OUTPUT ===>>>');
         }
         break;
       case 'zcashd':
         DaemonConfPath = shepherd.ZcashDir;
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
         break;
       case 'chipsd':
         DaemonConfPath = shepherd.chipsDir;
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
         break;
       case 'coind':
-        DaemonConfPath = os.platform() === 'win32' ? shepherd.path.normalize(`${shepherd.coindRootDir}/${coind.toLowerCase()}`) : `${shepherd.coindRootDir}/${coind.toLowerCase()}`;
+        DaemonConfPath = _platform === 'win32' ? shepherd.path.normalize(`${shepherd.coindRootDir}/${coind.toLowerCase()}`) : `${shepherd.coindRootDir}/${coind.toLowerCase()}`;
         break;
       default:
         DaemonConfPath = `${shepherd.komodoDir}/${flock}`;
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = shepherd.path.normalize(DaemonConfPath);
         }
     }
@@ -482,57 +483,58 @@ module.exports = (shepherd) => {
   }
 
   const setConf = (flock, coind) => {
+    const _platform = os.platform();
     let nativeCoindDir;
     let DaemonConfPath;
 
     shepherd.log(flock);
     shepherd.writeLog(`setconf ${flock}`);
 
-    if (os.platform() === 'darwin') {
-      nativeCoindDir = coind ? `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
-    }
-
-    if (os.platform() === 'linux') {
-      nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
-    }
-
-    if (os.platform() === 'win32') {
-      nativeCoindDir = coind ?  `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+    switch (_platform) {
+      case 'darwin':
+        nativeCoindDir = coind ? `${process.env.HOME}/Library/Application Support/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+        break;
+      case 'linux':
+        nativeCoindDir = coind ? `${process.env.HOME}/.${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}` : null;
+        break;
+      case 'win32':
+        nativeCoindDir = coind ?  `${process.env.APPDATA}/${shepherd.nativeCoindList[coind.toLowerCase()].bin}` : null;
+        break;
     }
 
     switch (flock) {
       case 'komodod':
         DaemonConfPath = `${shepherd.komodoDir}/komodo.conf`;
 
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
         break;
       case 'zcashd':
         DaemonConfPath = `${shepherd.ZcashDir}/zcash.conf`;
 
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
         break;
       case 'chipsd':
         DaemonConfPath = `${shepherd.chipsDir}/chips.conf`;
 
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
         break;
       case 'coind':
         DaemonConfPath = `${nativeCoindDir}/${shepherd.nativeCoindList[coind.toLowerCase()].bin.toLowerCase()}.conf`;
 
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
         break;
       default:
         DaemonConfPath = `${shepherd.komodoDir}/${flock}/${flock}.conf`;
 
-        if (os.platform() === 'win32') {
+        if (_platform === 'win32') {
           DaemonConfPath = path.normalize(DaemonConfPath);
         }
     }
@@ -655,26 +657,28 @@ module.exports = (shepherd) => {
             });
           }
 
-          const rpcbind = () => {
+          const rpcport = () => {
             return new Promise((resolve, reject) => {
-              const result = 'checking rpcbind...';
+              const result = 'checking rpcport...';
 
-              if (status[0].hasOwnProperty('rpcbind')) {
-                shepherd.log('rpcbind: OK');
-                shepherd.writeLog('rpcbind: OK');
-              } else {
-                shepherd.log('rpcbind: NOT FOUND');
-                shepherd.writeLog('rpcbind: NOT FOUND');
+              if (flock === 'komodod') {
+                if (status[0].hasOwnProperty('rpcport')) {
+                  shepherd.log('rpcport: OK');
+                  shepherd.writeLog('rpcport: OK');
+                } else {
+                  shepherd.log('rpcport: NOT FOUND');
+                  shepherd.writeLog('rpcport: NOT FOUND');
 
-                fs.appendFile(DaemonConfPath, '\nrpcbind=127.0.0.1', (err) => {
-                  if (err) {
-                    shepherd.writeLog(`append daemon conf err: ${err}`);
-                    shepherd.log(`append daemon conf err: ${err}`);
-                  }
-                  // throw err;
-                  shepherd.log('rpcbind: ADDED');
-                  shepherd.writeLog('rpcbind: ADDED');
-                });
+                  fs.appendFile(DaemonConfPath, '\nrpcport=7771', (err) => {
+                    if (err) {
+                      shepherd.writeLog(`append daemon conf err: ${err}`);
+                      shepherd.log(`append daemon conf err: ${err}`);
+                    }
+                    // throw err;
+                    shepherd.log('rpcport: ADDED');
+                    shepherd.writeLog('rpcport: ADDED');
+                  });
+                }
               }
 
               resolve(result);
@@ -764,7 +768,7 @@ module.exports = (shepherd) => {
             return rpcpass();
           })
           .then(server)
-          .then(rpcbind)
+          .then(rpcport)
           .then(addnode);
         });
 
@@ -788,66 +792,81 @@ module.exports = (shepherd) => {
    *  params: herd
    */
   shepherd.post('/herd', (req, res) => {
-    shepherd.log('======= req.body =======');
-    shepherd.log(req.body);
+    if (shepherd.checkToken(req.body.token)) {
+      const _body = req.body;
+      shepherd.log('herd req.body =>');
+      shepherd.log(_body);
 
-    if (req.body.options &&
-        !shepherd.kmdMainPassiveMode) {
-      const testCoindPort = (skipError) => {
-        if (!shepherd.lockDownAddCoin) {
-          const _port = shepherd.assetChainPorts[req.body.options.ac_name];
+      if (_body.options &&
+          !shepherd.kmdMainPassiveMode) {
+        const testCoindPort = (skipError) => {
+          const _acName = req.body.options.ac_name;
 
-          portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
-            // Status is 'open' if currently in use or 'closed' if available
-            if (status === 'open' &&
-                shepherd.appConfig.stopNativeDaemonsOnQuit) {
-              if (!skipError) {
-                shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
-                shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
-                shepherd.io.emit('service', {
-                  komodod: {
-                    error: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
-                  },
-                });
+          if (!shepherd.lockDownAddCoin) {
+            const _port = shepherd.assetChainPorts[_acName];
 
-                const obj = {
-                  msg: 'error',
-                  result: `error starting ${req.body.herd} ${req.body.options.ac_name} daemon. Port ${_port} is already taken!`,
-                };
+            portscanner.checkPortStatus(_port, '127.0.0.1', (error, status) => {
+              // Status is 'open' if currently in use or 'closed' if available
+              if (status === 'open' &&
+                  shepherd.appConfig.stopNativeDaemonsOnQuit) {
+                if (!skipError) {
+                  shepherd.log(`komodod service start error at port ${_port}, reason: port is closed`);
+                  shepherd.writeLog(`komodod service start error at port ${_port}, reason: port is closed`);
+                  shepherd.io.emit('service', {
+                    komodod: {
+                      error: `error starting ${_body.herd} ${_acName} daemon. Port ${_port} is already taken!`,
+                    },
+                  });
 
-                res.status(500);
-                res.end(JSON.stringify(obj));
+                  const obj = {
+                    msg: 'error',
+                    result: `error starting ${_body.herd} ${_acName} daemon. Port ${_port} is already taken!`,
+                  };
+
+                  res.status(500);
+                  res.end(JSON.stringify(obj));
+                } else {
+                  shepherd.log(`komodod service start success at port ${_port}`);
+                  shepherd.writeLog(`komodod service start success at port ${_port}`);
+                }
               } else {
-                shepherd.log(`komodod service start success at port ${_port}`);
-                shepherd.writeLog(`komodod service start success at port ${_port}`);
-              }
-            } else {
-              if (!skipError) {
-                herder(req.body.herd, req.body.options);
+                if (!skipError) {
+                  herder(_body.herd, _body.options);
 
-                const obj = {
-                  msg: 'success',
-                  result: 'result',
-                };
+                  const obj = {
+                    msg: 'success',
+                    result: 'result',
+                  };
 
-                res.end(JSON.stringify(obj));
-              } else {
-                shepherd.log(`komodod service start error at port ${_port}, reason: unknown`);
-                shepherd.writeLog(`komodod service start error at port ${_port}, reason: unknown`);
+                  res.end(JSON.stringify(obj));
+                } else {
+                  shepherd.log(`komodod service start error at port ${_port}, reason: unknown`);
+                  shepherd.writeLog(`komodod service start error at port ${_port}, reason: unknown`);
+                }
               }
-            }
-          });
+            });
+          }
         }
-      }
 
-      if (req.body.herd === 'komodod') {
-        // check if komodod instance is already running
-        testCoindPort();
-        setTimeout(() => {
-          testCoindPort(true);
-        }, 10000);
+        if (_body.herd === 'komodod') {
+          // check if komodod instance is already running
+          testCoindPort();
+          setTimeout(() => {
+            testCoindPort(true);
+          }, 10000);
+        } else {
+          herder(_body.herd, _body.options, _body.coind);
+
+          const obj = {
+            msg: 'success',
+            result: 'result',
+          };
+
+          res.end(JSON.stringify(obj));
+        }
       } else {
-        herder(req.body.herd, req.body.options, req.body.coind);
+        // (?)
+        herder(_body.herd, _body.options);
 
         const obj = {
           msg: 'success',
@@ -857,15 +876,12 @@ module.exports = (shepherd) => {
         res.end(JSON.stringify(obj));
       }
     } else {
-      // (?)
-      herder(req.body.herd, req.body.options);
-
-      const obj = {
-        msg: 'success',
-        result: 'result',
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(obj));
+      res.end(JSON.stringify(errorObj));
     }
   });
 
@@ -873,44 +889,64 @@ module.exports = (shepherd) => {
    *  type: POST
    */
   shepherd.post('/setconf', (req, res) => {
-    shepherd.log('======= req.body =======');
-    shepherd.log(req.body);
+    if (shepherd.checkToken(req.body.token)) {
+      const _body = req.body;
 
-    if (os.platform() === 'win32' &&
-        req.body.chain == 'komodod') {
-      setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+      shepherd.log('setconf req.body =>');
+      shepherd.log(_body);
+
+      if (os.platform() === 'win32' &&
+          _body.chain == 'komodod') {
+        setkomodoconf = spawn(path.join(__dirname, '../assets/bin/win64/genkmdconf.bat'));
+      } else {
+        shepherd.setConf(_body.chain);
+      }
+
+      const obj = {
+        msg: 'success',
+        result: 'result',
+      };
+
+      res.end(JSON.stringify(obj));
     } else {
-      shepherd.setConf(req.body.chain);
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
     }
-
-    const obj = {
-      msg: 'success',
-      result: 'result',
-    };
-
-    res.end(JSON.stringify(obj));
   });
 
   /*
    *  type: POST
    */
   shepherd.post('/getconf', (req, res) => {
-    shepherd.log('======= req.body =======');
-    shepherd.log(req.body);
+    if (shepherd.checkToken(req.body.token)) {
+      const _body = req.body;
 
-    const confpath = getConf(req.body.chain, req.body.coind);
+      shepherd.log('getconf req.body =>');
+      shepherd.log(_body);
 
-    shepherd.log('got conf path is:');
-    shepherd.log(confpath);
-    shepherd.writeLog('got conf path is:');
-    shepherd.writeLog(confpath);
+      const confpath = getConf(_body.chain, _body.coind);
 
-    const obj = {
-      msg: 'success',
-      result: confpath,
-    };
+      shepherd.log(`getconf path is: ${confpath}`);
+      shepherd.writeLog(`getconf path is: ${confpath}`);
 
-    res.end(JSON.stringify(obj));
+      const obj = {
+        msg: 'success',
+        result: confpath,
+      };
+
+      res.end(JSON.stringify(obj));
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
+      };
+
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   shepherd.setConfKMD = (isChips) => {

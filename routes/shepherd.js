@@ -18,7 +18,6 @@ shepherd.Promise = require('bluebird');
 shepherd.exec = require('child_process').exec;
 shepherd.execFile = require('child_process').execFile;
 shepherd.sha256 = require('sha256');
-shepherd.CoinKey = require('coinkey');
 shepherd.bitcoinJS = require('bitcoinjs-lib');
 shepherd.coinSelect = require('coinselect');
 shepherd.fixPath = require('fix-path');
@@ -38,6 +37,8 @@ shepherd.rpcConf = {};
 shepherd.appRuntimeLog = [];
 shepherd.appRuntimeSPVLog = [];
 shepherd.lockDownAddCoin = false;
+
+// dex cache
 shepherd.mmupass = null;
 shepherd.mmRatesInterval = null;
 shepherd.mmPublic = {
@@ -60,9 +61,10 @@ shepherd.electrumCoins = {
 };
 shepherd.electrumKeys = {};
 
+shepherd.electrumCache = {};
+
 shepherd.electrumJSCore = require('./electrumjs/electrumjs.core.js');
 shepherd.electrumJSNetworks = require('./electrumjs/electrumjs.networks.js');
-shepherd.electrumJSTxDecoder = require('./electrumjs/electrumjs.txdecoder.js');
 shepherd.electrumServers = require('./electrumjs/electrumServers.js');
 
 shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA = 'connection error or incomplete data';
@@ -96,6 +98,8 @@ shepherd = require('./shepherd/electrum/balance.js')(shepherd);
 shepherd = require('./shepherd/electrum/transactions.js')(shepherd);
 shepherd = require('./shepherd/electrum/block.js')(shepherd);
 shepherd = require('./shepherd/electrum/createtx.js')(shepherd);
+shepherd = require('./shepherd/electrum/createtx-split.js')(shepherd);
+shepherd = require('./shepherd/electrum/createtx-multi.js')(shepherd);
 shepherd = require('./shepherd/electrum/interest.js')(shepherd);
 shepherd = require('./shepherd/electrum/listunspent.js')(shepherd);
 shepherd = require('./shepherd/electrum/estimate.js')(shepherd);
@@ -109,7 +113,6 @@ shepherd = require('./shepherd/dex/electrumServersList.js')(shepherd);
 // core
 shepherd = require('./shepherd/addCoinShortcuts.js')(shepherd);
 shepherd = require('./shepherd/dashboardUpdate.js')(shepherd);
-shepherd = require('./shepherd/binsTestUtil.js')(shepherd);
 shepherd = require('./shepherd/binsUtils.js')(shepherd);
 shepherd = require('./shepherd/downloadUtil.js')(shepherd);
 shepherd = require('./shepherd/init.js')(shepherd);
@@ -128,6 +131,9 @@ shepherd = require('./shepherd/daemonControl.js')(shepherd);
 shepherd = require('./shepherd/auth.js')(shepherd);
 shepherd = require('./shepherd/coins.js')(shepherd);
 shepherd = require('./shepherd/coindWalletKeys.js')(shepherd);
+
+// elections
+shepherd = require('./shepherd/elections.js')(shepherd);
 
 // explorer
 // shepherd = require('./shepherd/explorer/overview.js')(shepherd);

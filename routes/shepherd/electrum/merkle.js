@@ -2,11 +2,11 @@ module.exports = (shepherd) => {
   // get merkle root
   shepherd.getMerkleRoot = (txid, proof, pos) => {
     const reverse = require('buffer-reverse');
-    let hash = txid;
-    let serialized;
     const _sha256 = (data) => {
       return shepherd.crypto.createHash('sha256').update(data).digest();
     }
+    let hash = txid;
+    let serialized;
 
     shepherd.log(`getMerkleRoot txid ${txid}`, true);
     shepherd.log(`getMerkleRoot pos ${pos}`, true);
@@ -30,7 +30,7 @@ module.exports = (shepherd) => {
     return hash;
   }
 
-  shepherd.verifyMerkle = (txid, height, serverList, mainServer) => {
+  shepherd.verifyMerkle = (txid, height, serverList, mainServer, network) => {
     // select random server
     const getRandomIntInclusive = (min, max) => {
       min = Math.ceil(min);
@@ -44,7 +44,7 @@ module.exports = (shepherd) => {
     const _randomServer = randomServer.split(':');
     const _mainServer = mainServer.split(':');
 
-    let ecl = new shepherd.electrumJSCore(_mainServer[1], _mainServer[0], 'tcp'); // tcp or tls
+    let ecl = new shepherd.electrumJSCore(_mainServer[1], _mainServer[0], _mainServer[2]); // tcp or tls
 
     return new shepherd.Promise((resolve, reject) => {
       shepherd.log(`main server: ${mainServer}`, true);
@@ -63,10 +63,10 @@ module.exports = (shepherd) => {
           const _res = shepherd.getMerkleRoot(txid, merkleData.merkle, merkleData.pos);
           shepherd.log(_res, true);
 
-          ecl = new shepherd.electrumJSCore(_randomServer[1], _randomServer[0], 'tcp');
+          ecl = new shepherd.electrumJSCore(_randomServer[1], _randomServer[0], _mainServer[2]);
           ecl.connect();
 
-          ecl.blockchainBlockGetHeader(height)
+          shepherd.getBlockHeader(height, network, ecl)
           .then((blockInfo) => {
             if (blockInfo &&
                 blockInfo['merkle_root']) {
@@ -83,13 +83,16 @@ module.exports = (shepherd) => {
                   resolve(false);
                 }
               } else {
+                ecl.close();
                 resolve(shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA);
               }
             } else {
+              ecl.close();
               resolve(shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA);
             }
           });
         } else {
+          ecl.close();
           resolve(shepherd.CONNECTION_ERROR_OR_INCOMPLETE_DATA);
         }
       });
@@ -117,8 +120,10 @@ module.exports = (shepherd) => {
           txid,
           height,
           _filteredServerList,
-          shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port
-        ).then((proof) => {
+          shepherd.electrumCoins[coin].server.ip + ':' + shepherd.electrumCoins[coin].server.port + ':' + shepherd.electrumServers[coin === 'KMD' || coin === 'komodo' ? 'komodo' : coin.toLowerCase()].proto,
+          coin
+        )
+        .then((proof) => {
           resolve(proof);
         });
       } else {
@@ -128,17 +133,26 @@ module.exports = (shepherd) => {
   }
 
   shepherd.get('/electrum/merkle/verify', (req, res, next) => {
-    shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
-    .then((verifyMerkleRes) => {
-      const successObj = {
-        msg: 'success',
-        result: {
-          merkleProof: verifyMerkleRes,
-        },
+    if (shepherd.checkToken(req.query.token)) {
+      shepherd.verifyMerkleByCoin(req.query.coin, req.query.txid, req.query.height)
+      .then((verifyMerkleRes) => {
+        const successObj = {
+          msg: 'success',
+          result: {
+            merkleProof: verifyMerkleRes,
+          },
+        };
+
+        res.end(JSON.stringify(successObj));
+      });
+    } else {
+      const errorObj = {
+        msg: 'error',
+        result: 'unauthorized access',
       };
 
-      res.end(JSON.stringify(successObj));
-    });
+      res.end(JSON.stringify(errorObj));
+    }
   });
 
   return shepherd;

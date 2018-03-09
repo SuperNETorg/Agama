@@ -2,217 +2,30 @@ const bitcoinJSForks = require('bitcoinforksjs-lib');
 const bitcoinZcash = require('bitcoinjs-lib-zcash');
 const bitcoinPos = require('bitcoinjs-lib-pos');
 
+// not prod ready, only for voting!
+// needs a fix
+
 module.exports = (shepherd) => {
-  // unsigned tx
-  shepherd.buildUnsignedTx = (sendTo, changeAddress, network, utxo, changeValue, spendValue) => {
-    let tx;
-
-    // TODO: finish unsigned for zcash, btc forks and pos coins
-    if (network === 'btg') {
-      shepherd.log('enable btg', true);
-      tx = new bitcoinJSForks.TransactionBuilder(shepherd.getNetworkData(network));
-      tx.enableBitcoinGold(true);
-    } else {
-      tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
-    }
-
-    shepherd.log('buildSignedTx', true);
-    // console.log(`buildSignedTx priv key ${wif}`);
-    shepherd.log(`buildSignedTx pub key ${changeAddress}`, true);
-    // console.log('buildSignedTx std tx fee ' + shepherd.electrumServers[network].txfee);
-
-    for (let i = 0; i < utxo.length; i++) {
-      tx.addInput(utxo[i].txid, utxo[i].vout);
-    }
-
-    tx.addOutput(sendTo, Number(spendValue));
-
-    if (changeValue > 0) {
-      tx.addOutput(changeAddress, Number(changeValue));
-    }
-
-    if (network === 'komodo' ||
-        network === 'KMD') {
-      const _locktime = Math.floor(Date.now() / 1000) - 777;
-      tx.setLockTime(_locktime);
-      shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
-    }
-
-    shepherd.log('buildSignedTx unsigned tx data vin', true);
-    shepherd.log(tx.tx.ins, true);
-    shepherd.log('buildSignedTx unsigned tx data vout', true);
-    shepherd.log(tx.tx.outs, true);
-    shepherd.log('buildSignedTx unsigned tx data', true);
-    shepherd.log(tx, true);
-
-    const rawtx = tx.buildIncomplete().toHex();
-
-    shepherd.log('buildUnsignedTx tx hex', true);
-    shepherd.log(rawtx, true);
-
-    return rawtx;
-  }
-
-  // single sig
-  shepherd.buildSignedTx = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue, opreturn) => {
-    let key = shepherd.isZcash(network) ? bitcoinZcash.ECPair.fromWIF(wif, shepherd.getNetworkData(network)) : shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
-    let tx;
-
-    if (shepherd.isZcash(network)) {
-      tx = new bitcoinZcash.TransactionBuilder(shepherd.getNetworkData(network));
-    } else if (shepherd.isPos(network)) {
-      tx = new bitcoinPos.TransactionBuilder(shepherd.getNetworkData(network));
-    } else {
-      tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
-    }
-
-    shepherd.log('buildSignedTx', true);
-    // console.log(`buildSignedTx priv key ${wif}`);
-    shepherd.log(`buildSignedTx pub key ${key.getAddress().toString()}`, true);
-    // console.log('buildSignedTx std tx fee ' + shepherd.electrumServers[network].txfee);
-
-    for (let i = 0; i < utxo.length; i++) {
-      tx.addInput(utxo[i].txid, utxo[i].vout);
-    }
-
-    if (shepherd.isPos(network)) {
-      tx.addOutput(sendTo, Number(spendValue), shepherd.getNetworkData(network));
-    } else {
-      tx.addOutput(sendTo, Number(spendValue));
-    }
-
-    if (changeValue > 0) {
-      if (shepherd.isPos(network)) {
-        tx.addOutput(changeAddress, Number(changeValue), shepherd.getNetworkData(network));
-      } else {
-        tx.addOutput(changeAddress, Number(changeValue));
-      }
-    }
-
-    if (opreturn) {
-      console.log(`opreturn ${opreturn}`);
-      const data = Buffer.from(opreturn, 'utf8');
-      const dataScript = shepherd.bitcoinJS.script.nullData.output.encode(data);
-      tx.addOutput(dataScript, 1000);
-    }
-
-    if (network === 'komodo' ||
-        network === 'KMD') {
-      const _locktime = Math.floor(Date.now() / 1000) - 777;
-      tx.setLockTime(_locktime);
-      shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
-    }
-
-    shepherd.log('buildSignedTx unsigned tx data vin', true);
-    shepherd.log(tx.tx.ins, true);
-    shepherd.log('buildSignedTx unsigned tx data vout', true);
-    shepherd.log(tx.tx.outs, true);
-    shepherd.log('buildSignedTx unsigned tx data', true);
-    shepherd.log(tx, true);
-
-    for (let i = 0; i < utxo.length; i++) {
-      if (shepherd.isPos(network)) {
-        tx.sign(shepherd.getNetworkData(network), i, key);
-      } else {
-        tx.sign(i, key);
-      }
-    }
-
-    const rawtx = tx.build().toHex();
-
-    shepherd.log('buildSignedTx signed tx hex', true);
-    shepherd.log(rawtx, true);
-
-    return rawtx;
-  }
-
-  // btg
-  shepherd.buildSignedTxForks = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue) => {
-    let tx;
-
-    if (network === 'btg' ||
-        network === 'bch') {
-      tx = new bitcoinJSForks.TransactionBuilder(shepherd.getNetworkData(network));
-    }
-
-    const keyPair = bitcoinJSForks.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
-    const pk = bitcoinJSForks.crypto.hash160(keyPair.getPublicKeyBuffer());
-    const spk = bitcoinJSForks.script.pubKeyHash.output.encode(pk);
-
-    shepherd.log(`buildSignedTx${network.toUpperCase()}`, true);
-
-    for (let i = 0; i < utxo.length; i++) {
-      tx.addInput(utxo[i].txid, utxo[i].vout, bitcoinJSForks.Transaction.DEFAULT_SEQUENCE, spk);
-    }
-
-    tx.addOutput(sendTo, Number(spendValue));
-
-    if (changeValue > 0) {
-      tx.addOutput(changeAddress, Number(changeValue));
-    }
-
-    if (network === 'btg') {
-      tx.enableBitcoinGold(true);
-    } else if (network === 'bch') {
-      tx.enableBitcoinCash(true);
-    }
-
-    tx.setVersion(2);
-
-    shepherd.log('buildSignedTx unsigned tx data vin', true);
-    shepherd.log(tx.tx.ins, true);
-    shepherd.log('buildSignedTx unsigned tx data vout', true);
-    shepherd.log(tx.tx.outs, true);
-    shepherd.log('buildSignedTx unsigned tx data', true);
-    shepherd.log(tx, true);
-
-    const hashType = bitcoinJSForks.Transaction.SIGHASH_ALL | bitcoinJSForks.Transaction.SIGHASH_BITCOINCASHBIP143;
-
-    for (let i = 0; i < utxo.length; i++) {
-      tx.sign(i, keyPair, null, hashType, utxo[i].value);
-    }
-
-    const rawtx = tx.build().toHex();
-
-    shepherd.log('buildSignedTx signed tx hex', true);
-    shepherd.log(rawtx, true);
-
-    return rawtx;
-  }
-
-  shepherd.maxSpendBalance = (utxoList, fee) => {
-    let maxSpendBalance = 0;
-
-    for (let i = 0; i < utxoList.length; i++) {
-      maxSpendBalance += Number(utxoList[i].value);
-    }
-
-    if (fee) {
-      return Number(maxSpendBalance) - Number(fee);
-    } else {
-      return maxSpendBalance;
-    }
-  }
-
-  shepherd.get('/electrum/createrawtx', (req, res, next) => {
-    if (shepherd.checkToken(req.query.token)) {
-      // TODO: unconf output(s) error message
-      const network = req.query.network || shepherd.findNetworkObj(req.query.coin);
+  shepherd.post('/electrum/createrawtx-multiout', (req, res, next) => {
+    if (shepherd.checkToken(req.body.token)) {
+      // TODO: 1) unconf output(s) error message
+      // 2) check targets integrity
+      const network = req.body.network || shepherd.findNetworkObj(req.body.coin);
       const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[network].port, shepherd.electrumServers[network].address, shepherd.electrumServers[network].proto); // tcp or tls
-      const outputAddress = req.query.address;
-      const changeAddress = req.query.change;
-      const push = req.query.push;
-      const opreturn = req.query.opreturn;
-      const btcFee = req.query.btcfee ? Number(req.query.btcfee) : null;
+      const initTargets = JSON.parse(JSON.stringify(req.body.targets));
+      let targets = req.body.targets;
+      const changeAddress = req.body.change;
+      const push = req.body.push;
+      const opreturn = req.body.opreturn;
+      const btcFee = req.body.btcfee ? Number(req.body.btcfee) : null;
       let fee = shepherd.electrumServers[network].txfee;
-      let value = Number(req.query.value);
-      let wif = req.query.wif;
+      let wif = req.body.wif;
 
-      if (req.query.gui) {
-        wif = shepherd.electrumKeys[req.query.coin].priv;
+      if (req.body.gui) {
+        wif = shepherd.electrumKeys[req.body.coin].priv;
       }
 
-      if (req.query.vote) {
+      if (req.body.vote) {
         wif = shepherd.elections.priv;
       }
 
@@ -223,7 +36,7 @@ module.exports = (shepherd) => {
       shepherd.log('electrum createrawtx =>', true);
 
       ecl.connect();
-      shepherd.listunspent(ecl, changeAddress, network, true, req.query.verify === 'true' ? true : null)
+      shepherd.listunspent(ecl, changeAddress, network, true, req.body.verify === 'true' ? true : null)
       .then((utxoList) => {
         ecl.close();
 
@@ -263,10 +76,10 @@ module.exports = (shepherd) => {
           shepherd.log(utxoListFormatted, true);
 
           const _maxSpendBalance = Number(shepherd.maxSpendBalance(utxoListFormatted));
-          let targets = [{
+          /*let targets = [{
             address: outputAddress,
             value: value > _maxSpendBalance ? _maxSpendBalance : value,
-          }];
+          }];*/
           shepherd.log('targets =>', true);
           shepherd.log(targets, true);
 
@@ -318,8 +131,8 @@ module.exports = (shepherd) => {
           let _change = 0;
 
           if (outputs &&
-              outputs.length === 2) {
-            _change = outputs[1].value - fee;
+              outputs.length > 1) {
+            _change = outputs[outputs.length - 1].value - fee;
           }
 
           if (!btcFee &&
@@ -327,13 +140,32 @@ module.exports = (shepherd) => {
             outputs[0].value = outputs[0].value - fee;
           }
 
-          if (btcFee) {
-            value = outputs[0].value;
+          shepherd.log('adjusted outputs');
+          shepherd.log(outputs, true);
+
+          shepherd.log('init targets', true);
+          shepherd.log(initTargets, true);
+
+          if (initTargets[0].value < targets[0].value) {
+            targets[0].value = initTargets[0].value;
+          }
+
+          let _targetsSum = 0;
+
+          for (let i = 0; i < targets.length; i++) {
+            _targetsSum += Number(targets[i].value);
+          }
+
+          shepherd.log(`total targets sum ${_targetsSum}`);
+
+          /*if (btcFee) {
+            value = _targetsSum;
           } else {
             if (_change > 0) {
-              value = outputs[0].value - fee;
+              value = _targetsSum - fee;
             }
-          }
+          }*/
+          value = _targetsSum;
 
           shepherd.log('adjusted outputs, value - default fee =>', true);
           shepherd.log(outputs, true);
@@ -368,7 +200,7 @@ module.exports = (shepherd) => {
           } else {
             shepherd.log(`maxspend ${_maxSpend} (${_maxSpend * 0.00000001})`, true);
             shepherd.log(`value ${value}`, true);
-            shepherd.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`, true);
+            // shepherd.log(`sendto ${outputAddress} amount ${value} (${value * 0.00000001})`, true);
             shepherd.log(`changeto ${changeAddress} amount ${_change} (${_change * 0.00000001})`, true);
 
             // account for KMD interest
@@ -411,16 +243,24 @@ module.exports = (shepherd) => {
                 vinSum += inputs[i].value;
               }
 
-              const _estimatedFee = vinSum - outputs[0].value - _change;
+              let voutSum = 0;
+
+              for (let i = 0; i < outputs.length; i++) {
+                voutSum += outputs[i].value;
+              }
+
+              const _estimatedFee = vinSum - voutSum;
 
               shepherd.log(`vin sum ${vinSum} (${vinSum * 0.00000001})`, true);
+              shepherd.log(`vout sum ${voutSum} (${voutSum * 0.00000001})`, true);
               shepherd.log(`estimatedFee ${_estimatedFee} (${_estimatedFee * 0.00000001})`, true);
               // double check no extra fee is applied
-              shepherd.log(`vin - vout ${vinSum - value - _change}`);
+              shepherd.log(`vin - vout - change ${vinSum - value - _change}`);
 
               if ((vinSum - value - _change) > fee) {
                 _change += fee;
                 shepherd.log(`double fee, increase change by ${fee}`);
+                shepherd.log(`adjusted vin - vout - change ${vinSum - value - _change}`);
               }
 
               // TODO: use individual dust thresholds
@@ -430,43 +270,36 @@ module.exports = (shepherd) => {
                 _change = 0;
               }
 
+              outputAddress = outputs;
+
+              if (outputAddress.length > 1) {
+                outputAddress.pop();
+              }
+
               let _rawtx;
 
-              if (req.query.unsigned) {
-                _rawtx = shepherd.buildUnsignedTx(
+              if (network === 'btg' ||
+                  network === 'bch') {
+                /*_rawtx = shepherd.buildSignedTxForks(
                   outputAddress,
                   changeAddress,
+                  wif,
                   network,
                   inputs,
                   _change,
                   value
-                );
+                );*/
               } else {
-                if (!req.query.offline) {
-                  if (network === 'btg' ||
-                      network === 'bch') {
-                    _rawtx = shepherd.buildSignedTxForks(
-                      outputAddress,
-                      changeAddress,
-                      wif,
-                      network,
-                      inputs,
-                      _change,
-                      value
-                    );
-                  } else {
-                    _rawtx = shepherd.buildSignedTx(
-                      outputAddress,
-                      changeAddress,
-                      wif,
-                      network,
-                      inputs,
-                      _change,
-                      value,
-                      opreturn
-                    );
-                  }
-                }
+                _rawtx = shepherd.buildSignedTxMulti(
+                  outputAddress,
+                  changeAddress,
+                  wif,
+                  network,
+                  inputs,
+                  _change,
+                  value,
+                  opreturn
+                );
               }
 
               if (!push ||
@@ -585,35 +418,83 @@ module.exports = (shepherd) => {
     }
   });
 
-  shepherd.post('/electrum/pushtx', (req, res, next) => {
-    if (shepherd.checkToken(req.body.token)) {
-      const rawtx = req.body.rawtx;
-      const _network = req.body.network;
-      const ecl = new shepherd.electrumJSCore(shepherd.electrumServers[_network].port, shepherd.electrumServers[_network].address, shepherd.electrumServers[_network].proto); // tcp or tls
+  // single sig
+  shepherd.buildSignedTxMulti = (sendTo, changeAddress, wif, network, utxo, changeValue, spendValue, opreturn) => {
+    let key = shepherd.isZcash(network) ? bitcoinZcash.ECPair.fromWIF(wif, shepherd.getNetworkData(network)) : shepherd.bitcoinJS.ECPair.fromWIF(wif, shepherd.getNetworkData(network));
+    let tx;
 
-      ecl.connect();
-      ecl.blockchainTransactionBroadcast(rawtx)
-      .then((json) => {
-        ecl.close();
-        shepherd.log('electrum pushtx ==>', true);
-        shepherd.log(json, true);
-
-        const successObj = {
-          msg: 'success',
-          result: json,
-        };
-
-        res.end(JSON.stringify(successObj));
-      });
+    if (shepherd.isZcash(network)) {
+      tx = new bitcoinZcash.TransactionBuilder(shepherd.getNetworkData(network));
+    } else if (shepherd.isPos(network)) {
+      tx = new bitcoinPos.TransactionBuilder(shepherd.getNetworkData(network));
     } else {
-      const errorObj = {
-        msg: 'error',
-        result: 'unauthorized access',
-      };
-
-      res.end(JSON.stringify(errorObj));
+      tx = new shepherd.bitcoinJS.TransactionBuilder(shepherd.getNetworkData(network));
     }
-  });
+
+    shepherd.log('buildSignedTx', true);
+    // console.log(`buildSignedTx priv key ${wif}`);
+    shepherd.log(`buildSignedTx pub key ${key.getAddress().toString()}`, true);
+    // console.log('buildSignedTx std tx fee ' + shepherd.electrumServers[network].txfee);
+
+    for (let i = 0; i < utxo.length; i++) {
+      tx.addInput(utxo[i].txid, utxo[i].vout);
+    }
+
+    for (let i = 0; i < sendTo.length; i++) {
+      if (shepherd.isPos(network)) {
+        tx.addOutput(sendTo[i].address, Number(sendTo[i].value), shepherd.getNetworkData(network));
+      } else {
+        tx.addOutput(sendTo[i].address, Number(sendTo[i].value));
+      }
+    }
+
+    if (changeValue > 0) {
+      if (shepherd.isPos(network)) {
+        tx.addOutput(changeAddress, Number(changeValue), shepherd.getNetworkData(network));
+      } else {
+        tx.addOutput(changeAddress, Number(changeValue));
+      }
+    }
+
+    if (opreturn &&
+        opreturn.length) {
+      for (let i = 0; i < opreturn.length; i++) {
+        shepherd.log(`opreturn ${i} ${opreturn[i]}`);
+        const data = Buffer.from(opreturn[i], 'utf8');
+        const dataScript = shepherd.bitcoinJS.script.nullData.output.encode(data);
+        tx.addOutput(dataScript, 1000);
+      }
+    }
+
+    if (network === 'komodo' ||
+        network === 'KMD') {
+      const _locktime = Math.floor(Date.now() / 1000) - 777;
+      tx.setLockTime(_locktime);
+      shepherd.log(`kmd tx locktime set to ${_locktime}`, true);
+    }
+
+    shepherd.log('buildSignedTx unsigned tx data vin', true);
+    shepherd.log(tx.tx.ins, true);
+    shepherd.log('buildSignedTx unsigned tx data vout', true);
+    shepherd.log(tx.tx.outs, true);
+    shepherd.log('buildSignedTx unsigned tx data', true);
+    shepherd.log(tx, true);
+
+    for (let i = 0; i < utxo.length; i++) {
+      if (shepherd.isPos(network)) {
+        tx.sign(shepherd.getNetworkData(network), i, key);
+      } else {
+        tx.sign(i, key);
+      }
+    }
+
+    const rawtx = tx.build().toHex();
+
+    shepherd.log('buildSignedTx signed tx hex', true);
+    shepherd.log(rawtx, true);
+
+    return rawtx;
+  }
 
   return shepherd;
 };
