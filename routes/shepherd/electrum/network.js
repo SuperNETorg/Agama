@@ -22,7 +22,9 @@ module.exports = (shepherd) => {
 
   shepherd.isPos = (network) => {
     if (network === 'BLK' ||
-        network === 'blk') {
+        network === 'blk' ||
+        network === 'DNR' ||
+        network === 'dnr') {
       return true;
     }
   };
