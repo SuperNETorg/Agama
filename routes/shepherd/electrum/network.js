@@ -10,6 +10,8 @@ module.exports = (shepherd) => {
         network === 'zec' ||
         network === 'zcash' ||
         network === 'ZCASH' ||
+        network === 'snowgem' ||
+        network === 'SNOWGEM' ||
         network === 'HUSH' ||
         network === 'hush' ||
         network === 'ZCL' ||
