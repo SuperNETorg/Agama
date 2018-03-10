@@ -280,19 +280,21 @@ function createWindow(status, hideLoadingWindow) {
 				mainWindow.startKMDNative = shepherd.startKMDNative;
 				mainWindow.addressVersionCheck = shepherd.addressVersionCheck;
 				mainWindow.getCoinByPub = shepherd.getCoinByPub;
-				mainWindow.resetSettings = function() { shepherd.saveLocalAppConf(__defaultAppSettings) };
+				mainWindow.resetSettings = () => { shepherd.saveLocalAppConf(__defaultAppSettings) };
 				mainWindow.createSeed = {
 					triggered: false,
 					firstLoginPH: null,
 					secondaryLoginPH: null,
 				};
 
-			  for (let i = 0; i < process.argv.length; i++) {
+				mainWindow.nnVoteChain = 'VOTE2018';
+
+			  /*for (let i = 0; i < process.argv.length; i++) {
 			    if (process.argv[i].indexOf('nvote') > -1) {
 			      console.log(`notary node elections chain ${process.argv[i].replace('nvote=', '')}`);
 			      mainWindow.nnVoteChain = process.argv[i].replace('nvote=', '');
 			    }
-			  }
+			  }*/
 			} else {
 				mainWindow = new BrowserWindow({
 					width: 500,
