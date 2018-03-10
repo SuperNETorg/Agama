@@ -417,16 +417,26 @@ let electrumServers = {
     ],
   },
   hush: {
-    address: '173.212.225.176',
-    port: 50013,
+    address: '45.77.254.232',
+    port: 10001,
     proto: 'tcp',
     txfee: 10000,
-    abbr: 'HUSH',
+    abbr: 'SNG',
     serverList: [
-      '173.212.225.176:50013',
-      '136.243.45.140:50013'
+      '45.77.254.232:10001',
+      '128.199.233.38:10001'
     ],
   },
+    snowgem: {
+    address: '',
+    port: 50032,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'ZEC',
+    serverList: [
+      '173.212.225.176:50032',
+      '136.243.45.140:50032'
+    ],
   xmy: {
     address: 'cetus.cryptap.us',
     port: 50004,
