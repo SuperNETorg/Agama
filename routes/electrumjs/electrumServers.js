@@ -180,16 +180,24 @@ let electrumServers = {
       'electrum2.cipig.net:10024'
     ],
   },
-  vote: { // !estimatefee
+  vote2018: { // !estimatefee
     address: 'electrum1.cipig.net',
     port: 10021,
     proto: 'tcp',
     txfee: 10000,
-    abbr: 'VOTE',
+    abbr: 'VOTE2018',
     serverList: [
       'electrum1.cipig.net:10021',
       'electrum2.cipig.net:10021'
     ],
+  },
+  ninja: { // !estimatefee
+    address: 'electrum.fund.ninja',
+    port: 50001,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'NINJA',
+    serverList: 'none',
   },
   jumblr: { // !estimatefee
     address: 'electrum1.cipig.net',

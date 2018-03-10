@@ -26,7 +26,8 @@ const assetChainPorts = {
   'MESH': '9455',
   'AXO': '12927',
   'ETOMIC': '10271',
-  'VOTE': '8012',
+  'VOTE2018': '15488',
+  'NINJA': '8427',
   'BTCH': '8800',
 };
 
