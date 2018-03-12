@@ -277,7 +277,7 @@ networks.zcl = {
   dustThreshold: 1000,
 };
 
-networks.snowgem = {
+networks.sng = {
   messagePrefix: '\x19Snowgem Signed Message:\n',
   bip32: {
     public: 0x0488b21e,
