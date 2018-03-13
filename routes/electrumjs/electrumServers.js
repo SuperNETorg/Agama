@@ -446,6 +446,17 @@ let electrumServers = {
       '136.243.45.140:50013'
     ],
   },
+  snowgem: {
+    address: '45.77.254.232',
+    port: 10001,
+    proto: 'tcp',
+    txfee: 10000,
+    abbr: 'SNG',
+    serverList: [
+      '45.77.254.232:10001',
+      '128.199.233.38:10001'
+    ],
+  },
   xmy: {
     address: 'cetus.cryptap.us',
     port: 50004,

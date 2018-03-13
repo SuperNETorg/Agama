@@ -290,6 +290,18 @@ networks.zcl = {
   dustThreshold: 1000,
 };
 
+networks.sng = {
+  messagePrefix: '\x19Snowgem Signed Message:\n',
+  bip32: {
+    public: 0x0488b21e,
+    private: 0x05358394,
+  },
+  pubKeyHash: 0x1c28,
+  scriptHash: 0x1c2D,
+  wif: 0x80,
+  dustThreshold: 1000,
+};
+
 networks.xmy = {
   messagePrefix: '\x19Myriad Signed Message:\n',
   bip32: {
